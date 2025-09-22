@@ -1,0 +1,13 @@
+{
+  "skeleton": {
+    "filename": "out/xbot_walking_without_skin_skeletonaaaaaaaaaaaa.ozz",
+    "import": {
+      "enable": true
+    }
+  },
+  "animations": [
+    {
+      "filename": "out/xbot_walking_without_skin_animation.ozz"
+    }
+  ]
+}

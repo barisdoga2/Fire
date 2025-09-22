@@ -5,8 +5,8 @@
 # EE
 x64/Debug/*
 x64/Release/*
-Debug/*
-Release/*
+x86/Debug/*
+x86/Release/*
 Fire/x64/Debug/*
 Fire/x64/Release/*
 Fire/Debug/*

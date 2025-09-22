@@ -1,0 +1,13 @@
+{
+  "skeleton": {
+    "filename": "out/Kachujin G Rosales_skeleton.ozz",
+    "import": {
+      "enable": true
+    }
+  },
+  "animations": [
+    {
+      "filename": "out/Kachujin G Rosales_animation.ozz"
+    }
+  ]
+}
