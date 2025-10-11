@@ -22,3 +22,12 @@ sample_fbx2mesh.exe --file="magician\Crouching Idle.fbx" --skeleton="magician\ou
 
 fbx2ozz.exe --file="Kachujin G Rosales_idle.fbx" --config_file="Kachujin G Rosales_config.json"
 sample_fbx2mesh.exe --file="Kachujin G Rosales.fbx" --skeleton="out/Kachujin G Rosales_skeleton.ozz" --mesh="out/Kachujin G Rosales_mesh.ozz" --max_influences=4
+
+
+fbx2ozz.exe --file="Character0-HipHop.fbx" --config_file="Character0-HipHop_config.json"
+sample_fbx2mesh.exe --file="Character0-HipHop.fbx" --skeleton="out/Character0_skeleton.ozz" --mesh="out/Character0_mesh.ozz" --max_influences=4
+
+
+fbx2ozz.exe --file="StandingIdleWSkin.fbx" --config_file="StandingIdleWSkin_config.json"
+sample_fbx2mesh.exe --file="StandingIdleWSkin.fbx" --skeleton="out/StandingIdleWSkin_skeleton.ozz" --mesh="out/StandingIdleWSkin_mesh.ozz" --max_influences=4
+

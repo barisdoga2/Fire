@@ -18,11 +18,17 @@ Shader::Shader(std::string name, std::vector<std::string> attribs)
 	if (fragmentShaderSource.length() > 0)
 		AttachShader(GL_FRAGMENT_SHADER, fragmentShaderSource.c_str());
 
-	for (unsigned int i = 0; i < attribs.size(); i++)
-		glBindAttribLocation(prog, i, attribs.at(i).c_str());
 	glLinkProgram(prog);
 	CheckStatus(prog, false);
 	glUseProgram(prog);
+	for (unsigned int i = 0; i < attribs.size(); i++)
+	{
+
+		GLint location = glGetAttribLocation(prog, attribs.at(i).c_str());
+		if (glGetError() != GL_NO_ERROR || location == -1)
+			std::cout << "err" << std::endl;
+		glBindAttribLocation(prog, i, attribs.at(i).c_str());
+	}
 }
 
 Shader::Shader(char* ptr, std::vector<std::string> attribs)

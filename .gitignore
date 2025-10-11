@@ -8,6 +8,7 @@ x64/Release/*
 x86/Debug/*
 x86/Release/*
 Fire/x64/Debug/*
+PG/x64/Debug/*
 Fire/x64/Release/*
 Fire/Debug/*
 Fire/Release/*

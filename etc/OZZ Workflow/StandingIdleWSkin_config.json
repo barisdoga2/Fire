@@ -1,0 +1,13 @@
+{
+  "skeleton": {
+    "filename": "out/StandingIdleWSkin_skeleton.ozz",
+    "import": {
+      "enable": true
+    }
+  },
+  "animations": [
+    {
+      "filename": "out/StandingIdleWSkin_animation.ozz"
+    }
+  ]
+}

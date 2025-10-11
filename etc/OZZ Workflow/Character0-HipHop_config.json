@@ -1,0 +1,13 @@
+{
+  "skeleton": {
+    "filename": "out/Character0_skeleton.ozz",
+    "import": {
+      "enable": true
+    }
+  },
+  "animations": [
+    {
+      "filename": "out/Character0_animation.ozz"
+    }
+  ]
+}

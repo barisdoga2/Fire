@@ -22,6 +22,7 @@
 #include <ozz/base/io/archive.h>
 #include "Utils.hpp"
 #include "Bone.hpp"
+#include "mesh.h"
 
 #define MAX_BONES 200
 #define MAX_BONE_INFLUENCE 4
@@ -119,8 +120,6 @@ public:
 	bool animatable;
 
 	// OZZ
-	ozz::animation::Skeleton* skeleton;
-	std::map<std::string, ozz::animation::Animation*> ozzAnimations;
 
 	Model(std::string name) : name(name)
 	{
@@ -445,7 +444,7 @@ void ProcessNode(Model* rawModel, aiNode* node, const aiScene* scene, std::map<a
 
 bool LoadSkeletonOZZ(const char* _filename, ozz::animation::Skeleton* _skeleton)
 {
-	assert(_filename && _skeleton);
+
 	ozz::log::Out() << "Loading skeleton archive " << _filename << "."
 		<< std::endl;
 	ozz::io::File file(_filename, "rb");
@@ -463,7 +462,6 @@ bool LoadSkeletonOZZ(const char* _filename, ozz::animation::Skeleton* _skeleton)
 
 	// Once the tag is validated, reading cannot fail.
 	{
-		//ProfileFctLog profile{ "Skeleton loading time" };
 		archive >> *_skeleton;
 	}
 	return true;
@@ -501,7 +499,7 @@ Model* LoadModel(std::string modelName)
 	std::string pathToModelFolder = "";
 
 	// Load file
-	const aiScene* pScene = aiImportFile(std::string("..\\..\\res\\" + modelName).c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
+	const aiScene* pScene = aiImportFile(std::string("..\\..\\res\\TPose.fbx").c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
 
 	assert(pScene != nullptr);
 
@@ -638,36 +636,12 @@ Model* LoadModel(std::string modelName)
 
 	aiReleaseImport(pScene);
 
-	std::string animName = std::string("..\\..\\res\\") + modelName.substr(0, modelName.find_last_of(".")) + std::string("_OrcIdle.fbx");
+	std::string animName = std::string("..\\..\\res\\TPose_OrcIdle.fbx");
 	const aiScene* pAnimScene = aiImportFile(animName.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
 
 	model->animations["idle"] = new Animation(model, pAnimScene, "idle");
 
-	ozz::animation::Skeleton* skeletonOZZ = new ozz::animation::Skeleton();
-	std::string skeNameOzz = std::string(animName.substr(0, animName.find_last_of("_")) + "_skeleton.ozz");
-	if (!LoadSkeletonOZZ(skeNameOzz.c_str(), skeletonOZZ))
-	{
-		std::cout << "OZZ LoadSkeleton error: " << skeNameOzz << std::endl;
-		delete skeletonOZZ;
-		skeletonOZZ = nullptr;
-	}
-	else
-	{
-		model->skeleton = skeletonOZZ;
-	}
-
-	ozz::animation::Animation* animationOZZ = new ozz::animation::Animation();
-	std::string animNameOzz = std::string(animName.substr(0, animName.find_last_of(".")) + ".ozz");
-	if (!LoadAnimationOZZ(animNameOzz.c_str(), animationOZZ))
-	{
-		std::cout << "OZZ LoadAnimation error: " << animNameOzz << std::endl;
-		delete animationOZZ;
-		animationOZZ = nullptr;
-	}
-	else
-	{
-		model->ozzAnimations.insert({ std::string("idle"), animationOZZ });
-	}
 
 	return model;
 }
+

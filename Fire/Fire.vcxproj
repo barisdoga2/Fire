@@ -114,16 +114,17 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;OZZ_USE_DYNAMIC_LINKING;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x64/debug/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ozz_animation_d.lib;ozz_animation_offline_d.lib;ozz_base_d.lib;ozz_geometry_d.lib;ozz_options_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ozz_animation.lib;ozz_animation_offline.lib;ozz_animation_tools.lib;ozz_base.lib;ozz_geometry.lib;ozz_options.lib;sample_framework.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -141,13 +142,16 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x64/release/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ozz_animation_offline_r.lib;ozz_animation_r.lib;ozz_base_r.lib;ozz_geometry_r.lib;ozz_options_r.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ozz_animation.lib;ozz_animation_offline.lib;ozz_animation_tools.lib;ozz_base.lib;ozz_geometry.lib;ozz_options.lib;sample_framework.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Keyboard.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Main2.cpp" />
+    <ClCompile Include="Main3.cpp" />
+    <ClCompile Include="mesh.cc" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="Shader.cpp" />
   </ItemGroup>
@@ -156,9 +160,9 @@
     <ClInclude Include="Bone.hpp" />
     <ClInclude Include="Camera.hpp" />
     <ClInclude Include="Keyboard.hpp" />
+    <ClInclude Include="mesh.h" />
     <ClInclude Include="Model.hpp" />
     <ClInclude Include="Mouse.hpp" />
-    <ClInclude Include="PlaybackController.hpp" />
     <ClInclude Include="Shader.hpp" />
     <ClInclude Include="Utils.hpp" />
   </ItemGroup>
