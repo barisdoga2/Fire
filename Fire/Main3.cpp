@@ -139,6 +139,92 @@ static const char* FS = "\n"
 "}\n"
 "\n";
 
+std::unordered_map<std::string, float> upperBodyMask = {
+{"mixamorig:Hips", 0.0f},
+{"mixamorig:Spine", 0.3f},
+{"mixamorig:Spine1", 0.6f},
+{"mixamorig:Spine2", 1.0f},
+
+{"mixamorig:Bowl5", 1.0f},
+{"mixamorig:Bowl1", 1.0f},
+{"mixamorig:Bowl6", 1.0f},
+{"mixamorig:Bowl2", 1.0f},
+{"mixamorig:Bowl7", 1.0f},
+{"mixamorig:Bowl3", 1.0f},
+{"mixamorig:Bowl8", 1.0f},
+{"mixamorig:Bowl4", 1.0f},
+
+{"mixamorig:Neck", 1.0f},
+{"mixamorig:Head", 1.0f},
+{"mixamorig:Leye", 1.0f},
+{"mixamorig:Reye", 1.0f},
+{"mixamorig:Head", 1.0f},
+{"mixamorig:HeadTop_End", 1.0f},
+{"mixamorig:LeftShoulder", 1.0f},
+{"mixamorig:LeftArm", 1.0f},
+{"mixamorig:LeftForeArm", 1.0f},
+{"mixamorig:LeftHand", 1.0f},
+{"mixamorig:RightShoulder", 1.0f},
+{"mixamorig:RightArm", 1.0f},
+{"mixamorig:RightForeArm", 1.0f},
+{"mixamorig:RightHand", 1.0f},
+
+{"mixamorig:RightHandPinky1", 1.0f},
+{"mixamorig:RightHandPinky2", 1.0f},
+{"mixamorig:RightHandPinky3", 1.0f},
+{"mixamorig:RightHandPinky4", 1.0f},
+{"mixamorig:RightHandRing1", 1.0f},
+{"mixamorig:RightHandRing2", 1.0f},
+{"mixamorig:RightHandRing3", 1.0f},
+{"mixamorig:RightHandRing4", 1.0f},
+{"mixamorig:RightHandMiddle1", 1.0f},
+{"mixamorig:RightHandMiddle2", 1.0f},
+{"mixamorig:RightHandMiddle3", 1.0f},
+{"mixamorig:RightHandMiddle4", 1.0f},
+{"mixamorig:RightHandIndex1", 1.0f},
+{"mixamorig:RightHandIndex2", 1.0f},
+{"mixamorig:RightHandIndex3", 1.0f},
+{"mixamorig:RightHandIndex4", 1.0f},
+{"mixamorig:RightHandThumb1", 1.0f},
+{"mixamorig:RightHandThumb2", 1.0f},
+{"mixamorig:RightHandThumb3", 1.0f},
+{"mixamorig:RightHandThumb4", 1.0f},
+{"mixamorig:LeftHandPinky1", 1.0f},
+{"mixamorig:LeftHandPinky2", 1.0f},
+{"mixamorig:LeftHandPinky3", 1.0f},
+{"mixamorig:LeftHandPinky4", 1.0f},
+{"mixamorig:LeftHandRing1", 1.0f},
+{"mixamorig:LeftHandRing2", 1.0f},
+{"mixamorig:LeftHandRing3", 1.0f},
+{"mixamorig:LeftHandRing4", 1.0f},
+{"mixamorig:LeftHandMiddle1", 1.0f},
+{"mixamorig:LeftHandMiddle2", 1.0f},
+{"mixamorig:LeftHandMiddle3", 1.0f},
+{"mixamorig:LeftHandMiddle4", 1.0f},
+{"mixamorig:LeftHandIndex1", 1.0f},
+{"mixamorig:LeftHandIndex2", 1.0f},
+{"mixamorig:LeftHandIndex3", 1.0f},
+{"mixamorig:LeftHandIndex4", 1.0f},
+{"mixamorig:LeftHandThumb1", 1.0f},
+{"mixamorig:LeftHandThumb2", 1.0f},
+{"mixamorig:LeftHandThumb3", 1.0f},
+{"mixamorig:LeftHandThumb4", 1.0f}
+};
+
+std::unordered_map<std::string, float> lowerBodyMask = {
+	{"mixamorig:Hips", 1.0f},
+	{"mixamorig:LeftUpLeg", 1.0f},
+	{"mixamorig:LeftLeg", 1.0f},
+	{"mixamorig:LeftFoot", 1.0f},
+	{"mixamorig:RightUpLeg", 1.0f},
+	{"mixamorig:RightLeg", 1.0f},
+	{"mixamorig:RightFoot", 1.0f},
+	{"mixamorig:RightToeBase", 1.0f},
+	{"mixamorig:RightToe_End", 1.0f},
+	{"mixamorig:LeftToeBase", 1.0f},
+	{"mixamorig:LeftToe_End", 1.0f},
+};
+
 struct AssimpNodeData
 {
 	glm::mat4x4 transformation;
@@ -716,6 +802,8 @@ private:
 	double m_BlendDuration = 0.0;
 	bool m_IsBlending = false;
 
+	float upperBodyBlend = 0.0f; // 0 = run only, 1 = aim upper
+
 public:
 	EasyAnimation* m_CurrentAnimation;
 
@@ -738,6 +826,40 @@ public:
 		m_BlendTime = 0.0;
 		m_BlendDuration = duration;
 		m_IsBlending = true;
+	}
+
+	void UpdateLayered(EasyAnimation* lowerAnim, EasyAnimation* upperAnim, bool aiming, double dt)
+	{
+		if (!lowerAnim || !upperAnim) return;
+
+		// Smoothly change blend factor
+		float target = aiming ? 1.0f : 0.0f;
+		upperBodyBlend = glm::mix(upperBodyBlend, target, (float)(dt * 8.0)); // smooth
+
+		// Update both animations
+		double runTime = fmod(m_CurrentTime * lowerAnim->m_TicksPerSecond, lowerAnim->m_Duration);
+		double aimTime = fmod(m_CurrentTime * upperAnim->m_TicksPerSecond, upperAnim->m_Duration);
+		m_CurrentTime += dt;
+
+		std::vector<glm::mat4> runBones(200, glm::mat4(1.0f));
+		std::vector<glm::mat4> aimBones(200, glm::mat4(1.0f));
+
+		CalculateBoneTransform(lowerAnim, &lowerAnim->m_RootNode, glm::mat4(1.0f), runBones, runTime);
+		CalculateBoneTransform(upperAnim, &upperAnim->m_RootNode, glm::mat4(1.0f), aimBones, aimTime);
+
+		// Mix upper/lower bones
+		for (auto& [boneName, info] : lowerAnim->m_BoneInfoMap)
+		{
+			int id = info.id;
+			float mask = 0.0f;
+			if (auto it = upperBodyMask.find(boneName); it != upperBodyMask.end())
+				mask = it->second * upperBodyBlend;
+
+			float lowerW = 1.0f - mask;
+			float upperW = mask;
+
+			m_FinalBoneMatrices[id] = runBones[id] * lowerW + aimBones[id] * upperW;
+		}
 	}
 
 	void UpdateAnimation(double dt)
@@ -880,26 +1002,18 @@ public:
 		{
 			const aiScene* animScene = aiImportFile(file.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
 			assert(animScene != nullptr && animScene->mNumAnimations == 1);
-			if (animator)
-			{
-				animations.push_back(new EasyAnimation(animScene, animScene->mAnimations[0], m_BoneInfoMap, m_BoneCounter));
-			}
-			else
-			{
-				EasyAnimation* anim = new EasyAnimation(animScene, animScene->mAnimations[0], m_BoneInfoMap, m_BoneCounter);
-				animator = new EasyAnimator(anim);
-				animations.push_back(anim);
-			}
+			animations.push_back(new EasyAnimation(animScene, animScene->mAnimations[0], m_BoneInfoMap, m_BoneCounter));
 			aiReleaseImport(animScene);
 		}
+		animator = new EasyAnimator(animations.at(1));
 	}
 
-	bool Update(double _dt)
+	bool Update(double _dt, bool mb1_pressed)
 	{
-		if (animator)
-		{
-			animator->UpdateAnimation(_dt);
-		}
+		EasyAnimation* runAnim = animations.at(1);   // running anim
+		EasyAnimation* aimAnim = animations.at(2);   // aiming anim
+		animator->UpdateLayered(runAnim, aimAnim, mb1_pressed, _dt);
+
 		return true;
 	}
 
@@ -1177,10 +1291,11 @@ private:
 class EasyPlaygrond {
 public:
 	static inline int exitRequested = 0;
-	static inline bool animation = false;
+	static inline int animation = 1;
+	static inline bool mb1_pressed = false;
 	static inline EasyCamera* cameraPtr;
 	const EasyDisplay& display_;
-	EasyModel model = EasyModel("../../res/Kachujin G Rosales Skin.fbx", { "../../res/Standing Idle on Kachujin G Rosales wo Skin.fbx", "../../res/Running on Kachujin G Rosales wo Skin.fbx" });
+	EasyModel model = EasyModel("../../res/Kachujin G Rosales Skin.fbx", { "../../res/Standing Idle on Kachujin G Rosales wo Skin.fbx", "../../res/Running on Kachujin G Rosales wo Skin.fbx", "../../res/Standing Aim Idle 01 on Kachujin H Rosales wo Skin.fbx" });
 	//EasyModel sword = EasyModel("../../res/sword.fbx");
 	EasyShader shader = EasyShader(VS, FS);
 	EasyCamera camera = EasyCamera(display_, { 3,194,166 }, { 3-0.15,194-0.44,166-0.895 }, 74.f, 0.01f, 1000.f);
@@ -1243,20 +1358,12 @@ public:
 
 	bool Render(double _dt)
 	{
-		static glm::mat4x4 handTransform = glm::mat4x4(1);
+		//if (model.animator)
+		//	model.animator->BlendTo(model.animations.at(animation ? 1 : 0), 1.0);
 
-		if (model.animator)
-			model.animator->BlendTo(model.animations.at(animation ? 1 : 0), 1.0);
-		model.Update(_dt);
+		model.Update(_dt, mb1_pressed);
 
 		camera.Update(_dt);
-
-		if (auto res = model.m_BoneInfoMap.find("mixamorig:LeftHand"); res != model.m_BoneInfoMap.end() && model.animator)
-		{
-			int boneID = res->second.id;
-			handTransform = model.animator->GetFinalBoneMatrices()[boneID];
-		}
-
 
 		bool success = true;
 
@@ -1373,6 +1480,10 @@ public:
 
 	static void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 	{
+		if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS)
+			mb1_pressed = true;
+		else if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_RELEASE)
+			mb1_pressed = false;
 		cameraPtr->mouse_callback(window, button, action, mods);
 	}
 
@@ -1387,7 +1498,7 @@ public:
 
 		if (key == GLFW_KEY_T && action == GLFW_RELEASE)
 		{
-			animation = !animation;
+			animation = 2;
 		}
 	}
 
