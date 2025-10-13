@@ -84,6 +84,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -102,6 +103,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -119,12 +121,13 @@
       <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x64/debug/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ozz_animation.lib;ozz_animation_offline.lib;ozz_animation_tools.lib;ozz_base.lib;ozz_geometry.lib;ozz_options.lib;sample_framework.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -137,34 +140,48 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x64/release/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ozz_animation.lib;ozz_animation_offline.lib;ozz_animation_tools.lib;ozz_base.lib;ozz_geometry.lib;ozz_options.lib;sample_framework.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="Keyboard.cpp" />
+    <ClCompile Include="EasyAnimation.cpp" />
+    <ClCompile Include="EasyAnimator.cpp" />
+    <ClCompile Include="EasyBuffer.cpp" />
+    <ClCompile Include="EasyCamera.cpp" />
+    <ClCompile Include="EasyDisplay.cpp" />
+    <ClCompile Include="EasyIpAddress.cpp" />
+    <ClCompile Include="EasyModel.cpp" />
+    <ClCompile Include="EasyPlayground.cpp" />
+    <ClCompile Include="EasyShader.cpp" />
+    <ClCompile Include="EasySocket.cpp" />
+    <ClCompile Include="EasyTexture.cpp" />
+    <ClCompile Include="imgui_impl_glfw.cpp" />
+    <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Main2.cpp" />
-    <ClCompile Include="Main3.cpp" />
-    <ClCompile Include="mesh.cc" />
-    <ClCompile Include="Mouse.cpp" />
-    <ClCompile Include="Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Animator.hpp" />
-    <ClInclude Include="Bone.hpp" />
-    <ClInclude Include="Camera.hpp" />
-    <ClInclude Include="Keyboard.hpp" />
-    <ClInclude Include="mesh.h" />
-    <ClInclude Include="Model.hpp" />
-    <ClInclude Include="Mouse.hpp" />
-    <ClInclude Include="Shader.hpp" />
-    <ClInclude Include="Utils.hpp" />
+    <ClInclude Include="EasyAnimation.hpp" />
+    <ClInclude Include="EasyAnimator.hpp" />
+    <ClInclude Include="EasyBuffer.hpp" />
+    <ClInclude Include="EasyCamera.hpp" />
+    <ClInclude Include="EasyDisplay.hpp" />
+    <ClInclude Include="EasyIpAddress.hpp" />
+    <ClInclude Include="EasyModel.hpp" />
+    <ClInclude Include="EasyPlayground.hpp" />
+    <ClInclude Include="EasyShader.hpp" />
+    <ClInclude Include="EasySocket.hpp" />
+    <ClInclude Include="EasyTexture.hpp" />
+    <ClInclude Include="GL_Ext.hpp" />
+    <ClInclude Include="imgui_impl_glfw.h" />
+    <ClInclude Include="imgui_impl_opengl3.h" />
+    <ClInclude Include="imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="EasyUtility.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
