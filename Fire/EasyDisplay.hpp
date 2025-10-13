@@ -11,6 +11,7 @@ public:
     GLFWwindow* window = nullptr;
 
     EasyDisplay(glm::tvec2<int> windowSize = { 800, 600 });
+    ~EasyDisplay();
 
     bool Init();
 

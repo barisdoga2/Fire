@@ -1,9 +1,33 @@
 #include "EasyShader.hpp"
 #include "GL_Ext.hpp"
+#include "EasyUtility.hpp"
 
 #include <iostream>
 
 
+
+EasyShader::EasyShader(const std::string& name)
+{
+    prog = glCreateProgram();
+
+    std::string vertexShaderSource = LoadFile("../../res/" + name + "V.glsl");
+    if (vertexShaderSource.length() > 0)
+        AttachShader(GL_VERTEX_SHADER, vertexShaderSource.c_str());
+
+    std::string fragmentShaderSource = LoadFile("../../res/" + name + "F.glsl");
+    if (fragmentShaderSource.length() > 0)
+        AttachShader(GL_FRAGMENT_SHADER, fragmentShaderSource.c_str());
+
+    glLinkProgram(prog);
+    GLint status = GL_FALSE, log[1 << 11] = { 0 };
+    GL(GetProgramiv(prog, GL_LINK_STATUS, &status));
+    if (status != GL_TRUE)
+    {
+        glGetProgramInfoLog(prog, sizeof(log), nullptr, (GLchar*)log);
+        std::cout << (std::string((GLchar*)log).length() == 0 ? "Error Loading Shader!" : (GLchar*)log) << std::endl;
+    }
+    glUseProgram(prog);
+}
 
 EasyShader::EasyShader(const char* VS, const char* FS)
 {

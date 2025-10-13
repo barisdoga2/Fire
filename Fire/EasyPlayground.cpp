@@ -14,117 +14,74 @@
 #include "imgui_impl_glfw.h"
 
 
-bool show_demo_window = true;
-bool show_another_window = false;
-ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-void imguiInit(const EasyDisplay& display)
-{
-	const char* glsl_version = "#version 130";
-
-	// Setup Dear ImGui context
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-
-	ImVector<ImWchar> ranges;
-	ImFontGlyphRangesBuilder builder;
-	builder.AddText(u8"ğĞşŞıİüÜöÖçÇ");
-	builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
-	builder.BuildRanges(&ranges);
-	io.Fonts->AddFontFromFileTTF("../../res/Arial.ttf", 20.f, 0, ranges.Data);
-	io.Fonts->Build();
-
-	// Setup Dear ImGui style
-	ImGui::StyleColorsDark();
-	//ImGui::StyleColorsLight();
-
-	// Setup Platform/Renderer backends
-	ImGui_ImplGlfw_InitForOpenGL(display.window, false);
-	ImGui_ImplOpenGL3_Init(glsl_version);
-
-}
-
-void imguiRender()
-{
-	// Start the Dear ImGui frame
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-
-	// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-	if (show_demo_window)
-		ImGui::ShowDemoWindow(&show_demo_window);
-
-	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-	{
-		static float f = 0.0f;
-		static int counter = 0;
-
-		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-		ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-		ImGui::Checkbox("Another Window", &show_another_window);
-
-		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-		if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-			counter++;
-		ImGui::SameLine();
-		ImGui::Text("counter = %d", counter);
-
-		//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-		ImGui::End();
-	}
-
-	// 3. Show another simple window.
-	if (show_another_window)
-	{
-		ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-		ImGui::Text("hello");
-		if (ImGui::Button("Close Me"))
-			show_another_window = false;
-		ImGui::End();
-	}
-
-	// Rendering
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
-
-void imguiDeInit()
-{
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
-}
 
 EasyPlayground::EasyPlayground(const EasyDisplay& display) : display_(display)
 {
-	;
+	
+}
+
+EasyPlayground::~EasyPlayground()
+{
+	// ImGUI
+	{
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
+		ImGui::DestroyContext();
+	}
 }
 
 bool EasyPlayground::Init()
 {
-	imguiInit(display_);
+	// Callbacks
+	{
+		static EasyPlayground* instance = this;
+		glfwSetKeyCallback(display_.window, [](GLFWwindow* w, int k, int s, int a, int m) { instance->key_callback(w, k, s, a, m); });
+		glfwSetCursorPosCallback(display_.window, [](GLFWwindow* w, double x, double y) { instance->cursor_callback(w, x, y); });
+		glfwSetMouseButtonCallback(display_.window, [](GLFWwindow* window, int button, int action, int mods) { instance->mouse_callback(window, button, action, mods); });
+		glfwSetScrollCallback(display_.window, [](GLFWwindow* w, double x, double y) { instance->scroll_callback(w, x, y); });
+		glfwSetCharCallback(display_.window, [](GLFWwindow* w, unsigned int x) { instance->char_callback(w, x); });
+	}
 
-	static EasyPlayground* instance = this;
-	glfwSetKeyCallback(display_.window, [](GLFWwindow* w, int k, int s, int a, int m) { instance->key_callback(w, k, s, a, m); });
-    glfwSetCursorPosCallback(display_.window, [](GLFWwindow* w, double x, double y) { instance->cursor_callback(w, x, y); });
-    glfwSetMouseButtonCallback(display_.window, [](GLFWwindow* window, int button, int action, int mods) { instance->mouse_callback(window, button, action, mods); });
-    glfwSetScrollCallback(display_.window, [](GLFWwindow* w, double x, double y) { instance->scroll_callback(w, x, y); });
-	glfwSetCharCallback(display_.window, [](GLFWwindow* w, unsigned int x) { instance->char_callback(w, x); });
+	// Asset
+	{
+		model.LoadToGPU();
+	}
 
-    model.LoadToGPU();
+	// Shader
+	{
+		shader.Start();
+		shader.BindAttribs({ "position", "uv", "normal", "tangent", "bitangent", "boneIds", "weights" });
+		shader.BindUniforms({ "diffuse", "view", "proj", "model", "animated" });
+		shader.BindUniformArray("boneMatrices", 200);
+		shader.Stop();
+	}
 
-    shader.Start();
-    shader.BindAttribs({ "position", "uv", "normal", "tangent", "bitangent", "boneIds", "weights" });
-    shader.BindUniforms({ "diffuse", "view", "proj", "model", "animated" });
-    shader.BindUniformArray("boneMatrices", 200);
-    shader.Stop();
+	// ImGUI
+	{
+		const char* glsl_version = "#version 130";
 
+		// Setup Dear ImGui context
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+
+		ImVector<ImWchar> ranges;
+		ImFontGlyphRangesBuilder builder;
+		builder.AddText(u8"ğĞşŞıİüÜöÖçÇ");
+		builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+		builder.BuildRanges(&ranges);
+		io.Fonts->AddFontFromFileTTF("../../res/Arial.ttf", 20.f, 0, ranges.Data);
+		io.Fonts->Build();
+
+		// Setup Dear ImGui style
+		ImGui::StyleColorsDark();
+		//ImGui::StyleColorsLight();
+
+		// Setup Platform/Renderer backends
+		ImGui_ImplGlfw_InitForOpenGL(display_.window, false);
+		ImGui_ImplOpenGL3_Init(glsl_version);
+	}
 
     return true;
 }
@@ -256,11 +213,60 @@ bool EasyPlayground::Render(double _dt)
 			}
 		}
 
-
 		shader.Stop();
+	}
 
+	// ImGUI Render
+	{
+		static bool show_demo_window = true;
+		static bool show_another_window = false;
+		static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-		imguiRender();
+		// Start the Dear ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+		if (show_demo_window)
+			ImGui::ShowDemoWindow(&show_demo_window);
+
+		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+		{
+			static float f = 0.0f;
+			static int counter = 0;
+
+			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+			ImGui::Checkbox("Another Window", &show_another_window);
+
+			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+				counter++;
+			ImGui::SameLine();
+			ImGui::Text("counter = %d", counter);
+
+			//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+			ImGui::End();
+		}
+
+		// 3. Show another simple window.
+		if (show_another_window)
+		{
+			ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+			ImGui::Text("hello");
+			if (ImGui::Button("Close Me"))
+				show_another_window = false;
+			ImGui::End();
+		}
+
+		// Rendering
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
 
 	// End Render

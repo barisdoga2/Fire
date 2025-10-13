@@ -15,6 +15,7 @@ public:
     std::unordered_map<std::string, GLint> attribs;
     std::unordered_map<std::string, GLint> uniforms;
 
+    EasyShader(const std::string& name);
     EasyShader(const char* VS, const char* FS);
     void Start();
     void Stop();

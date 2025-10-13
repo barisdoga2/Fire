@@ -12,11 +12,17 @@
     <Filter Include="Source Files\Core">
       <UniqueIdentifier>{7384b4e4-b63e-442a-97c0-e2834f5816bb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Ext">
-      <UniqueIdentifier>{4b33e866-9718-4f9a-8466-2f452515054e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Net">
       <UniqueIdentifier>{3801cbfb-d9a5-49ef-b7bc-bbe5b3f74ed2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Core\Model">
+      <UniqueIdentifier>{0e241eeb-c913-45af-b631-af999044ff68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Core\Render">
+      <UniqueIdentifier>{bdd7a664-b9e9-4df2-9431-4b8d44866746}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Core\Ext">
+      <UniqueIdentifier>{4b33e866-9718-4f9a-8466-2f452515054e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -26,32 +32,11 @@
     <ClCompile Include="EasyPlayground.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EasyAnimation.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyAnimator.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyCamera.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyDisplay.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyModel.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyShader.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyTexture.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
     <ClCompile Include="imgui_impl_glfw.cpp">
-      <Filter>Source Files\Ext</Filter>
+      <Filter>Source Files\Core\Ext</Filter>
     </ClCompile>
     <ClCompile Include="imgui_impl_opengl3.cpp">
-      <Filter>Source Files\Ext</Filter>
+      <Filter>Source Files\Core\Ext</Filter>
     </ClCompile>
     <ClCompile Include="EasyBuffer.cpp">
       <Filter>Source Files\Net</Filter>
@@ -62,31 +47,31 @@
     <ClCompile Include="EasySocket.cpp">
       <Filter>Source Files\Net</Filter>
     </ClCompile>
+    <ClCompile Include="EasyAnimation.cpp">
+      <Filter>Source Files\Core\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyAnimator.cpp">
+      <Filter>Source Files\Core\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyModel.cpp">
+      <Filter>Source Files\Core\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyCamera.cpp">
+      <Filter>Source Files\Core\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyDisplay.cpp">
+      <Filter>Source Files\Core\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyShader.cpp">
+      <Filter>Source Files\Core\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyTexture.cpp">
+      <Filter>Source Files\Core\Model</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EasyPlayground.hpp">
       <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyAnimation.hpp">
-      <Filter>Source Files\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyAnimator.hpp">
-      <Filter>Source Files\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyCamera.hpp">
-      <Filter>Source Files\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyDisplay.hpp">
-      <Filter>Source Files\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyModel.hpp">
-      <Filter>Source Files\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyShader.hpp">
-      <Filter>Source Files\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyTexture.hpp">
-      <Filter>Source Files\Core</Filter>
     </ClInclude>
     <ClInclude Include="EasyUtility.hpp">
       <Filter>Source Files\Core</Filter>
@@ -95,13 +80,13 @@
       <Filter>Source Files\Core</Filter>
     </ClInclude>
     <ClInclude Include="imgui_impl_opengl3_loader.h">
-      <Filter>Source Files\Ext</Filter>
+      <Filter>Source Files\Core\Ext</Filter>
     </ClInclude>
     <ClInclude Include="imgui_impl_glfw.h">
-      <Filter>Source Files\Ext</Filter>
+      <Filter>Source Files\Core\Ext</Filter>
     </ClInclude>
     <ClInclude Include="imgui_impl_opengl3.h">
-      <Filter>Source Files\Ext</Filter>
+      <Filter>Source Files\Core\Ext</Filter>
     </ClInclude>
     <ClInclude Include="EasyBuffer.hpp">
       <Filter>Source Files\Net</Filter>
@@ -111,6 +96,27 @@
     </ClInclude>
     <ClInclude Include="EasySocket.hpp">
       <Filter>Source Files\Net</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyAnimation.hpp">
+      <Filter>Source Files\Core\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyAnimator.hpp">
+      <Filter>Source Files\Core\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyModel.hpp">
+      <Filter>Source Files\Core\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyCamera.hpp">
+      <Filter>Source Files\Core\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyDisplay.hpp">
+      <Filter>Source Files\Core\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyShader.hpp">
+      <Filter>Source Files\Core\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyTexture.hpp">
+      <Filter>Source Files\Core\Model</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

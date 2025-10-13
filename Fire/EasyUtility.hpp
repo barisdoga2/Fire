@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -10,6 +11,27 @@
 #include <assimp/scene.h>
 
 
+
+static inline std::string LoadFile(std::string file)
+{
+    std::string ret;
+
+    std::string line;
+    std::ifstream inFile(file);
+    if (inFile.good())
+    {
+        while (getline(inFile, line))
+        {
+            if (line.length() > 0)
+            {
+                ret.append(line + "\n");
+            }
+        }
+        inFile.close();
+    }
+
+    return ret;
+}
 
 static inline glm::mat4 AiToGlm(const aiMatrix4x4& m)
 {

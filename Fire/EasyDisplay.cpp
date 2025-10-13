@@ -12,6 +12,12 @@ EasyDisplay::EasyDisplay(glm::tvec2<int> windowSize) : windowSize(windowSize)
 
 }
 
+EasyDisplay::~EasyDisplay()
+{
+	glfwDestroyWindow(window);
+	glfwTerminate();
+}
+
 bool EasyDisplay::Init()
 {
 	if (!glfwInit())
