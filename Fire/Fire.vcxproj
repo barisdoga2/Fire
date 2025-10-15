@@ -127,7 +127,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x64/debug/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -146,7 +146,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x64/release/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -154,6 +154,7 @@
     <ClCompile Include="EasyAnimator.cpp" />
     <ClCompile Include="EasyBuffer.cpp" />
     <ClCompile Include="EasyCamera.cpp" />
+    <ClCompile Include="EasyDB.cpp" />
     <ClCompile Include="EasyDisplay.cpp" />
     <ClCompile Include="EasyIpAddress.cpp" />
     <ClCompile Include="EasyModel.cpp" />
@@ -170,6 +171,7 @@
     <ClInclude Include="EasyAnimator.hpp" />
     <ClInclude Include="EasyBuffer.hpp" />
     <ClInclude Include="EasyCamera.hpp" />
+    <ClInclude Include="EasyDB.hpp" />
     <ClInclude Include="EasyDisplay.hpp" />
     <ClInclude Include="EasyIpAddress.hpp" />
     <ClInclude Include="EasyModel.hpp" />

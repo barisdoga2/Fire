@@ -3,56 +3,61 @@
 #include <ws2tcpip.h>
 
 
-EasyIpAddress::EasyIpAddress(std::uint8_t byte0, std::uint8_t byte1, std::uint8_t byte2, std::uint8_t byte3) : m_address(htonl(static_cast<std::uint32_t>((byte0 << 24) | (byte1 << 16) | (byte2 << 8) | byte3)))
-{}
 
-EasyIpAddress::EasyIpAddress(std::uint32_t address) : m_address(htonl(address))
-{}
+const EasyIpAddress EasyIpAddress::Any(0, 0, 0, 0);
+const EasyIpAddress EasyIpAddress::LocalHost(127, 0, 0, 1);
+const EasyIpAddress EasyIpAddress::Broadcast(255, 255, 255, 255);
 
-std::uint32_t EasyIpAddress::toInteger() const
+EasyIpAddress::EasyIpAddress() : m_address(htonl(0)) {}
+
+EasyIpAddress::EasyIpAddress(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3)
 {
-	return ntohl(m_address);
+    uint32_t addrHost = (static_cast<uint32_t>(b0) << 24) |
+        (static_cast<uint32_t>(b1) << 16) |
+        (static_cast<uint32_t>(b2) << 8) |
+        static_cast<uint32_t>(b3);
+    m_address = htonl(addrHost); // convert to network order
 }
 
-std::optional<EasyIpAddress> EasyIpAddress::resolve(std::string_view address)
+EasyIpAddress::EasyIpAddress(uint32_t addressNetworkOrder)
+    : m_address(addressNetworkOrder) {
+}
+
+uint32_t EasyIpAddress::toInteger() const
 {
-	static const EasyIpAddress Any(0, 0, 0, 0);
-	static const EasyIpAddress LocalHost(127, 0, 0, 1);
-	static const EasyIpAddress Broadcast(255, 255, 255, 255);
+    return ntohl(m_address); // convert to host order
+}
 
-	using namespace std::string_view_literals;
+std::string EasyIpAddress::toString() const
+{
+    char buffer[INET_ADDRSTRLEN] = {};
+    in_addr addr{};
+    addr.s_addr = m_address; // already network order
+    if (inet_ntop(AF_INET, &addr, buffer, sizeof(buffer)) == nullptr)
+        return {};
+    return std::string(buffer);
+}
 
-	if (address.empty())
-		return std::nullopt;
+EasyIpAddress EasyIpAddress::resolve(const std::string& address)
+{
+    if (address.empty())
+        return Any;
 
-	if (address == "255.255.255.255"sv)
-	{
-		return Broadcast;
-	}
+    in_addr addr{};
+    if (inet_pton(AF_INET, address.c_str(), &addr) == 1)
+        return EasyIpAddress(addr.s_addr); // already network order
 
-	if (address == "0.0.0.0"sv)
-		return Any;
+    addrinfo hints{};
+    hints.ai_family = AF_INET;
 
-	std::uint32_t ip;
-	inet_pton(AF_INET, address.data(), &ip);
-	if (ip != INADDR_NONE)
-		return EasyIpAddress(ntohl(ip));
+    addrinfo* result = nullptr;
+    if (getaddrinfo(address.c_str(), nullptr, &hints, &result) == 0 && result)
+    {
+        sockaddr_in* sin = reinterpret_cast<sockaddr_in*>(result->ai_addr);
+        uint32_t net = sin->sin_addr.s_addr;
+        freeaddrinfo(result);
+        return EasyIpAddress(net);
+    }
 
-
-	addrinfo hints{};
-	hints.ai_family = AF_INET;
-
-	addrinfo* result = nullptr;
-	if (getaddrinfo(address.data(), nullptr, &hints, &result) == 0 && result != nullptr)
-	{
-		sockaddr_in sin{};
-		std::memcpy(&sin, result->ai_addr, sizeof(*result->ai_addr));
-
-		const std::uint32_t ip = sin.sin_addr.s_addr;
-		freeaddrinfo(result);
-
-		return EasyIpAddress(ntohl(ip));
-	}
-
-	return std::nullopt;
+    return Any;
 }

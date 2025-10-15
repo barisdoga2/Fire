@@ -1,20 +1,24 @@
 #pragma once
 
 #include <iostream>
-#include <optional>
 
 
 
 class EasyIpAddress {
-private:
-	std::uint32_t m_address;
 public:
-	EasyIpAddress(std::uint8_t byte0, std::uint8_t byte1, std::uint8_t byte2, std::uint8_t byte3);
+    EasyIpAddress();                                           // 0.0.0.0
+    EasyIpAddress(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3);
+    explicit EasyIpAddress(uint32_t addressNetworkOrder);      // already network order
 
-	explicit EasyIpAddress(std::uint32_t address);
+    static const EasyIpAddress Any;
+    static const EasyIpAddress LocalHost;
+    static const EasyIpAddress Broadcast;
 
-	std::uint32_t toInteger() const;
+    uint32_t toInteger() const;                  // host order integer
+    std::string toString() const;                // "A.B.C.D"
+    static EasyIpAddress resolve(const std::string& address); // from string/hostname
 
-	static std::optional<EasyIpAddress> resolve(std::string_view address);
+private:
+    uint32_t m_address; // stored in network byte order
 
 };

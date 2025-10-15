@@ -1,36 +1,37 @@
 #include "EasyBuffer.hpp"
 
-EasyBuffer::EasyBuffer(size_t m_capacity) : m_capacity(m_capacity), m_data(malloc(m_capacity))
+EasyBuffer::EasyBuffer() : vector(1472U), ptr(0U)
 {
-
+	
 }
 
 EasyBuffer::~EasyBuffer()
 {
-	free(m_data);
+
 }
 
 void EasyBuffer::Release()
 {
+	ptr = 0U;
 	EasyBuffer::Free(this);
 }
 
 void* EasyBuffer::Data()
 {
-	return m_data;
+	return data();
 }
 
 size_t EasyBuffer::Capacity()
 {
-	return m_capacity;
+	return size();
 }
 
-void EasyBuffer::Init(size_t buffer_count, size_t buffer_size)
+void EasyBuffer::Init(size_t buffer_count)
 {
 	if (!isInit)
 	{
 		for (size_t i = 0; i < buffer_count; i++)
-			freeBuffers.push_back(new EasyBuffer(buffer_size));
+			freeBuffers.push_back(new EasyBuffer());
 		isInit = true;
 	}
 }

@@ -1,38 +1,28 @@
-#include "EasySocket.hpp"
-
 #include <ws2tcpip.h>
 
-EasySocket::EasySocket() : m_isBlocking(true), m_socket(INVALID_SOCKET)
+#include "EasySocket.hpp"
+
+
+
+EasySocket::EasySocket() : m_isBlocking(false), m_socket(INVALID_SOCKET)
 {
 	
 }
 
-static sockaddr_in createAddress(std::uint32_t address, unsigned short port)
+static sockaddr_in makeSockAddr(const EasyIpAddress& ip, unsigned short port)
 {
-	auto addr = sockaddr_in();
-	addr.sin_addr.s_addr = htonl(address);
+	sockaddr_in addr{};
 	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = ip.toInteger() == 0 ? INADDR_ANY : ip.toInteger();
+	addr.sin_addr.s_addr = ip.toInteger() ? ip.toInteger() : INADDR_ANY;
+	addr.sin_addr.s_addr = ip.toInteger() ? htonl(ip.toInteger()) : INADDR_ANY;
 	addr.sin_port = htons(port);
-
 	return addr;
 }
 
-static EasySocket::EStatus getErrorStatus()
+static uint64_t getErrorStatus()
 {
-
-	switch (WSAGetLastError())
-	{
-		case WSAEWOULDBLOCK:  return EasySocket::EStatus::NotReady;
-		case WSAEALREADY:     return EasySocket::EStatus::NotReady;
-		case WSAECONNABORTED: return EasySocket::EStatus::Disconnected;
-		case WSAECONNRESET:   return EasySocket::EStatus::Disconnected;
-		case WSAETIMEDOUT:    return EasySocket::EStatus::Disconnected;
-		case WSAENETRESET:    return EasySocket::EStatus::Disconnected;
-		case WSAENOTCONN:     return EasySocket::EStatus::Disconnected;
-		case WSAEISCONN:      return EasySocket::EStatus::Done;
-		default:              return EasySocket::EStatus::Error;
-	}
-
+	return WSAGetLastError();
 }
 
 EasySocket::SocketHandle EasySocket::invalidSocket()
@@ -40,20 +30,17 @@ EasySocket::SocketHandle EasySocket::invalidSocket()
 	return INVALID_SOCKET;
 }
 
-EasySocket::EStatus EasySocket::bind(unsigned short port, EasyIpAddress ip)
+uint64_t EasySocket::bind(unsigned short port, const EasyIpAddress& ip)
 {
 	close();
 
 	create();
 
-	sockaddr_in addr = createAddress(ip.toInteger(), port);
+	sockaddr_in addr = makeSockAddr(ip, port);
 	if (::bind(m_socket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == -1)
-	{
-		std::cout << "Failed to bind socket to port " << port << std::endl;
-		return EStatus::Error;
-	}
+		return GetLastError();
 
-	return EStatus::Done;
+	return WSAEISCONN;
 }
 
 void EasySocket::unbind()
@@ -61,52 +48,59 @@ void EasySocket::unbind()
 	close();
 }
 
-EasySocket::EStatus EasySocket::send(const void* data, std::size_t size, EasyIpAddress remoteAddress, unsigned short remotePort)
+uint64_t EasySocket::send(const void* data, const std::size_t& size, const EasyIpAddress& remoteAddress, const unsigned short& remotePort)
 {
 	create();
 
-	if (size > MaxDatagramSize)
-	{
-		std::cout << "Cannot send data over the network " << "(the number of bytes to send is greater than sf::UDPSocket::MaxDatagramSize)" << std::endl;
-		return EStatus::Error;
-	}
-
-	sockaddr_in address = createAddress(remoteAddress.toInteger(), remotePort);
-
-	const int sent = static_cast<int>(
-		sendto(m_socket, static_cast<const char*>(data), static_cast<Size>(size), 0, reinterpret_cast<sockaddr*>(&address), sizeof(address)));
+	sockaddr_in addr = makeSockAddr(remoteAddress, remotePort);
+	const int sent = static_cast<int>(sendto(m_socket, static_cast<const char*>(data), static_cast<Size>(size), 0, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
 
 	if (sent < 0)
 		return getErrorStatus();
 
-	return EStatus::Done;
+	return WSAEISCONN;
 }
 
-EasySocket::EStatus EasySocket::receive(void* data, std::size_t size, std::size_t& received, std::optional<EasyIpAddress>& remoteAddress, unsigned short& remotePort)
+uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, EasyIpAddress& remoteAddress, unsigned short& remotePort)
 {
+	create();
+
 	received = 0;
-	remoteAddress = std::nullopt;
 	remotePort = 0;
+	remoteAddress = EasyIpAddress::Any;
 
-	if (!data)
-	{
-		std::cout << "Cannot receive data from the network (the destination buffer is invalid)" << std::endl;
-		return EStatus::Error;
-	}
+	sockaddr_in sender{};
+	int addrLen = sizeof(sender);
+	const int recv = static_cast<int>(recvfrom(m_socket, static_cast<char*>(data), static_cast<Size>(capacity), 0, reinterpret_cast<sockaddr*>(&sender), &addrLen));
 
-	sockaddr_in address = createAddress(INADDR_ANY, 0);
-
-	AddrLength addressSize = sizeof(address);
-	const int sizeReceived = static_cast<int>(recvfrom(m_socket, static_cast<char*>(data), static_cast<Size>(size), 0, reinterpret_cast<sockaddr*>(&address), &addressSize));
-
-	if (sizeReceived < 0)
+	if (recv < 0)
 		return getErrorStatus();
 
-	received = static_cast<std::size_t>(sizeReceived);
-	remoteAddress = EasyIpAddress(ntohl(address.sin_addr.s_addr));
-	remotePort = ntohs(address.sin_port);
+	received = static_cast<std::size_t>(recv);
+	remoteAddress = EasyIpAddress(sender.sin_addr.s_addr);
+	remotePort = ntohs(sender.sin_port);
 
-	return EStatus::Done;
+	return WSAEISCONN;
+}
+
+uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, uint64_t& peer)
+{
+	create();
+
+	received = 0;
+	peer = 0;
+
+	sockaddr_in sender{};
+	int addrLen = sizeof(sender);
+	const int recv = static_cast<int>(recvfrom(m_socket, static_cast<char*>(data), static_cast<Size>(capacity), 0, reinterpret_cast<sockaddr*>(&sender), &addrLen));
+
+	if (recv < 0)
+		return getErrorStatus();
+
+	peer = (sender.sin_addr.s_addr << 32U) | (sender.sin_port);
+	received = static_cast<std::size_t>(recv);
+
+	return WSAEISCONN;
 }
 
 void EasySocket::setBlocking(bool block)

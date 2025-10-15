@@ -68,6 +68,9 @@
     <ClCompile Include="EasyTexture.cpp">
       <Filter>Source Files\Core\Model</Filter>
     </ClCompile>
+    <ClCompile Include="EasyDB.cpp">
+      <Filter>Source Files\Net</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EasyPlayground.hpp">
@@ -117,6 +120,9 @@
     </ClInclude>
     <ClInclude Include="EasyTexture.hpp">
       <Filter>Source Files\Core\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyDB.hpp">
+      <Filter>Source Files\Net</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
