@@ -158,6 +158,7 @@
     <ClCompile Include="EasyDisplay.cpp" />
     <ClCompile Include="EasyIpAddress.cpp" />
     <ClCompile Include="EasyModel.cpp" />
+    <ClCompile Include="EasyPacket.cpp" />
     <ClCompile Include="EasyPlayground.cpp" />
     <ClCompile Include="EasyShader.cpp" />
     <ClCompile Include="EasySocket.cpp" />
@@ -175,6 +176,9 @@
     <ClInclude Include="EasyDisplay.hpp" />
     <ClInclude Include="EasyIpAddress.hpp" />
     <ClInclude Include="EasyModel.hpp" />
+    <ClInclude Include="EasyNet.hpp" />
+    <ClInclude Include="EasyPacket.hpp" />
+    <ClInclude Include="EasyPeer.hpp" />
     <ClInclude Include="EasyPlayground.hpp" />
     <ClInclude Include="EasyShader.hpp" />
     <ClInclude Include="EasySocket.hpp" />

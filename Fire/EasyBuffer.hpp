@@ -2,87 +2,100 @@
 
 #include <iostream>
 #include <vector>
+#include <mutex>
 
-class EasyBuffer : std::vector<uint8_t> {
+
+
+class EasyBuffer {
 private:
-	EasyBuffer();
-
-	~EasyBuffer();
+	const size_t m_capacity;
+	uint8_t* m_begin;
 
 public:
-	size_t ptr;
+	size_t m_payload_size;
 
-	void Release();
+	EasyBuffer(size_t capacity) : m_capacity(capacity), m_payload_size(0U)
+	{
+		m_begin = (uint8_t*)malloc(capacity);
+	}
 
-	void* Data();
+	~EasyBuffer()
+	{
+		free(m_begin);
+	}
 
-	size_t Capacity();
+	uint8_t* begin() const
+	{
+		return m_begin;
+	}
 
-private:
-	inline static std::vector<EasyBuffer*> freeBuffers, busyBuffers;
-	inline static bool isInit = false;
-
-public:
-	static void Init(size_t buffer_count = 256U);
-
-	static void DeInit();
-
-	static EasyBuffer* Get();
-
-private:
-	static void Free(EasyBuffer* b);
-
-};
-
-class BufferType {
-public:
-	std::vector<uint8_t> buff;
-	size_t ptr;
-	BufferType(size_t capacity) : buff(capacity), ptr(0U) {}
-	uint8_t* data() { return buff.data(); }
-	size_t size() { return buff.size(); }
+	size_t capacity() const
+	{
+		return m_capacity;
+	}
 };
 
 class EasyBufferManager {
 public:
-	using BufferPool = std::vector<BufferType>;
-	using BufferPtrPool = std::vector<BufferType*>;
+	using BufferPool = std::vector<EasyBuffer*>;
 	const size_t buffer_count, buffer_length;
-	BufferPool buffers;
-	BufferPtrPool free_buffers;
-	BufferPtrPool busy_buffers;
+	BufferPool free_buffers;
+	BufferPool busy_buffers;
+	std::mutex lock;
 
 	EasyBufferManager() = delete;
 
-	EasyBufferManager(const size_t buffer_count, const size_t buffer_length) : buffer_count(buffer_count), buffer_length(buffer_length), buffers(buffer_count, BufferType(buffer_length))
+	EasyBufferManager(const size_t buffer_count, const size_t buffer_length) : buffer_count(buffer_count), buffer_length(buffer_length)
 	{
-		for (size_t i = 0U ; i < buffer_count ; ++i)
-			free_buffers.push_back(&buffers[i]);
-	}
-
-	BufferType* Get()
-	{
-		if (free_buffers.size() > 0)
+		for (size_t i = 0U; i < buffer_count; ++i)
 		{
-			BufferType* buff = free_buffers.back();
-			buff->ptr = 0U;
-			busy_buffers.push_back(buff);
-			free_buffers.pop_back();
-			return buff;
+			EasyBuffer* buffer = new EasyBuffer(buffer_length);
+			free_buffers.push_back(buffer);
 		}
-		return nullptr;
 	}
 
-	bool Free(BufferType* buffer)
+	~EasyBufferManager()
 	{
+		lock.lock();
+		for (auto b : free_buffers)
+			delete b;
+		for (auto b : busy_buffers)
+			delete b;
+		free_buffers.clear();
+		busy_buffers.clear();
+		lock.unlock();
+	}
+
+	EasyBuffer* Get()
+	{
+		EasyBuffer* buff = nullptr;
+		if (lock.try_lock())
+		{
+			if (free_buffers.size() > 0)
+			{
+				buff = free_buffers.back();
+				buff->m_payload_size = 0U;
+				busy_buffers.push_back(buff);
+				free_buffers.pop_back();
+			}
+			lock.unlock();
+		}
+		return buff;
+	}
+
+	bool Free(EasyBuffer* buffer)
+	{
+		bool ret = false;
+		lock.lock();
 		if (auto it = std::find(busy_buffers.begin(), busy_buffers.end(), buffer); it != busy_buffers.end())
 		{
-			(*it)->ptr = 0U;
+			(*it)->m_payload_size = 0U;
 			free_buffers.push_back(*it);
 			busy_buffers.erase(it);
-			return true;
+			ret = true;
 		}
-		return false;
+		lock.unlock();
+		return ret;
 	}
 
 };

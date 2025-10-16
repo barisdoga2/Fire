@@ -1,334 +1,94 @@
-﻿//#include "EasyPlayground.hpp"
+﻿#define DUMP
+#define CLIENT false
+#define LOCAL_SERVER false
+#define SERVER_PORT 54000U
+
 #include <iostream>
+#include <list>
 #include <chrono>
 #include <string>
+#include <unordered_map>
+#include <future>
+#include <conio.h>
+#ifdef DUMP
+#include <windows.h>
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
+#endif
+
 #include <lua.hpp>
-#include <bitsery/adapter/buffer.h>
-#include <bitsery/traits/vector.h>
-#include <cryptopp/aes.h>
-#include <cryptopp/gcm.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/osrng.h>
-#include <cryptopp/hex.h>
-#include <cryptopp/aes.h>
-#include <cryptopp/gcm.h>
-#include <cryptopp/osrng.h>
-#include <cryptopp/cryptlib.h>
-#include <cryptopp/base64.h>
-#include <jdbc/cppconn/driver.h>
+#include <box2d/box2d.h>
+#include <curl/curl.h>
 
 #include "EasyBuffer.hpp"
 #include "EasySocket.hpp"
 #include "EasyIpAddress.hpp"
 #include "EasyDB.hpp"
+#include "EasyNet.hpp"
+#include "EasyPeer.hpp"
+#include "EasyPacket.hpp"
 
-using namespace CryptoPP;
-using namespace sql;
 
-#define KEY_SIZE 16U
-#define TAG_SIZE 12U
-#define IV_SIZE 8U
+#if defined(_DEBUG) || LOCAL_SERVER
+#if LOCAL_SERVER
+#define SERVER_BUILD
+#define SERVER_IP "127.0.0.1"
+#else
+#define SERVER_IP "31.210.43.142"
+#endif
+#else
+#define RELEASE_BUILD
+#define SERVER_BUILD
+#define SERVER_IP "31.210.43.142"
+#endif
+#if CLIENT && !defined(RELEASE_BUILD)
+#include "EasyPlayground.hpp"
+#endif
 
-namespace lua {
-    EasySocket srv;
+EasyBufferManager bf(50U, 1472U);
 
-    int Bind(lua_State* L)
-    {
-        unsigned short port = static_cast<unsigned short>(lua_tointeger(L, 1));
-        auto res = srv.bind(port);
-        std::cout << "Server Bind Port: " << port << ", Result: " << res << std::endl;
-        return 0;
-    }
-
-    int Unbind(lua_State* L)
-    {
-        srv.unbind();
-        std::cout << "Server Unbind." << std::endl;
-        return 0;
-    }
-
-    int Blocking(lua_State* L)
-    {
-        bool block = lua_toboolean(L, 1) > 0;
-        srv.setBlocking(block);
-        std::cout << "Server Blocking: " << block << std::endl;
-        return 0;
-    }
-
-    EasyIpAddress recvIP;
-    unsigned short recvPort;
-    int Recv(lua_State* L)
-    {
-        std::byte arr[10U];
-        size_t recvBytes;
-        auto res = srv.receive(arr, sizeof(arr) / sizeof(std::byte), recvBytes, recvIP, recvPort);
-        std::string dataStr; for (int i = 0; i < 10; i++)dataStr += std::to_string((int)arr[i]) + "-";
-        std::cout << "Server Recv Result: " << res << ", Bytes: " << recvBytes << ", IP: " << recvIP.toString() << ", Port: " << recvPort << ", Data: " << dataStr << std::endl;
-        return 0;
-    }
-
-    int Send(lua_State* L)
-    {
-        std::string dstIP = lua_tostring(L, 1);
-        unsigned short dstPort = static_cast<unsigned short>(lua_tointeger(L, 2));
-        int sendSize = static_cast<int>(lua_tointeger(L, 3));
-
-        std::vector<std::byte> sendBuffer(sendSize);
-        EasyIpAddress ip = EasyIpAddress::resolve(dstIP);
-        for (int i = 0; i < 10 && sendSize > i; i++) sendBuffer[i] = std::byte(i);
-        auto res = srv.send(sendBuffer.data(), sendBuffer.size(), ip, dstPort);
-        std::cout << "Server Send Result: " << res << ", Bytes: " << sendBuffer.size() << ", IP: " << ip.toString() << ", Port: " << dstPort << std::endl;
-        return 0;
-    }
-
-}
-
-namespace Net {
-
-    typedef uint64_t Addr_t;
-    typedef uint32_t SessionID_t;
-    typedef uint32_t SequenceID_t;
-    typedef std::vector<uint8_t> Payload_t;
-
-    typedef std::vector<uint8_t> IV_t;
-    typedef std::vector<uint8_t> Key_t;
-    typedef std::pair<Key_t, IV_t> AES_t;
-
-#pragma pack(push, 1)
-    struct UDPHeader {
-    public:
-        SessionID_t sessionID;
-        SequenceID_t sequenceID;
-        IV_t IV;
-    };
-#pragma pack(pop)
-
-    struct UDPPacket {
-    public:
-        UDPHeader header;
-        Payload_t payload;
-    };
-
-    class MyBuffer {
-    public:
-        uint8_t* ptr;
-        size_t size;
-
-    };
-
-    
-
-    class Peer {
-        static inline CryptoPP::AutoSeededRandomPool prng;
-    public:
-        Addr_t addr;
-
-        SessionID_t session_id;
-        SequenceID_t sequence_id;
-
-        GCM<AES>::Encryption enc;
-        GCM<AES>::Decryption dec;
-        AES_t secret;
-
-        Peer(const Peer& peer) : addr(peer.addr), session_id(peer.session_id), sequence_id(peer.sequence_id), secret(peer.secret), enc(peer.enc), dec(peer.dec)
-        {
-            
-        }
-
-        Peer() : addr(0), session_id(0), sequence_id(0), secret(Key_t(KEY_SIZE), IV_t(IV_SIZE))
-        {
-            
-        }
-
-        void NextSequence()
-        {
-            ++sequence_id;
-            prng.GenerateBlock(secret.second.data(), IV_SIZE);
-        }
-
-        bool operator==(const Peer& lhs)
-        {
-            return lhs.addr == addr;
-        }
-
-        struct PeerCompare {
-            bool operator()(const Peer& a, const Peer& b) const noexcept
-            {
-                return a.addr == b.addr;
-            }
-        };
-    };
-
-    class MyPacket {
-    private:
-        const MyBuffer& m_buffer;
-
-    public:
-        MyPacket(const MyBuffer& buffer) : m_buffer(buffer)
-        {
-
-        }
-
-        static bool MakeEncrypted(Peer& peer, MyBuffer& buffer)
-        {
-            try {
-                MyPacket packet(buffer);
-                if (buffer.size > 0U)
-                {
-                    // Fill Header
-                    memcpy(packet.SessionID(), &peer.session_id, sizeof(SessionID_t));
-                    memcpy(packet.SequenceID(), &peer.sequence_id, sizeof(SequenceID_t));
-                    memcpy(packet.IV(), peer.secret.second.data(), IV_SIZE);
-
-                    // Set Key
-                    peer.enc.SetKeyWithIV(peer.secret.first.data(), KEY_SIZE, (uint8_t*)packet.IV(), IV_SIZE);
-
-                    // GCM Filter
-                    AuthenticatedEncryptionFilter aef(peer.enc, new ArraySink(packet.Payload(), packet.PayloadSize() + TAG_SIZE), false, TAG_SIZE);
-
-                    // Fill AAD Channel
-                    aef.ChannelPut(AAD_CHANNEL, (const byte*)packet.SessionID(), sizeof(SessionID_t));
-                    aef.ChannelPut(AAD_CHANNEL, (const byte*)packet.SequenceID(), sizeof(SequenceID_t));
-                    aef.ChannelMessageEnd(AAD_CHANNEL);
-
-                    // Encrypt Payload
-                    aef.ChannelPut(DEFAULT_CHANNEL, (const byte*)packet.Payload(), packet.m_buffer.size);
-                    aef.ChannelMessageEnd(DEFAULT_CHANNEL);
-
-                    buffer.size += TAG_SIZE;
-
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            catch (const Exception& e) {
-                return false;
-            }
-        }
-
-        static bool MakeDecrypted(Peer& peer, MyBuffer& buffer)
-        {
-            try {
-                MyPacket packet(buffer);
-                if ((*packet.SessionID() == peer.session_id) && (buffer.size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE))
-                {
-                    // Set Key
-                    peer.dec.SetKeyWithIV(peer.secret.first.data(), KEY_SIZE, (uint8_t*)packet.IV(), IV_SIZE);
-
-                    // GCM Filter
-                    AuthenticatedDecryptionFilter adf(peer.dec, new ArraySink(packet.Payload(), packet.PayloadSize() - TAG_SIZE), AuthenticatedDecryptionFilter::DEFAULT_FLAGS, TAG_SIZE);
-
-                    // Fill AAD Channel
-                    adf.ChannelPut(AAD_CHANNEL, (const byte*)packet.SessionID(), sizeof(SessionID_t));
-                    adf.ChannelPut(AAD_CHANNEL, (const byte*)packet.SequenceID(), sizeof(SequenceID_t));
-                    adf.ChannelMessageEnd(AAD_CHANNEL);
-
-                    adf.ChannelPut(DEFAULT_CHANNEL, (const byte*)packet.Payload(), packet.PayloadSize() - sizeof(SessionID_t) - sizeof(SequenceID_t) - IV_SIZE);
-                    adf.ChannelMessageEnd(DEFAULT_CHANNEL);
-
-                    if (adf.GetLastResult())
-                    {
-                        buffer.size = buffer.size - (sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE);
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            catch (const Exception& e) {
-                return false;
-            }
-        }
-
-        inline SessionID_t* SessionID() const {
-            return (SessionID_t*)(m_buffer.ptr);
-        }
-
-        inline SequenceID_t* SequenceID() const {
-            return (SequenceID_t*)(m_buffer.ptr + sizeof(SessionID_t));
-        }
-
-        inline IV_t* IV() const {
-            return (IV_t*)(m_buffer.ptr + sizeof(SessionID_t) + sizeof(SequenceID_t));
-        }
-
-        inline uint8_t* Payload() const {
-            return m_buffer.ptr + sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE;
-        }
-
-        inline size_t PayloadSize() const {
-            return m_buffer.size;
-        }
-    };
-
+namespace Server {
     class Server {
     public:
-        using IntermediateBufferPool = std::map<Peer, std::vector<BufferType*>, Peer::PeerCompare>;
-        const unsigned short port;
+        using PeerList = std::unordered_map<Addr_t, EasyPeer>;
 
+        // Flags
         bool running;
 
-        std::thread receive;
-        std::thread send;
-
+        // Net
         EasySocket sock;
+        const unsigned short port;
+        std::thread receive;
+        std::thread update;
 
-        std::mutex intermediateMutex;
+        // Resources
+        PeerList peers;
+        std::mutex receiveMutex;
 
+        // DB
         EasyDB db;
 
-        Server() : running(false), port(port)
+        // World
+        b2WorldId world;
+
+        Server() : running(false), port(SERVER_PORT)
         {
+            std::vector<uint8_t> vv(333);
+            ReadKeyFromMYSQL(0, vv);
+            // Init Box2D
             {
-                Peer peer;
+                b2WorldDef worldDef = b2DefaultWorldDef();
+                worldDef.gravity = { 0.0f, -10.0f };
+                world = b2CreateWorld(&worldDef);
 
-                // Initialize Sample Data
-                peer.session_id = 12U;
-                peer.sequence_id = 22U;
-                peer.secret.first = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
-                peer.secret.second = { 0,1,2,3,4,5,6,7 };
+                b2BodyDef groundBodyDef = b2DefaultBodyDef();
+                groundBodyDef.position = { 0.0f, -10.0f };
+                b2BodyId groundId = b2CreateBody(world, &groundBodyDef);
+                b2Polygon groundBox = b2MakeBox(50.0f, 10.0f);
+                b2ShapeDef groundShapeDef = b2DefaultShapeDef();
+                b2CreatePolygonShape(groundId, &groundShapeDef, &groundBox);
 
-                // Generate IV and Increase Sequence Counter
-                peer.NextSequence();
-
-                // Create Buffer
-                std::vector<uint8_t> rawBuffer(256U);
-                MyBuffer buffer;
-                buffer.ptr = rawBuffer.data();
-                buffer.size = 0U;
-
-                // Create Packet
-                MyPacket packet(buffer);
-
-                // Insert Sample Data
-                const size_t samplePlainPayloadLength = 5U;
-                for (uint8_t i = 0U; i < samplePlainPayloadLength; ++i)
-                    packet.Payload()[i] = (uint8_t)i;
-
-                // Encrypt
-                buffer.size = samplePlainPayloadLength; // Raw Payload Size
-                bool res1 = MyPacket::MakeEncrypted(peer, buffer);
-                auto res2 = packet.Payload();
-                auto res3 = packet.PayloadSize();
-
-
-                buffer.size = sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + samplePlainPayloadLength + TAG_SIZE; // Full Size
-                bool res4 = MyPacket::MakeDecrypted(peer, buffer);
-                auto res5 = packet.Payload();
-                auto res6 = packet.PayloadSize();
-
-                std::cout << "";
             }
-
         }
 
         ~Server()
@@ -336,16 +96,202 @@ namespace Net {
             Stop();
         }
 
-        bool Start(unsigned short port = 54000)
+        void B2Update(double _dt)
+        {
+            b2World_Step(world, (float)(_dt / 1000.0), 4);
+        }
+
+        void Update()
+        {
+            const double ups_constant = 1000.0 / 24.0;
+            const double receive_constant = 1000.0 / 60.0;
+            double ups_timer = 0.0, receive_timer = 0.0;
+            std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
+            while (true)
+            {
+                std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+                double elapsed_ms = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
+                lastTime = currentTime;
+
+                ups_timer += elapsed_ms;
+                receive_timer += elapsed_ms;
+
+                if (receive_timer >= receive_constant && receiveMutex.try_lock())
+                {
+                    receive_timer = 0.0;
+                    for (auto peer = peers.begin(); peer != peers.end(); ++peer)
+                    {
+                        if (peer->second.receiveBuffer.size() > 0)
+                        {
+                            std::string payload;
+                            std::cout << "Peer receive size: " << peer->second.receiveBuffer.size() << std::endl;
+                            int i = 0;
+                            for (auto b : peer->second.receiveBuffer)
+                            {
+                                EasyPacket p(b);
+                                std::string payload;
+                                for (size_t ii = 0; ii < b->m_payload_size && ii < 10; ii++)
+                                    payload += std::to_string(*((unsigned char*)(p.Payload() + ii))) + ((ii != 10 && ii != b->m_payload_size) ? " " : ((ii == 10 && b->m_payload_size > 10) ? "..." : ""));
+                                std::cout << "    [" << (++i) << "] Payload: [" << payload << "]" << std::endl;
+
+                                ++(*p.Payload());
+                                if (p.MakeEncrypted(peer->second))
+                                {
+                                    auto rr = sock.send(b->begin(), b->m_payload_size + sizeof(SequenceID_t) + sizeof(SessionID_t) + IV_SIZE, peer->second.ip, peer->second.port);
+                                    std::cout << "Server Echo Reply Sent! Result: " << rr << std::endl;
+                                    bf.Free(b);
+                                }
+                                else
+                                {
+                                    std::cout << "Server Echo Reply Encrypt Error!" << std::endl;
+                                }
+                            }
+                            peer->second.receiveBuffer.clear();
+                        }
+                    }
+
+                    receiveMutex.unlock();
+                }
+
+                // Box2D Update
+                if (ups_timer >= ups_timer)
+                {
+                    B2Update(ups_timer);
+                    ups_timer = 0.0;
+                }
+
+                // Rest a bit
+                std::this_thread::sleep_for(std::chrono::milliseconds(1U));
+            }
+        }
+
+        void Receive()
+        {
+            using Clock = std::chrono::high_resolution_clock;
+            using TS = Clock::time_point;
+            using MS = std::chrono::milliseconds;
+            const double flushPeriod = 1000.0 / 144.0;
+
+            TS lastFlush, currentTime;
+            PeerList peer_cache;
+            while (true)
+            {
+                // Receive for 3ms every 7ms
+                {
+                    static TS nextReceive = Clock::now();
+                    currentTime = Clock::now();
+                    if (nextReceive < currentTime)
+                    {
+                        nextReceive = currentTime + MS(7U);
+                        TS endTime = Clock::now() + MS(3U);
+                        static EasyBuffer* buff = bf.Get();
+                        while (Clock::now() < endTime)
+                        {
+                            if (!buff)
+                                buff = bf.Get();
+                            if (buff)
+                            {
+                                buff->m_payload_size = 0U;
+
+                                EasyPeer host;
+                                uint64_t ret = sock.receive(buff->begin(), buff->capacity(), buff->m_payload_size, host);
+                                if (ret == WSAEISCONN && buff->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + 0U + TAG_SIZE)
+                                {
+                                    PeerList::iterator cache_peer = peer_cache.find(host.addr);
+                                    if (cache_peer == peer_cache.end())
+                                    {
+                                        EasyPacket packet(buff);
+                                        if (ReadKeyFromMYSQL(*packet.SessionID(), host.secret.first))
+                                        {
+                                            host.session_id = *packet.SessionID();
+                                            memcpy(host.secret.second.data(), packet.IV(), IV_SIZE);
+                                            if (packet.MakeDecrypted(host))
+                                            {
+                                                std::pair<PeerList::iterator, bool> res = peer_cache.insert({ host.addr, host });
+                                                (*res.first).second.receiveBuffer.push_back(buff);
+                                                buff = nullptr;
+                                            }
+                                            else
+                                            {
+                                                std::cout << "Error! Packet decryption failed!" << std::endl;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            std::cout << "Error! Reading key from database!" << std::endl;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        EasyPacket packet(buff);
+                                        memcpy(host.secret.second.data(), packet.IV(), IV_SIZE);
+                                        if (packet.MakeDecrypted(cache_peer->second))
+                                        {
+                                            cache_peer->second.receiveBuffer.push_back(buff);
+                                            buff = nullptr;
+                                        }
+                                        else
+                                        {
+                                            std::cout << "Error! Packet decryption failed!" << std::endl;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    buff->m_payload_size = 0U;
+                                }
+                              }
+                        }
+                    }
+                }
+
+                // Flush every 4ms
+                {
+                    static TS nextFlush = Clock::now();
+                    currentTime = Clock::now();
+                    if (nextFlush < currentTime && receiveMutex.try_lock())
+                    {
+                        nextFlush = currentTime + MS(4U);
+                        for (auto peer = peer_cache.begin(); peer != peer_cache.end(); ++peer)
+                        {
+                            if (peer->second.receiveBuffer.size() > 0U)
+                            {
+                                if (auto r_peer = peers.find(peer->second.addr); r_peer != peers.end())
+                                {
+                                    r_peer->second.receiveBuffer.insert(r_peer->second.receiveBuffer.end(), peer->second.receiveBuffer.begin(), peer->second.receiveBuffer.end());
+                                }
+                                else
+                                {
+                                    std::pair<PeerList::iterator, bool> newPeer = peers.insert({ peer->first, peer->second });
+                                    newPeer.first->second.receiveBuffer.insert(newPeer.first->second.receiveBuffer.end(), peer->second.receiveBuffer.begin(), peer->second.receiveBuffer.end());
+                                }
+                            }
+                            peer->second.receiveBuffer.clear();
+                        }
+                        receiveMutex.unlock();
+                    }
+                }
+
+                // Rest a bit
+                std::this_thread::sleep_for(std::chrono::milliseconds(1U));
+            }
+        }
+
+        bool Start()
         {
             if (running)
                 return false;
+
+            std::cout << "Server is starting..." << std::endl;
 
             if (sock.bind(port) != WSAEISCONN)
                 return false;
 
             running = true;
             receive = std::thread(&Server::Receive, this);
+            update = std::thread(&Server::Update, this);
+
+            return true;
         }
 
         void Stop()
@@ -353,148 +299,309 @@ namespace Net {
             if (!running)
                 return;
 
+            std::cout << "Server is stopping..." << std::endl;
+
             running = false;
 
             if (receive.joinable())
                 receive.join();
-            if (send.joinable())
-                send.join();
+            if (update.joinable())
+                update.join();
         }
 
-        void FlushIntermediate(EasyBufferManager& bufferManager, IntermediateBufferPool& intermediateBuffer)
+        bool ReadKeyFromMYSQL(const SessionID_t& session_id, Key_t& key)
         {
-            for (auto it : intermediateBuffer)
+            bool ret = false;
+            sql::PreparedStatement* stmt = db.PrepareStatement("SELECT * FROM sessions WHERE id=? LIMIT 1;");
+            stmt->setUInt(1, session_id);
+            sql::ResultSet* res = stmt->executeQuery();
+            while (res->next())
             {
-                const Peer& peer = it.first;
-                for (BufferType* buff : it.second)
-                {
-
-
-
-                    bufferManager.Free(buff);
-                }
+                memcpy(key.data(), res->getString(3).c_str(), KEY_SIZE);
+                ret = true; // If valid_until < current_timestamp
+                break;
             }
-            intermediateBuffer.clear();
+            delete res;
+            delete stmt;
+            return ret;
         }
 
-        bool ReadKeyFromMYSQL_OR_Peers(const uint64_t& session_id, std::vector<std::uint8_t>& key)
-        {
-            key.resize(16U);
-            memset(key.data(), 0U, key.size());
-            memset(key.data(), (int)session_id, sizeof(int));
-            return true;
-        }
-
-        void Receive()
-        {
-            const double flushPeriod = 1000.0 / 144.0;
-            Peer host;
-            uint64_t ret;
-            EasyBufferManager bufferManager(100U, 1472U);
-            BufferType* buff = bufferManager.Get();
-            IntermediateBufferPool intermediateBuffer;
-            std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now(), lastFlush = std::chrono::high_resolution_clock::now();
-            while (running)
-            {
-                currentTime = std::chrono::high_resolution_clock::now();
-                if (buff)
-                {
-                    ret = sock.receive(buff->data(), buff->size(), buff->ptr, host.addr);
-                    if (ret == WSAEISCONN && buff->ptr > 8U + 8U + 0U + 16U)
-                    {
-                        host.session_id = *((uint64_t*)buff->data());
-                        host.sequence_id = *((uint64_t*)(buff->data() + 8U));
-
-                        if (ReadKeyFromMYSQL_OR_Peers(host.session_id, host.secret.second))
-                        {
-                            BufferType* decryptBuff = bufferManager.Get();
-                            if (decryptBuff/* && Decrypt(host, buff, decryptBuff)*/)
-                            {
-                                if (auto it = intermediateBuffer.find(host); it != intermediateBuffer.end())
-                                {
-                                    it->second.push_back(decryptBuff);
-                                }
-                                else
-                                {
-                                    intermediateBuffer.insert({ host, {decryptBuff} });
-                                }
-                            }
-                        }
-                        bufferManager.Free(buff);
-                        buff = bufferManager.Get();
-                    }
-                    else
-                    {
-                        buff->ptr = 0;
-                    }
-                }
-                else
-                {
-                    buff = bufferManager.Get();
-                }
-
-                double sinceLastFlush = std::chrono::duration<double, std::milli>(currentTime - lastFlush).count();
-                if (sinceLastFlush >= flushPeriod && intermediateMutex.try_lock())
-                {
-                    FlushIntermediate(bufferManager, intermediateBuffer);
-                    lastFlush = currentTime;
-                    intermediateMutex.unlock();
-                }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(1U));
-            }
-        }
-
-        void Send()
-        {
-            while (running)
-            {
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(10U));
-            }
-        }
     };
 
 }
 
-int main()
+namespace ClientTest {
+    EasyPeer client;
+    EasySocket socket;
+    uint8_t ctr = 0U;
+
+    int ClientWebRequest(lua_State* L)
+    {
+        CURL* curl = curl_easy_init();
+        if (!curl) {
+            std::cout << "Failed to initialize CURL\n";
+            return 1;
+        }
+
+        std::string response;
+        std::string url = "https://barisdoga.com/index.php";
+        std::string postData = "username=barisdoga&password=123&login=1";
+        std::string prefix = "<textarea name=\"jwt\" readonly>";
+        std::string prefix2 = "<div class=\"msg\">";
+        auto writeLambda = [](char* ptr, size_t size, size_t nmemb, void* userdata) -> size_t
+            {
+                auto* out = static_cast<std::string*>(userdata);
+                out->append(ptr, size * nmemb);
+                return size * nmemb;
+            };
+
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +writeLambda);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+
+        CURLcode res = curl_easy_perform(curl);
+        if (res != CURLE_OK)
+        {
+            std::cout << "Error! Login failed! CURL error: " << curl_easy_strerror(res) << std::endl;
+        }
+        else
+        {
+            if (size_t index = response.find(prefix); index != std::string::npos)
+            {
+                response = response.substr(index + prefix.length());
+                response = response.substr(0, response.find("</textarea>"));
+                SessionID_t sessionID = static_cast<SessionID_t>(std::stoul(response.substr(0, response.find_first_of(":"))));
+                response = response.substr(response.find_first_of(":") + 1U);
+                uint32_t userID = static_cast<uint32_t>(std::stoul(response.substr(0, response.find_first_of(":"))));
+                response = response.substr(response.find_first_of(":") + 1U);
+                std::string key = response;
+
+                client.session_id = sessionID;
+                memcpy(client.secret.first.data(), key.data(), KEY_SIZE);
+
+                std::cout << "Login OK! SessionID: " << sessionID << ", UserID: " << userID << ", Key: " << key << std::endl;
+            }
+            else
+            {
+                if (size_t index = response.find(prefix2); index != std::string::npos)
+                {
+                    response = response.substr(index + prefix2.length());
+                    response = response.substr(0, response.find("</div>"));
+                    std::cout << "Error! Login failed! Message: " << response << std::endl;
+                }
+                else
+                {
+                    std::cout << "Error! Login response parse failed!"  << std::endl;
+                }
+            }
+        }
+
+        curl_easy_cleanup(curl);
+        return 0;
+    }
+
+    int ClientPacket(lua_State* L)
+    {
+        EasyBuffer* buff = bf.Get();
+        if (buff)
+        {
+            Payload_t payload = { ctr++ };
+
+            client.NextSequence();
+
+            EasyPacket packet(buff);
+            memcpy(packet.Payload(), payload.data(), payload.size());
+            buff->m_payload_size = payload.size();
+            if (packet.MakeEncrypted(client))
+            {
+                auto res = socket.send(buff->begin(), sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + buff->m_payload_size, EasyIpAddress::resolve(SERVER_IP), SERVER_PORT);
+                std::cout << "Client Packet Send! Result: " << res << std::endl;
+                bf.Free(buff);
+            }
+        
+        }
+        return 0;
+    }
+
+    int ClientReceive(lua_State* L)
+    {
+        EasyBuffer* b = bf.Get();
+        if (b)
+        {
+            EasyIpAddress receiveIP;
+            unsigned short receivePort;
+            auto res = socket.receive(b->begin(), b->capacity(), b->m_payload_size, receiveIP, receivePort);
+            std::cout << "Client Packet Receive! Result: " << res << std::endl;
+
+            EasyPacket p(b);
+            if (p.MakeDecrypted(client))
+            {
+                std::string payload;
+                for (size_t ii = 0; ii < b->m_payload_size && ii < 10; ii++)
+                    payload += std::to_string(*((unsigned char*)(p.Payload() + ii))) + ((ii != 10 && ii != b->m_payload_size) ? " " : ((ii == 10 && b->m_payload_size > 10) ? "..." : ""));
+                std::cout << "    Payload: [" << payload << "]" << std::endl;
+                ctr = *p.Payload();
+            }
+            else
+            {
+                std::cout << "Client Packet Decrypt Error!" << std::endl;
+            }
+            bf.Free(b);
+        }
+        return 0;
+    }
+    
+    int ClientBoth(lua_State* L)
+    {
+        ClientWebRequest(L);
+        ClientPacket(L);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500U));
+        ClientReceive(L);
+        return 0;
+    }
+}
+
+void LUAListen(bool& running)
 {
-    Net::Server s;
+    std::cout << "LUA commander is starting..." << std::endl;
 
-    lua_State* L = luaL_newstate();
+    lua_State* L;
+
+    L = luaL_newstate();
     luaL_openlibs(L);
+    lua_register(L, "W", ClientTest::ClientWebRequest);
+    lua_register(L, "P", ClientTest::ClientPacket);
+    lua_register(L, "R", ClientTest::ClientReceive);
+    lua_register(L, "B", ClientTest::ClientBoth);
 
-    lua_register(L, "Bind", lua::Bind);
-    lua_register(L, "Unbind", lua::Unbind);
-    lua_register(L, "Blocking", lua::Blocking);
-    lua_register(L, "Recv", lua::Recv);
-    lua_register(L, "Send", lua::Send);
+    std::string input = "", input2 = "";
+    while (running)
+    {
+        if (input.length() != 0)
+        {
+            if (luaL_dostring(L, input.c_str()) != LUA_OK)
+            {
+                std::cerr << "Lua error: " << lua_tostring(L, -1) << std::endl;
+                lua_pop(L, 1);
+            }
+            input = "";
 
-    std::cout << "Lua Interactive Shell (type 'exit' to quit)\n";
-    std::string input;
+        }
+        if(_kbhit()) 
+        { 
+            char c = (char)_getch();
+            if (c == '\r' || c == '\n') {
+                if (input2 == "exit") {
+                    running = false;
+                    break;
+                }
+                input = input2;
+                std::cout << std::endl;
+                input2.clear();
+            }
+            else if (c == '\b') {
+                if (!input2.empty()) {
+                    input2.pop_back();
+                    std::cout << "\b \b";
+                }
+            }
+            else {
+                input2.push_back(c);
+                std::cout << c;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-    while (true) {
-        std::cout << "> ";
-        if (!std::getline(std::cin, input)) break;
-        if (input == "exit") break;
+    }
 
-        // Run the typed Lua command
-        if (luaL_dostring(L, input.c_str()) != LUA_OK) {
-            std::cerr << "Lua error: " << lua_tostring(L, -1) << std::endl;
-            lua_pop(L, 1); // remove error message
+    std::cout << "LUA commander is closing..." << std::endl;
+
+    lua_close(L);
+}
+
+#ifdef DUMP
+namespace Dump {
+    void CreateMiniDump(EXCEPTION_POINTERS* e) {
+        SYSTEMTIME st;
+        GetSystemTime(&st);
+        char filename[MAX_PATH];
+        sprintf_s(filename, "Crash_%04d%02d%02d_%02d%02d%02d.dmp",
+            st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+
+        HANDLE hFile = CreateFileA(filename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL, nullptr);
+
+        if ((hFile != nullptr) && (hFile != INVALID_HANDLE_VALUE)) {
+            MINIDUMP_EXCEPTION_INFORMATION info;
+            info.ThreadId = GetCurrentThreadId();
+            info.ExceptionPointers = e;
+            info.ClientPointers = FALSE;
+
+            MiniDumpWriteDump(
+                GetCurrentProcess(),
+                GetCurrentProcessId(),
+                hFile,
+                MiniDumpWithFullMemory, // or MiniDumpNormal
+                e ? &info : nullptr,
+                nullptr,
+                nullptr
+            );
+
+            CloseHandle(hFile);
+            std::cout << "Crash dump written: " << filename << std::endl;
         }
     }
 
-    lua_close(L);
-    std::cout << "Hi";
+    LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* e) {
+        std::cerr << "Unhandled exception caught! Creating dump...\n";
+        CreateMiniDump(e);
+        return EXCEPTION_EXECUTE_HANDLER;
+    }
 
-	//if (EasyDisplay display({1024,768}); display.Init())
-	//{
-	//	if (EasyPlayground playground(display); playground.Init())
-	//	{
-	//		while (playground.OneLoop());
-	//	}
-	//}
+}
+#endif
+
+int main()
+{
+#ifdef DUMP
+    SetUnhandledExceptionFilter(Dump::ExceptionHandler);
+#endif
+    bool luaRunning = true;
+    std::thread luaThread = std::thread([&]() { LUAListen(luaRunning); });
+
+#ifdef SERVER_BUILD
+    Server::Server server;
+    if (server.Start())
+    {
+#if !(CLIENT && !defined(RELEASE_BUILD))
+        while (luaRunning && server.running)
+            std::this_thread::sleep_for(std::chrono::milliseconds(10000U));
+#endif
+    }
+#endif
+#if CLIENT && !defined(RELEASE_BUILD)
+    if (EasyDisplay display({ 1024,768 }); display.Init())
+    {
+        if (EasyPlayground playground(display); playground.Init())
+        {
+            while (playground.OneLoop());
+            luaRunning = false;
+        }
+    }
+#endif
+#if !(CLIENT && !defined(RELEASE_BUILD)) || !defined(SERVER_BUILD)
+    while (luaRunning)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10000U));
+#endif
+    luaRunning = false;
+#ifdef SERVER_BUILD
+    server.Stop();
+#endif
+    if (luaThread.joinable())
+        luaThread.join();
 	return 0;
 }
 

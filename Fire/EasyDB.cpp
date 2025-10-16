@@ -16,8 +16,9 @@ EasyDB::EasyDB()
 		connection = driver->connect("127.0.0.1", "root", "");
 		connection->setSchema("fire");
 		connected = true;
+		std::cout << "DB Manager connected." << std::endl;
 	}
-	catch (sql::SQLException& e)
+	catch (sql::SQLException e)
 	{
 		std::cout << "Database Connection failed!" << std::endl;
 		connected = false;

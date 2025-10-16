@@ -1,10 +1,12 @@
 #pragma once
 
 #include <optional>
+#include <vector>
 
 #include "EasyIpAddress.hpp"
 
 #define WSABASEERR              10000
+#ifndef WSAEWOULDBLOCK
 #define WSAEWOULDBLOCK          (WSABASEERR+35)
 #define WSAEINPROGRESS          (WSABASEERR+36)
 #define WSAEALREADY             (WSABASEERR+37)
@@ -42,9 +44,11 @@
 #define WSAEDQUOT               (WSABASEERR+69)
 #define WSAESTALE               (WSABASEERR+70)
 #define WSAEREMOTE              (WSABASEERR+71)
+#endif
 
 
 
+class EasyPeer;
 class EasySocket {
 private:
 	using AddrLength = int;
@@ -64,10 +68,11 @@ public:
 
 	void unbind();
 
+
 	uint64_t send(const void* data, const size_t& size, const EasyIpAddress& remoteAddress, const unsigned short& remotePort);
 
 	uint64_t receive(void* data, const size_t& size, size_t& received, EasyIpAddress& remoteAddress, unsigned short& remotePort);
-	uint64_t receive(void* data, const std::size_t& capacity, std::size_t& received, uint64_t& peer);
+	uint64_t receive(void* data, const std::size_t& capacity, std::size_t& received, EasyPeer& peer);
 
 	void setBlocking(bool block);
 

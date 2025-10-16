@@ -71,6 +71,9 @@
     <ClCompile Include="EasyDB.cpp">
       <Filter>Source Files\Net</Filter>
     </ClCompile>
+    <ClCompile Include="EasyPacket.cpp">
+      <Filter>Source Files\Net</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EasyPlayground.hpp">
@@ -122,6 +125,15 @@
       <Filter>Source Files\Core\Model</Filter>
     </ClInclude>
     <ClInclude Include="EasyDB.hpp">
+      <Filter>Source Files\Net</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyPacket.hpp">
+      <Filter>Source Files\Net</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyPeer.hpp">
+      <Filter>Source Files\Net</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyNet.hpp">
       <Filter>Source Files\Net</Filter>
     </ClInclude>
   </ItemGroup>

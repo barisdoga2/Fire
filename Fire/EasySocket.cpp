@@ -1,6 +1,7 @@
 #include <ws2tcpip.h>
 
 #include "EasySocket.hpp"
+#include "EasyPeer.hpp"
 
 
 
@@ -83,22 +84,24 @@ uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_
 	return WSAEISCONN;
 }
 
-uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, uint64_t& peer)
+uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, EasyPeer& peer)
 {
 	create();
 
 	received = 0;
-	peer = 0;
 
-	sockaddr_in sender{};
-	int addrLen = sizeof(sender);
-	const int recv = static_cast<int>(recvfrom(m_socket, static_cast<char*>(data), static_cast<Size>(capacity), 0, reinterpret_cast<sockaddr*>(&sender), &addrLen));
+	int addrLen = static_cast<int>(peer.sockAddr.size());
+	const int recv = static_cast<int>(recvfrom(m_socket, static_cast<char*>(data), static_cast<Size>(capacity), 0, reinterpret_cast<sockaddr*>(peer.sockAddr.data()), &addrLen));
 
 	if (recv < 0)
 		return getErrorStatus();
 
-	peer = (sender.sin_addr.s_addr << 32U) | (sender.sin_port);
+	sockaddr_in* addrIn = reinterpret_cast<sockaddr_in*>(peer.sockAddr.data());
+	peer.addr = (addrIn->sin_addr.s_addr << 16U) | (addrIn->sin_port);
 	received = static_cast<std::size_t>(recv);
+
+	peer.ip = EasyIpAddress(addrIn->sin_addr.s_addr);
+	peer.port = ntohs(addrIn->sin_port);
 
 	return WSAEISCONN;
 }
