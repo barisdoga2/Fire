@@ -12,9 +12,6 @@
     <Filter Include="Source Files\Core">
       <UniqueIdentifier>{7384b4e4-b63e-442a-97c0-e2834f5816bb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Net">
-      <UniqueIdentifier>{3801cbfb-d9a5-49ef-b7bc-bbe5b3f74ed2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Core\Model">
       <UniqueIdentifier>{0e241eeb-c913-45af-b631-af999044ff68}</UniqueIdentifier>
     </Filter>
@@ -23,6 +20,12 @@
     </Filter>
     <Filter Include="Source Files\Core\Ext">
       <UniqueIdentifier>{4b33e866-9718-4f9a-8466-2f452515054e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Core\Net">
+      <UniqueIdentifier>{3801cbfb-d9a5-49ef-b7bc-bbe5b3f74ed2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Game">
+      <UniqueIdentifier>{aaeb0528-5d79-4ea1-a24e-6786fd451e3c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -39,13 +42,13 @@
       <Filter>Source Files\Core\Ext</Filter>
     </ClCompile>
     <ClCompile Include="EasyBuffer.cpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClCompile>
     <ClCompile Include="EasyIpAddress.cpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClCompile>
     <ClCompile Include="EasySocket.cpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClCompile>
     <ClCompile Include="EasyAnimation.cpp">
       <Filter>Source Files\Core\Model</Filter>
@@ -69,13 +72,19 @@
       <Filter>Source Files\Core\Model</Filter>
     </ClCompile>
     <ClCompile Include="EasyDB.cpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClCompile>
     <ClCompile Include="EasyPacket.cpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClCompile>
     <ClCompile Include="EasyCompression.cpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
+    </ClCompile>
+    <ClCompile Include="World.cpp">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="EasySerializer.cpp">
+      <Filter>Source Files\Core\Net</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -98,13 +107,13 @@
       <Filter>Source Files\Core\Ext</Filter>
     </ClInclude>
     <ClInclude Include="EasyBuffer.hpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClInclude>
     <ClInclude Include="EasyIpAddress.hpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClInclude>
     <ClInclude Include="EasySocket.hpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClInclude>
     <ClInclude Include="EasyAnimation.hpp">
       <Filter>Source Files\Core\Model</Filter>
@@ -128,19 +137,25 @@
       <Filter>Source Files\Core\Model</Filter>
     </ClInclude>
     <ClInclude Include="EasyDB.hpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClInclude>
     <ClInclude Include="EasyPacket.hpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClInclude>
     <ClInclude Include="EasyPeer.hpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClInclude>
     <ClInclude Include="EasyNet.hpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
     </ClInclude>
     <ClInclude Include="EasyCompression.hpp">
-      <Filter>Source Files\Net</Filter>
+      <Filter>Source Files\Core\Net</Filter>
+    </ClInclude>
+    <ClInclude Include="World.hpp">
+      <Filter>Source Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="EasySerializer.hpp">
+      <Filter>Source Files\Core\Net</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

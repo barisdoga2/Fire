@@ -161,12 +161,14 @@
     <ClCompile Include="EasyModel.cpp" />
     <ClCompile Include="EasyPacket.cpp" />
     <ClCompile Include="EasyPlayground.cpp" />
+    <ClCompile Include="EasySerializer.cpp" />
     <ClCompile Include="EasyShader.cpp" />
     <ClCompile Include="EasySocket.cpp" />
     <ClCompile Include="EasyTexture.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EasyAnimation.hpp" />
@@ -182,6 +184,7 @@
     <ClInclude Include="EasyPacket.hpp" />
     <ClInclude Include="EasyPeer.hpp" />
     <ClInclude Include="EasyPlayground.hpp" />
+    <ClInclude Include="EasySerializer.hpp" />
     <ClInclude Include="EasyShader.hpp" />
     <ClInclude Include="EasySocket.hpp" />
     <ClInclude Include="EasyTexture.hpp" />
@@ -190,6 +193,7 @@
     <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="imgui_impl_opengl3_loader.h" />
     <ClInclude Include="EasyUtility.hpp" />
+    <ClInclude Include="World.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

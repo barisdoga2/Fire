@@ -68,6 +68,9 @@ bool EasyPacket::MakeDecrypted(EasyPeer& peer)
     try {
         if ((*SessionID() == peer.session_id) && (m_buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE))
         {
+            // Set IV
+            memcpy(peer.secret.second.data(), IV(), IV_SIZE);
+
             // Set Key
             peer.dec.SetKeyWithIV(peer.secret.first.data(), KEY_SIZE, (uint8_t*)IV(), IV_SIZE);
 

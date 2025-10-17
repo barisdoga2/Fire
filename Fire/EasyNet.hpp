@@ -6,6 +6,7 @@
 typedef uint64_t Addr_t;
 typedef uint32_t SessionID_t;
 typedef uint32_t SequenceID_t;
+typedef uint16_t PacketID_t;
 typedef std::vector<uint8_t> Payload_t;
 
 typedef std::vector<uint8_t> IV_t;
