@@ -154,6 +154,7 @@
     <ClCompile Include="EasyAnimator.cpp" />
     <ClCompile Include="EasyBuffer.cpp" />
     <ClCompile Include="EasyCamera.cpp" />
+    <ClCompile Include="EasyCompression.cpp" />
     <ClCompile Include="EasyDB.cpp" />
     <ClCompile Include="EasyDisplay.cpp" />
     <ClCompile Include="EasyIpAddress.cpp" />
@@ -172,6 +173,7 @@
     <ClInclude Include="EasyAnimator.hpp" />
     <ClInclude Include="EasyBuffer.hpp" />
     <ClInclude Include="EasyCamera.hpp" />
+    <ClInclude Include="EasyCompression.hpp" />
     <ClInclude Include="EasyDB.hpp" />
     <ClInclude Include="EasyDisplay.hpp" />
     <ClInclude Include="EasyIpAddress.hpp" />

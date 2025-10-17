@@ -24,9 +24,14 @@ bool EasyPacket::MakeEncrypted(EasyPeer& peer)
     try {
         if (m_buffer->m_payload_size > 0U)
         {
+            AutoSeededRandomPool prng;
+            prng.GenerateBlock(peer.secret.second.data(), IV_SIZE);
+
+            ++peer.sequence_id_out;
+
             // Fill Header
             memcpy(SessionID(), &peer.session_id, sizeof(SessionID_t));
-            memcpy(SequenceID(), &peer.sequence_id, sizeof(SequenceID_t));
+            memcpy(SequenceID(), &peer.sequence_id_out, sizeof(SequenceID_t));
             memcpy(IV(), peer.secret.second.data(), IV_SIZE);
 
             // Set Key
@@ -78,8 +83,9 @@ bool EasyPacket::MakeDecrypted(EasyPeer& peer)
             adf.ChannelPut(DEFAULT_CHANNEL, (const byte*)Payload(), PayloadSize() - sizeof(SessionID_t) - sizeof(SequenceID_t) - IV_SIZE);
             adf.ChannelMessageEnd(DEFAULT_CHANNEL);
 
-            if (adf.GetLastResult())
+            if (adf.GetLastResult() && peer.sequence_id_in < *(SequenceID()))
             {
+                peer.sequence_id_in = *(SequenceID());
                 m_buffer->m_payload_size = m_buffer->m_payload_size - (sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE);
                 return true;
             }
@@ -97,3 +103,51 @@ bool EasyPacket::MakeDecrypted(EasyPeer& peer)
         return false;
     }
 }
+
+bool EasyPacket::MakeCompressed(EasyBuffer* out)
+{
+    EasyPacket destination(out);
+    bool ret = EasyCompression::BZ2Compress(Payload(), PayloadSize(), destination.Payload(), out->capacity(), out->m_payload_size);
+    if (ret)
+    {
+        memcpy(out->begin(), this->m_buffer->begin(), HeaderSize());
+    }
+    return ret;
+}
+
+bool EasyPacket::MakeDecompressed(EasyBuffer* out)
+{
+    EasyPacket destination(out);
+    bool ret = EasyCompression::BZ2Decompress(Payload(), PayloadSize(), destination.Payload(), out->capacity(), out->m_payload_size);
+    if (ret)
+    {
+        memcpy(out->begin(), this->m_buffer->begin(), HeaderSize());
+    }
+    return ret;
+}
+
+// STATIC
+bool EasyPacket::MakeEncrypted(EasyPeer& peer, EasyBuffer* buffer)
+{
+    EasyPacket enc(buffer);
+    return enc.MakeEncrypted(peer);
+}
+
+bool EasyPacket::MakeDecrypted(EasyPeer& peer, EasyBuffer* buffer)
+{
+    EasyPacket dec(buffer);
+    return dec.MakeDecrypted(peer);
+}
+
+bool EasyPacket::MakeCompressed(EasyBuffer* in, EasyBuffer* out)
+{
+    EasyPacket source(in);
+    return source.MakeCompressed(out);
+}
+
+bool EasyPacket::MakeDecompressed(EasyBuffer* in, EasyBuffer* out)
+{
+    EasyPacket source(in);
+    return source.MakeDecompressed(out);
+}
+// END

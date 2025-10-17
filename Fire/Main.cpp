@@ -1,6 +1,6 @@
 ﻿#define DUMP
 #define CLIENT false
-#define LOCAL_SERVER false
+#define LOCAL_SERVER true
 #define SERVER_PORT 54000U
 
 #include <iostream>
@@ -47,6 +47,8 @@
 
 EasyBufferManager bf(50U, 1472U);
 
+
+
 namespace Server {
     class Server {
     public:
@@ -73,8 +75,6 @@ namespace Server {
 
         Server() : running(false), port(SERVER_PORT)
         {
-            std::vector<uint8_t> vv(333);
-            ReadKeyFromMYSQL(0, vv);
             // Init Box2D
             {
                 b2WorldDef worldDef = b2DefaultWorldDef();
@@ -118,38 +118,8 @@ namespace Server {
 
                 if (receive_timer >= receive_constant && receiveMutex.try_lock())
                 {
+                    ProcessReceived();
                     receive_timer = 0.0;
-                    for (auto peer = peers.begin(); peer != peers.end(); ++peer)
-                    {
-                        if (peer->second.receiveBuffer.size() > 0)
-                        {
-                            std::string payload;
-                            std::cout << "Peer receive size: " << peer->second.receiveBuffer.size() << std::endl;
-                            int i = 0;
-                            for (auto b : peer->second.receiveBuffer)
-                            {
-                                EasyPacket p(b);
-                                std::string payload;
-                                for (size_t ii = 0; ii < b->m_payload_size && ii < 10; ii++)
-                                    payload += std::to_string(*((unsigned char*)(p.Payload() + ii))) + ((ii != 10 && ii != b->m_payload_size) ? " " : ((ii == 10 && b->m_payload_size > 10) ? "..." : ""));
-                                std::cout << "    [" << (++i) << "] Payload: [" << payload << "]" << std::endl;
-
-                                ++(*p.Payload());
-                                if (p.MakeEncrypted(peer->second))
-                                {
-                                    auto rr = sock.send(b->begin(), b->m_payload_size + sizeof(SequenceID_t) + sizeof(SessionID_t) + IV_SIZE, peer->second.ip, peer->second.port);
-                                    std::cout << "Server Echo Reply Sent! Result: " << rr << std::endl;
-                                    bf.Free(b);
-                                }
-                                else
-                                {
-                                    std::cout << "Server Echo Reply Encrypt Error!" << std::endl;
-                                }
-                            }
-                            peer->second.receiveBuffer.clear();
-                        }
-                    }
-
                     receiveMutex.unlock();
                 }
 
@@ -162,6 +132,56 @@ namespace Server {
 
                 // Rest a bit
                 std::this_thread::sleep_for(std::chrono::milliseconds(1U));
+            }
+        }
+
+        void ProcessReceived()
+        {
+            for (auto peer = peers.begin(); peer != peers.end(); ++peer)
+            {
+                for (size_t i = 0U; i < peer->second.receiveBuffer.size(); i++)
+                {
+                    EasyBuffer* plainBuffer = peer->second.receiveBuffer[i];
+                    EasyPacket asPacket(plainBuffer);
+
+                    // Print Payload
+                    {
+                        std::string payload;
+                        for (size_t ii = 0; ii < asPacket.PayloadSize() && ii < 10; ii++)
+                            payload += std::to_string(*((unsigned char*)(asPacket.Payload() + ii))) + ((ii != 10 && ii != asPacket.PayloadSize()) ? ((ii == asPacket.PayloadSize() - 1U || ii == 10 - 1U) ? "" : " ") : ((ii == 10 && asPacket.PayloadSize() > 10) ? "..." : ""));
+                        std::cout << "Server Receive Packet[" << (++i) << "] Payload: [" << payload << "]" << std::endl;
+                    }
+
+                    // Send Echo Reply
+                    {
+                        EasyBuffer* buff = bf.Get();
+
+                        bool status = true;
+
+                        if (status)
+                            status = buff;
+
+                        if (status)
+                            status = EasyPacket::MakeCompressed(plainBuffer, buff);
+
+                        if (status)
+                            status = EasyPacket::MakeEncrypted(peer->second, buff);
+
+                        if (status)
+                        {
+                            auto res = sock.send(buff->begin(), buff->m_payload_size + EasyPacket::HeaderSize(), peer->second.ip, peer->second.port);
+                            std::cout << "Server Echo Reply Sent! Result: " << res << std::endl;
+                        }
+                        else
+                        {
+                            std::cout << "Server Error While Sending Echo Reply!" << std::endl;
+                        }
+
+                        bf.Free(buff);
+                        bf.Free(plainBuffer);
+                    }
+                }
+                peer->second.receiveBuffer.clear();
             }
         }
 
@@ -197,50 +217,13 @@ namespace Server {
                                 uint64_t ret = sock.receive(buff->begin(), buff->capacity(), buff->m_payload_size, host);
                                 if (ret == WSAEISCONN && buff->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + 0U + TAG_SIZE)
                                 {
-                                    PeerList::iterator cache_peer = peer_cache.find(host.addr);
-                                    if (cache_peer == peer_cache.end())
-                                    {
-                                        EasyPacket packet(buff);
-                                        if (ReadKeyFromMYSQL(*packet.SessionID(), host.secret.first))
-                                        {
-                                            host.session_id = *packet.SessionID();
-                                            memcpy(host.secret.second.data(), packet.IV(), IV_SIZE);
-                                            if (packet.MakeDecrypted(host))
-                                            {
-                                                std::pair<PeerList::iterator, bool> res = peer_cache.insert({ host.addr, host });
-                                                (*res.first).second.receiveBuffer.push_back(buff);
-                                                buff = nullptr;
-                                            }
-                                            else
-                                            {
-                                                std::cout << "Error! Packet decryption failed!" << std::endl;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            std::cout << "Error! Reading key from database!" << std::endl;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        EasyPacket packet(buff);
-                                        memcpy(host.secret.second.data(), packet.IV(), IV_SIZE);
-                                        if (packet.MakeDecrypted(cache_peer->second))
-                                        {
-                                            cache_peer->second.receiveBuffer.push_back(buff);
-                                            buff = nullptr;
-                                        }
-                                        else
-                                        {
-                                            std::cout << "Error! Packet decryption failed!" << std::endl;
-                                        }
-                                    }
+                                    (void)ReceivePacket(buff, host, peer_cache);
                                 }
                                 else
                                 {
                                     buff->m_payload_size = 0U;
                                 }
-                              }
+                            }
                         }
                     }
                 }
@@ -275,6 +258,63 @@ namespace Server {
                 // Rest a bit
                 std::this_thread::sleep_for(std::chrono::milliseconds(1U));
             }
+        }
+
+        bool ReceivePacket(EasyBuffer* buff, EasyPeer& host, PeerList& peer_cache)
+        {
+            EasyPeer& actualHost = host;
+
+            PeerList::iterator cache_peer = peer_cache.find(host.addr);
+
+            EasyPacket packet(buff);
+            memcpy(actualHost.secret.second.data(), packet.IV(), IV_SIZE);
+
+            SessionID_t session_id = *packet.SessionID();
+
+            bool status = true;
+            if (cache_peer == peer_cache.end())
+            {
+                actualHost.session_id = session_id;
+                status = ReadKeyFromMYSQL(*packet.SessionID(), actualHost.secret.first);
+            }
+            else if(session_id == cache_peer->second.session_id)
+            {
+                actualHost = cache_peer->second;
+            }
+            else
+            {
+                status = false;
+            }
+
+            if (status)
+                status = EasyPacket::MakeDecrypted(host, buff);
+
+            EasyBuffer* buff2 = bf.Get();
+            if (status)
+                status = buff2;
+
+            if (status)
+                status = EasyPacket::MakeDecompressed(buff, buff2);
+
+            if (status)
+            {
+                if (cache_peer == peer_cache.end())
+                {
+                    std::pair<PeerList::iterator, bool> res = peer_cache.insert({ host.addr, host });
+                    (*res.first).second.receiveBuffer.push_back(buff2);
+                }
+                else
+                {
+                    cache_peer->second.receiveBuffer.push_back(buff2);
+                }
+            }
+            else
+            {
+                std::cout << "Server Error while processing incoming packet!" << std::endl;
+                bf.Free(buff2);
+            }
+
+            return status;
         }
 
         bool Start()
@@ -331,9 +371,24 @@ namespace Server {
 }
 
 namespace ClientTest {
+    std::string key = "fbdRjmU4rvENzNCy";
     EasyPeer client;
     EasySocket socket;
-    uint8_t ctr = 0U;
+    uint8_t ctr = (uint8_t)'*';
+    uint8_t payload_size = 10U;
+
+    struct ClientTestInitializer
+    {
+        ClientTestInitializer()
+        {
+            //client.user_id = 1U;
+            client.session_id = 2U;
+            client.sequence_id_in = 0U;
+            client.sequence_id_out = 0U;
+            memcpy(client.secret.first.data(), key.c_str(), KEY_SIZE);
+        }
+    };
+    ClientTestInitializer clientTestInitializer;
 
     int ClientWebRequest(lua_State* L)
     {
@@ -406,51 +461,80 @@ namespace ClientTest {
     int ClientPacket(lua_State* L)
     {
         EasyBuffer* buff = bf.Get();
-        if (buff)
+        EasyBuffer* buff2 = bf.Get();
+        EasyBuffer* buff3 = bf.Get();
+
+        if (buff && buff2 && buff3)
         {
-            Payload_t payload = { ctr++ };
-
-            client.NextSequence();
-
-            EasyPacket packet(buff);
-            memcpy(packet.Payload(), payload.data(), payload.size());
+            // Sample Payload
+            Payload_t payload;
+            for (uint8_t i = 0U; i < payload_size; i++)
+                payload.push_back(ctr);
+            EasyPacket plainPacket(buff);
+            memcpy(plainPacket.Payload(), payload.data(), payload.size());
             buff->m_payload_size = payload.size();
-            if (packet.MakeEncrypted(client))
+
+            // Prepare Packet
+            bool result = true;
+            if (result)
+                result = EasyPacket::MakeCompressed(buff, buff2);
+
+            if (result)
+                result = EasyPacket::MakeEncrypted(client, buff2);
+
+            // Send Packet
+            if (result)
             {
-                auto res = socket.send(buff->begin(), sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + buff->m_payload_size, EasyIpAddress::resolve(SERVER_IP), SERVER_PORT);
+                auto res = socket.send(buff2->begin(), sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + buff2->m_payload_size, EasyIpAddress::resolve(SERVER_IP), SERVER_PORT);
                 std::cout << "Client Packet Send! Result: " << res << std::endl;
-                bf.Free(buff);
             }
-        
+            else
+            {
+                std::cout << "Client Packet Send! Error while packet create! " << std::endl;
+            }
         }
+        bf.Free(buff);
+        bf.Free(buff2);
+        bf.Free(buff3);
         return 0;
     }
 
     int ClientReceive(lua_State* L)
     {
-        EasyBuffer* b = bf.Get();
-        if (b)
+        EasyBuffer* buff = bf.Get();
+        EasyBuffer* buff2 = bf.Get();
+        if (buff && buff2)
         {
             EasyIpAddress receiveIP;
             unsigned short receivePort;
-            auto res = socket.receive(b->begin(), b->capacity(), b->m_payload_size, receiveIP, receivePort);
+            auto res = socket.receive(buff->begin(), buff->capacity(), buff->m_payload_size, receiveIP, receivePort);
             std::cout << "Client Packet Receive! Result: " << res << std::endl;
 
-            EasyPacket p(b);
-            if (p.MakeDecrypted(client))
+            bool status = (res == WSAEISCONN);
+
+            if (status)
+                status = EasyPacket::MakeDecrypted(client, buff);
+
+            if (status)
+                status = EasyPacket::MakeDecompressed(buff, buff2);
+
+            if (status)
             {
-                std::string payload;
-                for (size_t ii = 0; ii < b->m_payload_size && ii < 10; ii++)
-                    payload += std::to_string(*((unsigned char*)(p.Payload() + ii))) + ((ii != 10 && ii != b->m_payload_size) ? " " : ((ii == 10 && b->m_payload_size > 10) ? "..." : ""));
-                std::cout << "    Payload: [" << payload << "]" << std::endl;
-                ctr = *p.Payload();
+                EasyPacket asPacket(buff2);
+
+                std::string asString;
+                for (size_t ii = 0; ii < buff2->m_payload_size && ii < 10; ii++)
+                    asString += std::to_string(*((unsigned char*)(asPacket.Payload() + ii))) + ((ii != 10 && ii != asPacket.PayloadSize()) ? " " : ((ii == 10 && asPacket.PayloadSize() > 10) ? "..." : ""));
+                std::cout << "    Payload: [" << asString << "]" << std::endl;
+                ctr = *asPacket.Payload();
             }
             else
             {
-                std::cout << "Client Packet Decrypt Error!" << std::endl;
+                std::cout << "Client Error While Processing Received Packet!" << std::endl;
             }
-            bf.Free(b);
         }
+        bf.Free(buff);
+        bf.Free(buff2);
         return 0;
     }
     

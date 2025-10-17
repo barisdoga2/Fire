@@ -74,6 +74,9 @@
     <ClCompile Include="EasyPacket.cpp">
       <Filter>Source Files\Net</Filter>
     </ClCompile>
+    <ClCompile Include="EasyCompression.cpp">
+      <Filter>Source Files\Net</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EasyPlayground.hpp">
@@ -134,6 +137,9 @@
       <Filter>Source Files\Net</Filter>
     </ClInclude>
     <ClInclude Include="EasyNet.hpp">
+      <Filter>Source Files\Net</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyCompression.hpp">
       <Filter>Source Files\Net</Filter>
     </ClInclude>
   </ItemGroup>
