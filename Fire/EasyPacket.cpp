@@ -35,10 +35,11 @@ bool EasyPacket::MakeEncrypted(EasyPeer& peer)
             memcpy(IV(), peer.secret.second.data(), IV_SIZE);
 
             // Set Key
-            peer.enc.SetKeyWithIV(peer.secret.first.data(), KEY_SIZE, (uint8_t*)IV(), IV_SIZE);
+            GCM<AES>::Encryption enc;
+            enc.SetKeyWithIV(peer.secret.first.data(), KEY_SIZE, (uint8_t*)IV(), IV_SIZE);
 
             // GCM Filter
-            AuthenticatedEncryptionFilter aef(peer.enc, new ArraySink(Payload(), PayloadSize() + TAG_SIZE), false, TAG_SIZE);
+            AuthenticatedEncryptionFilter aef(enc, new ArraySink(Payload(), PayloadSize() + TAG_SIZE), false, TAG_SIZE);
 
             // Fill AAD Channel
             aef.ChannelPut(AAD_CHANNEL, (const byte*)SessionID(), sizeof(SessionID_t));
@@ -74,10 +75,11 @@ bool EasyPacket::MakeDecrypted(EasyPeer& peer)
             memcpy(peer.secret.second.data(), IV(), IV_SIZE);
 
             // Set Key
-            peer.dec.SetKeyWithIV(peer.secret.first.data(), KEY_SIZE, (uint8_t*)IV(), IV_SIZE);
+            GCM<AES>::Decryption dec;
+            dec.SetKeyWithIV(peer.secret.first.data(), KEY_SIZE, (uint8_t*)IV(), IV_SIZE);
 
             // GCM Filter
-            AuthenticatedDecryptionFilter adf(peer.dec, new ArraySink(Payload(), PayloadSize() - TAG_SIZE), AuthenticatedDecryptionFilter::DEFAULT_FLAGS, TAG_SIZE);
+            AuthenticatedDecryptionFilter adf(dec, new ArraySink(Payload(), PayloadSize() - TAG_SIZE), AuthenticatedDecryptionFilter::DEFAULT_FLAGS, TAG_SIZE);
 
             // Fill AAD Channel
             adf.ChannelPut(AAD_CHANNEL, (const byte*)SessionID(), sizeof(SessionID_t));

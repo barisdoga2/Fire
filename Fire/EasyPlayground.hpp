@@ -26,8 +26,9 @@ public:
 
     bool Update(double _dt);
     bool Render(double _dt);
-
-    bool OneLoop();
+    void StartRender(double _dt);
+    void EndRender();
+    void ImGUIRender();
 
     void scroll_callback(GLFWwindow* window, double xpos, double ypos);
     void cursor_callback(GLFWwindow* window, double xpos, double ypos);

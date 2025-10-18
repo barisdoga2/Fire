@@ -70,9 +70,10 @@ public:
 
 
 	uint64_t send(const void* data, const size_t& size, const EasyIpAddress& remoteAddress, const unsigned short& remotePort);
+	uint64_t send(const void* data, const size_t& size, EasyPeer& peer); // Server use only
 
 	uint64_t receive(void* data, const size_t& size, size_t& received, EasyIpAddress& remoteAddress, unsigned short& remotePort);
-	uint64_t receive(void* data, const std::size_t& capacity, std::size_t& received, EasyPeer& peer);
+	uint64_t receive(void* data, const std::size_t& capacity, std::size_t& received, EasyPeer& peer); // Server use only
 
 	void setBlocking(bool block);
 

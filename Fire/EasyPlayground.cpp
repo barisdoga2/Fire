@@ -115,6 +115,103 @@ bool EasyPlayground::Update(double _dt)
     return !exitRequested;
 }
 
+void EasyPlayground::StartRender(double _dt)
+{
+	// FPS Calc
+	{
+		static double frameTimes[25] = { 0.0 };
+		static int frameCount = 0;
+		static int index = 0;
+
+		// store current frame delta time
+		frameTimes[index] = _dt;
+		index = (index + 1) % 25;
+
+		if (frameCount < 25)
+			++frameCount;
+
+		// calculate average delta over last N frames
+		double avgDt = 0.0;
+		for (int i = 0; i < frameCount; ++i)
+			avgDt += frameTimes[i];
+		avgDt /= frameCount;
+
+		// calculate FPS
+		fps = 1.0 / avgDt;
+	}
+
+	GL(ClearDepth(1.f));
+	GL(ClearColor(.4f, .42f, .38f, 1.f));
+	GL(Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+	
+	// Setup default states
+	GL(Disable(GL_CULL_FACE)); //GL(Enable(GL_CULL_FACE));
+	GL(CullFace(GL_BACK));
+	GL(Enable(GL_DEPTH_TEST));
+	GL(DepthMask(GL_TRUE));
+	GL(DepthFunc(GL_LEQUAL));
+}
+
+void EasyPlayground::ImGUIRender()
+{
+	static bool show_demo_window = true;
+	static bool show_another_window = false;
+	static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+	// Start the Dear ImGui frame
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+	if (show_demo_window)
+		ImGui::ShowDemoWindow(&show_demo_window);
+
+	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+	{
+		static float f = 0.0f;
+		static int counter = 0;
+
+		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+		ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+		ImGui::Checkbox("Another Window", &show_another_window);
+
+		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+		if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+			counter++;
+		ImGui::SameLine();
+		ImGui::Text("counter = %d", counter);
+
+		//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+		ImGui::End();
+	}
+
+	// 3. Show another simple window.
+	if (show_another_window)
+	{
+		ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+		ImGui::Text("hello");
+		if (ImGui::Button("Close Me"))
+			show_another_window = false;
+		ImGui::End();
+	}
+
+	// Rendering
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void EasyPlayground::EndRender()
+{
+	glfwSetWindowTitle(display_.window, (std::ostringstream() << std::fixed << std::setprecision(3) << "FPS: " << fps << " | UPS: " << ups).str().c_str());
+	glfwSwapBuffers(display_.window);
+	glfwPollEvents();
+}
+
 bool EasyPlayground::Render(double _dt)
 {
 	//if (model.animator)
@@ -125,43 +222,6 @@ bool EasyPlayground::Render(double _dt)
 	camera.Update(_dt);
 
 	bool success = true;
-
-	// Early Render
-	{
-		// FPS Calc
-		{
-			static double frameTimes[25] = { 0.0 };
-			static int frameCount = 0;
-			static int index = 0;
-
-			// store current frame delta time
-			frameTimes[index] = _dt;
-			index = (index + 1) % 25;
-
-			if (frameCount < 25)
-				++frameCount;
-
-			// calculate average delta over last N frames
-			double avgDt = 0.0;
-			for (int i = 0; i < frameCount; ++i)
-				avgDt += frameTimes[i];
-			avgDt /= frameCount;
-
-			// calculate FPS
-			fps = 1.0 / avgDt;
-		}
-
-		GL(ClearDepth(1.f));
-		GL(ClearColor(.4f, .42f, .38f, 1.f));
-		GL(Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
-
-		// Setup default states
-		GL(Disable(GL_CULL_FACE)); //GL(Enable(GL_CULL_FACE));
-		GL(CullFace(GL_BACK));
-		GL(Enable(GL_DEPTH_TEST));
-		GL(DepthMask(GL_TRUE));
-		GL(DepthFunc(GL_LEQUAL));
-	}
 
 	// Render
 	{
@@ -215,102 +275,6 @@ bool EasyPlayground::Render(double _dt)
 
 		shader.Stop();
 	}
-
-	// ImGUI Render
-	{
-		static bool show_demo_window = true;
-		static bool show_another_window = false;
-		static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-		// Start the Dear ImGui frame
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-		if (show_demo_window)
-			ImGui::ShowDemoWindow(&show_demo_window);
-
-		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-		{
-			static float f = 0.0f;
-			static int counter = 0;
-
-			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-			ImGui::Checkbox("Another Window", &show_another_window);
-
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-				counter++;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
-			//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-			ImGui::End();
-		}
-
-		// 3. Show another simple window.
-		if (show_another_window)
-		{
-			ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-			ImGui::Text("hello");
-			if (ImGui::Button("Close Me"))
-				show_another_window = false;
-			ImGui::End();
-		}
-
-		// Rendering
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-	}
-
-	// End Render
-	{
-		glfwSetWindowTitle(display_.window, (std::ostringstream() << std::fixed << std::setprecision(3) << "FPS: " << fps << " | UPS: " << ups).str().c_str());
-		glfwSwapBuffers(display_.window);
-		glfwPollEvents();
-	}
-
-	return success;
-}
-
-bool EasyPlayground::OneLoop()
-{
-	static bool init = false;
-	static std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
-	if (!init) { init = true; lastTime = std::chrono::high_resolution_clock::now(); }
-	static const double fps_constant = 1000.0 / 144.0;
-	static const double ups_constant = 1000.0 / 24.0;
-
-	static double fps_timer = 0.0;
-	static double ups_timer = 0.0;
-
-	std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
-	double elapsed_ms = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
-	lastTime = currentTime;
-
-	fps_timer += elapsed_ms;
-	ups_timer += elapsed_ms;
-
-	bool success = true;
-	if (fps_timer >= fps_constant)
-	{
-		success &= Render(fps_timer / 1000.0);
-		fps_timer = 0.0;
-	}
-
-	if (ups_timer >= ups_constant)
-	{
-		success &= Update(ups_timer / 1000.0);
-		ups_timer = 0.0;
-	}
-
-	success &= (glfwWindowShouldClose(display_.window) == 0);
 
 	return success;
 }

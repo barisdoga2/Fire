@@ -182,14 +182,13 @@ struct Chunk {
 
 class World {
 public:
+    b2WorldId world;
     World();
     Chunk* getChunkAt(const glm::vec2& pos);
     std::vector<Chunk*> getChunksInRadius(const glm::vec2& pos, float radius);
     void updatePeerSubscription(EasyPeer& peer);
     void Update(double _dt);
 private:
-    b2WorldId world;
-
     std::vector<Chunk> chunks;
     uint32_t widthChunks, heightChunks;
 

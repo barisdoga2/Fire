@@ -15,6 +15,7 @@ public:
     static const EasyIpAddress Broadcast;
 
     uint32_t toInteger() const;                  // host order integer
+    uint32_t asNetworkInteger() const; 
     std::string toString() const;                // "A.B.C.D"
     static EasyIpAddress resolve(const std::string& address); // from string/hostname
 

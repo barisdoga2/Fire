@@ -15,4 +15,6 @@ public:
 
     bool Init();
 
+    bool ShouldClose();
+
 };

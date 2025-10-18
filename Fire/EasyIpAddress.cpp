@@ -28,6 +28,11 @@ uint32_t EasyIpAddress::toInteger() const
     return ntohl(m_address); // convert to host order
 }
 
+uint32_t EasyIpAddress::asNetworkInteger() const
+{
+    return m_address;
+}
+
 std::string EasyIpAddress::toString() const
 {
     char buffer[INET_ADDRSTRLEN] = {};

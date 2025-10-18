@@ -70,3 +70,8 @@ bool EasyDisplay::Init()
 
 	return true;
 }
+
+bool EasyDisplay::ShouldClose()
+{
+	return glfwWindowShouldClose(window);
+}

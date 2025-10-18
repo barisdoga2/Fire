@@ -1,5 +1,5 @@
 ﻿#define DUMP
-#define CLIENT false
+#define CLIENT true
 #define LOCAL_SERVER true
 #define SERVER_PORT 54000U
 
@@ -30,7 +30,6 @@
 #include "World.hpp"
 #include "Serializer.hpp"
 
-
 #if defined(_DEBUG) || LOCAL_SERVER
 #if LOCAL_SERVER
 #define SERVER_BUILD
@@ -48,7 +47,6 @@
 #endif
 
 EasyBufferManager bf(50U, 1472U);
-
 
 namespace Server {
     class Server {
@@ -150,7 +148,7 @@ namespace Server {
 
                     if (status)
                     {
-                        auto res = sock.send(buff->begin(), buff->m_payload_size + EasyPacket::HeaderSize(), peer->second.ip, peer->second.port);
+                        auto res = sock.send(buff->begin(), buff->m_payload_size + EasyPacket::HeaderSize(), peer->second);
                         std::cout << "Server Echo Reply Sent! Result: " << res << std::endl;
                     }
                     else
@@ -297,9 +295,6 @@ namespace Server {
                         std::cout << "Peer cache, reconnected with different addr\n";
 
                         cache_peer->second.addr = host.addr;
-                        cache_peer->second.ip = host.ip;
-                        cache_peer->second.port = host.port;
-                        cache_peer->second.sockAddr = host.sockAddr;
                     }
                     else
                     {
@@ -686,6 +681,7 @@ namespace Dump {
 }
 #endif
 
+
 int main()
 {
 #ifdef DUMP
@@ -709,7 +705,43 @@ int main()
     {
         if (EasyPlayground playground(display); playground.Init())
         {
-            while (playground.OneLoop());
+            std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+            std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
+
+            const double fps_constant = 1000.0 / 144.0;
+            const double ups_constant = 1000.0 / 24.0;
+
+            double fps_timer = 0.0;
+            double ups_timer = 0.0;
+
+            bool success = true;
+            while (success)
+            {
+                currentTime = std::chrono::high_resolution_clock::now();
+                double elapsed_ms = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
+                lastTime = currentTime;
+
+                fps_timer += elapsed_ms;
+                ups_timer += elapsed_ms;
+
+                if (fps_timer >= fps_constant)
+                {
+                    playground.StartRender(fps_timer / 1000.0);
+                    success &= playground.Render(fps_timer / 1000.0);
+                    playground.ImGUIRender();
+                    playground.EndRender();
+                    fps_timer = 0.0;
+                }
+
+                if (ups_timer >= ups_constant)
+                {
+                    success &= playground.Update(ups_timer / 1000.0);
+                    ups_timer = 0.0;
+                }
+
+                success &= !display.ShouldClose();
+            }
+
             luaRunning = false;
         }
     }

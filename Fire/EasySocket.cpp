@@ -62,6 +62,23 @@ uint64_t EasySocket::send(const void* data, const std::size_t& size, const EasyI
 	return WSAEISCONN;
 }
 
+uint64_t EasySocket::send(const void* data, const std::size_t& size, EasyPeer& peer) // Server use only
+{
+	create();
+
+	sockaddr_in addr{};
+	addr.sin_family = AF_INET;
+	addr.sin_port = static_cast<uint16_t>(peer.addr & 0xFFFF);
+	addr.sin_addr.s_addr = static_cast<uint32_t>(peer.addr >> 16);
+
+	const int sent = static_cast<int>(sendto((SOCKET)m_socket, static_cast<const char*>(data), static_cast<Size>(size), 0, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
+
+	if (sent < 0)
+		return getErrorStatus();
+
+	return WSAEISCONN;
+}
+
 uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, EasyIpAddress& remoteAddress, unsigned short& remotePort)
 {
 	create();
@@ -84,24 +101,22 @@ uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_
 	return WSAEISCONN;
 }
 
-uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, EasyPeer& peer)
+uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, EasyPeer& peer)  // Server use only
 {
 	create();
 
 	received = 0;
 
-	int addrLen = static_cast<int>(peer.sockAddr.size());
-	const int recv = static_cast<int>(recvfrom((SOCKET)m_socket, static_cast<char*>(data), static_cast<Size>(capacity), 0, reinterpret_cast<sockaddr*>(peer.sockAddr.data()), &addrLen));
+	sockaddr_in addr{};
+	int addr_size = sizeof(sockaddr_in);
+	const int recv = static_cast<int>(recvfrom((SOCKET)m_socket, static_cast<char*>(data), static_cast<Size>(capacity), 0, reinterpret_cast<sockaddr*>(&addr), &addr_size));
 
 	if (recv < 0)
 		return getErrorStatus();
 
-	sockaddr_in* addrIn = reinterpret_cast<sockaddr_in*>(peer.sockAddr.data());
-	peer.addr = (addrIn->sin_addr.s_addr << 16U) | (addrIn->sin_port);
 	received = static_cast<std::size_t>(recv);
 
-	peer.ip = EasyIpAddress(addrIn->sin_addr.s_addr);
-	peer.port = ntohs(addrIn->sin_port);
+	peer.addr = (static_cast<uint64_t>(addr.sin_addr.s_addr) << 16) | addr.sin_port;
 
 	return WSAEISCONN;
 }
@@ -168,7 +183,7 @@ struct SocketInitializer
 	SocketInitializer()
 	{
 		WSADATA init;
-		WSAStartup(MAKEWORD(2, 2), &init);
+		(void)WSAStartup(MAKEWORD(2, 2), &init);
 	}
 
 	~SocketInitializer()
