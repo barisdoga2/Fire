@@ -165,7 +165,7 @@ void EasyModel::ExtractBoneWeightForVertices(aiMesh* aiMesh, EasyMesh* mesh, con
         {
             int vertexId = weights[weightIndex].mVertexId;
             float weight = weights[weightIndex].mWeight;
-            assert(vertexId <= mesh->vertices.size());
+            assert(vertexId <= static_cast<int>(mesh->vertices.size()));
             for (int i = 0; i < 4; ++i)
             {
                 if (mesh->vertices[vertexId].boneIds[i] < 0)

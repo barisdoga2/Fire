@@ -1,5 +1,6 @@
 #pragma once
 
+#include <queue>
 #include "EasyNet.hpp"
 #include "EasyBuffer.hpp"
 #include "EasyPeer.hpp"

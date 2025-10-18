@@ -29,12 +29,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyPlayground.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="imgui_impl_glfw.cpp">
       <Filter>Source Files\Core\Ext</Filter>
     </ClCompile>
@@ -83,14 +77,14 @@
     <ClCompile Include="World.cpp">
       <Filter>Source Files\Game</Filter>
     </ClCompile>
-    <ClCompile Include="EasySerializer.cpp">
-      <Filter>Source Files\Core\Net</Filter>
+    <ClCompile Include="EasyPlayground.cpp">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EasyPlayground.hpp">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="EasyUtility.hpp">
       <Filter>Source Files\Core</Filter>
     </ClInclude>
@@ -156,6 +150,15 @@
     </ClInclude>
     <ClInclude Include="EasySerializer.hpp">
       <Filter>Source Files\Core\Net</Filter>
+    </ClInclude>
+    <ClInclude Include="Net.hpp">
+      <Filter>Source Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Serializer.hpp">
+      <Filter>Source Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyPlayground.hpp">
+      <Filter>Source Files\Game</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

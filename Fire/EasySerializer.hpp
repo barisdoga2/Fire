@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <stdint.h>
+#include <glm/glm.hpp>
 #include "EasyNet.hpp"
 #include "EasyBuffer.hpp"
 
@@ -15,7 +16,7 @@ public:
 class EasySerializer {
 public:
     uint8_t state = 0U;
-    uint64_t head = 0U;
+    size_t head = 0U;
     EasyBuffer* bf;
 
     EasySerializer(EasyBuffer* bf) : bf(bf)
@@ -38,15 +39,22 @@ public:
     template <class T>
     void Put(T& v)
     {
-        static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
-        if (state == 1U)
+        if constexpr (std::is_base_of_v<EasySerializeable, T>)
         {
-            memcpy(bf->begin() + bf->m_payload_size + head, &v, sizeof(T)); bf->m_payload_size += sizeof(T);
+            v.Serialize(this);
         }
-        else if (state == 2U)
+        else
         {
-            memcpy((uint8_t*)&v, bf->begin() + head, sizeof(T)); head += sizeof(T);
+            if (state == 1U)
+            {
+                memcpy(bf->begin() + head, &v, sizeof(T));
+            }
+            else if (state == 2U)
+            {
+                memcpy((uint8_t*)&v, bf->begin() + head, sizeof(T));
+            }
         }
+        head += sizeof(T);
     }
 
     template <class T>
@@ -61,6 +69,12 @@ public:
             Put(c);
     }
 
+    void Put(glm::vec2& v)
+    {
+        Put(v.x);
+        Put(v.y);
+    }
+
     void Put(std::string& v)
     {
 
@@ -73,18 +87,4 @@ public:
 
 };
 
-class EasyNetObj : public EasySerializeable {
-public:
-    PacketID_t packetID;
 
-    EasyNetObj(PacketID_t packetID) : packetID(packetID)
-    {
-
-    }
-
-    void Serialize(EasySerializer* ser)
-    {
-        ser->Put(packetID);
-    }
-
-};

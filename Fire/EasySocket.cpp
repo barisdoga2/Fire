@@ -38,7 +38,7 @@ uint64_t EasySocket::bind(unsigned short port, const EasyIpAddress& ip)
 	create();
 
 	sockaddr_in addr = makeSockAddr(ip, port);
-	if (::bind(m_socket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == -1)
+	if (::bind((SOCKET)m_socket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == -1)
 		return GetLastError();
 
 	return WSAEISCONN;
@@ -54,7 +54,7 @@ uint64_t EasySocket::send(const void* data, const std::size_t& size, const EasyI
 	create();
 
 	sockaddr_in addr = makeSockAddr(remoteAddress, remotePort);
-	const int sent = static_cast<int>(sendto(m_socket, static_cast<const char*>(data), static_cast<Size>(size), 0, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
+	const int sent = static_cast<int>(sendto((SOCKET)m_socket, static_cast<const char*>(data), static_cast<Size>(size), 0, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
 
 	if (sent < 0)
 		return getErrorStatus();
@@ -72,7 +72,7 @@ uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_
 
 	sockaddr_in sender{};
 	int addrLen = sizeof(sender);
-	const int recv = static_cast<int>(recvfrom(m_socket, static_cast<char*>(data), static_cast<Size>(capacity), 0, reinterpret_cast<sockaddr*>(&sender), &addrLen));
+	const int recv = static_cast<int>(recvfrom((SOCKET)m_socket, static_cast<char*>(data), static_cast<Size>(capacity), 0, reinterpret_cast<sockaddr*>(&sender), &addrLen));
 
 	if (recv < 0)
 		return getErrorStatus();
@@ -91,7 +91,7 @@ uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_
 	received = 0;
 
 	int addrLen = static_cast<int>(peer.sockAddr.size());
-	const int recv = static_cast<int>(recvfrom(m_socket, static_cast<char*>(data), static_cast<Size>(capacity), 0, reinterpret_cast<sockaddr*>(peer.sockAddr.data()), &addrLen));
+	const int recv = static_cast<int>(recvfrom((SOCKET)m_socket, static_cast<char*>(data), static_cast<Size>(capacity), 0, reinterpret_cast<sockaddr*>(peer.sockAddr.data()), &addrLen));
 
 	if (recv < 0)
 		return getErrorStatus();
@@ -111,7 +111,7 @@ void EasySocket::setBlocking(bool block)
 	if (m_socket != INVALID_SOCKET)
 	{
 		u_long blocking = block ? 0 : 1;
-		ioctlsocket(m_socket, static_cast<long>(FIONBIO), &blocking);
+		ioctlsocket((SOCKET)m_socket, static_cast<long>(FIONBIO), &blocking);
 		m_isBlocking = block;
 	}
 }
@@ -122,7 +122,7 @@ unsigned short EasySocket::getLocalPort()
 	{
 		sockaddr_in address{};
 		AddrLength size = sizeof(address);
-		if (getsockname(m_socket, reinterpret_cast<sockaddr*>(&address), &size) != -1)
+		if (getsockname((SOCKET)m_socket, reinterpret_cast<sockaddr*>(&address), &size) != -1)
 		{
 			return ntohs(address.sin_port);
 		}
@@ -147,7 +147,7 @@ void EasySocket::create()
 		setBlocking(m_isBlocking);
 
 		int yes = 1;
-		if (setsockopt(m_socket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&yes), sizeof(yes)) == -1)
+		if (setsockopt((SOCKET)m_socket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&yes), sizeof(yes)) == -1)
 		{
 			std::cout << "Failed to enable broadcast on UDP socket" << std::endl;
 		}
@@ -158,7 +158,7 @@ void EasySocket::close()
 {
 	if (m_socket != INVALID_SOCKET)
 	{
-		closesocket(m_socket);
+		closesocket((SOCKET)m_socket);
 		m_socket = INVALID_SOCKET;
 	}
 }

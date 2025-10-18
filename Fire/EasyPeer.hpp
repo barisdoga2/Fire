@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <queue>
 #include <chrono>
 #include <unordered_set>
 #include <glm/glm.hpp>
@@ -39,7 +40,7 @@ public:
     CryptoPP::GCM<CryptoPP::AES>::Decryption dec;
     AES_t secret;
 
-    std::vector<EasyBuffer*> receiveBuffer;
+    std::vector<EasyNetObj*> receive;
 
     NetPlayer player;
 
@@ -48,12 +49,14 @@ public:
     EasyPeer(const EasyPeer& peer)
         : addr(peer.addr), session_id(peer.session_id), sequence_id_in(peer.sequence_id_in), sequence_id_out(peer.sequence_id_out),
         secret(peer.secret), enc(peer.enc), dec(peer.dec), sockAddr(peer.sockAddr), ip(peer.ip), port(peer.port),
-        player(peer.player), lastReceive(peer.lastReceive)
+        player(peer.player), lastReceive(peer.lastReceive), receive(peer.receive)
     {
 
     }
 
-    EasyPeer() : addr(0), session_id(0), sequence_id_in(0), sequence_id_out(0), secret(Key_t(KEY_SIZE), IV_t(IV_SIZE)), sockAddr(16U), ip(0), port(0), player({{ 0.0f, 0.0f }, {}}), lastReceive()
+    EasyPeer()
+        : addr(0), session_id(0), sequence_id_in(0), sequence_id_out(0), secret(Key_t(KEY_SIZE), IV_t(IV_SIZE)), sockAddr(16U),
+        ip(0), port(0), player({{ 0.0f, 0.0f }, {}}), lastReceive(), receive()
     {
 
     }

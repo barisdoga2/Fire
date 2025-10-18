@@ -28,6 +28,7 @@
 #include "EasyPacket.hpp"
 #include "EasySerializer.hpp"
 #include "World.hpp"
+#include "Serializer.hpp"
 
 
 #if defined(_DEBUG) || LOCAL_SERVER
@@ -47,7 +48,6 @@
 #endif
 
 EasyBufferManager bf(50U, 1472U);
-
 
 
 namespace Server {
@@ -122,73 +122,47 @@ namespace Server {
         {
             for (auto peer = peers.begin(); peer != peers.end(); ++peer)
             {
-                for (size_t i = 0U; i < peer->second.receiveBuffer.size(); i++)
+                for (size_t i = 0U; i < peer->second.receive.size(); i++)
                 {
-                    EasyBuffer* plainBuffer = peer->second.receiveBuffer[i];
-                    EasyPacket asPacket(plainBuffer);
+                    EasyNetObj* o = peer->second.receive[i];
+                    if (o->packetID == HELLO)
+                        std::cout << "Server Received Hello! Message: " << ((pHello*)o)->message << "\n";
 
-                    // Print Payload
+                    // Send Echo Response
+                    std::vector<EasyNetObj*> cache;
+                    EasyBuffer* plainBuffer = bf.Get();
+                    EasyBuffer* buff = bf.Get();
 
-                    b2::pMaterial mc,mc2;
-                    EasySerializer deser(plainBuffer);
-                    deser.head = EasyPacket::HeaderSize();
-                    deser.Deserialize(mc);
-                    deser.Deserialize(mc2);
-                    std::cout << "client recv m1: " << mc.b << ", m2: " << mc2.b << std::endl;
-
-
-                    b2::pMaterial m;
-                    m.friction = 1;
-                    m.restitution = 2;
-                    m.rollingResistance = 3;
-                    m.tangentSpeed = 4;
-                    m.a = { 12,465,112,534,84 };
-                    m.b = "helloserver11";
-
-                    b2::pMaterial m2;
-                    m2.friction = 21;
-                    m2.restitution = 24;
-                    m2.rollingResistance = 113;
-                    m2.tangentSpeed = 554;
-                    m2.a = { 1234,1234,55,66 };
-                    m2.b = "helloWWWserver222";
-
-                    plainBuffer->m_payload_size = 0U;
-                    EasySerializer ser(plainBuffer);
-                    ser.head = EasyPacket::HeaderSize();
-                    ser.Serialize(m);
-                    ser.Serialize(m2);
-
-                    // Send Echo Reply
+                    bool status = plainBuffer && buff;
+                    if(status)
                     {
-                        EasyBuffer* buff = bf.Get();
+                        pHello echo("Hi, Im server :)");
+                        cache.push_back(&echo);
 
-                        bool status = true;
-
-                        if (status)
-                            status = buff;
-
-                        if (status)
-                            status = EasyPacket::MakeCompressed(plainBuffer, buff);
-
-                        if (status)
-                            status = EasyPacket::MakeEncrypted(peer->second, buff);
-
-                        if (status)
-                        {
-                            auto res = sock.send(buff->begin(), buff->m_payload_size + EasyPacket::HeaderSize(), peer->second.ip, peer->second.port);
-                            std::cout << "Server Echo Reply Sent! Result: " << res << std::endl;
-                        }
-                        else
-                        {
-                            std::cout << "Server Error While Sending Echo Reply!" << std::endl;
-                        }
-
-                        bf.Free(buff);
-                        bf.Free(plainBuffer);
+                        MakeSerialized(plainBuffer, cache);
                     }
+
+                    if (status)
+                        status = EasyPacket::MakeCompressed(plainBuffer, buff);
+                    
+                    if (status)
+                        status = EasyPacket::MakeEncrypted(peer->second, buff);
+
+                    if (status)
+                    {
+                        auto res = sock.send(buff->begin(), buff->m_payload_size + EasyPacket::HeaderSize(), peer->second.ip, peer->second.port);
+                        std::cout << "Server Echo Reply Sent! Result: " << res << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "Server Error While Sending Echo Reply!" << std::endl;
+                    }
+
+                    bf.Free(buff);
+                    bf.Free(plainBuffer);
+                    delete o;
                 }
-                peer->second.receiveBuffer.clear();
+                peer->second.receive.clear();
             }
         }
 
@@ -280,57 +254,58 @@ namespace Server {
         {
             for (auto peer = peer_cache.begin(); peer != peer_cache.end(); ++peer)
             {
-                if (peer->second.receiveBuffer.size() > 0U)
+                if (peer->second.receive.size() > 0U)
                 {
                     if (auto r_peer = peers.find(peer->second.session_id); r_peer != peers.end())
                     {
-                        r_peer->second.receiveBuffer.insert(r_peer->second.receiveBuffer.end(), peer->second.receiveBuffer.begin(), peer->second.receiveBuffer.end());
+                        r_peer->second.receive.insert(r_peer->second.receive.end(), peer->second.receive.begin(), peer->second.receive.end());
                     }
                     else
                     {
-                        std::pair<PeerList::iterator, bool> newPeer = peers.insert({ peer->first, peer->second });
-                        newPeer.first->second.receiveBuffer.insert(newPeer.first->second.receiveBuffer.end(), peer->second.receiveBuffer.begin(), peer->second.receiveBuffer.end());
+                        peers.insert({ peer->first, peer->second });
                     }
                 }
-                peer->second.receiveBuffer.clear();
+                peer->second.receive.clear();
             }
         }
 
         bool ReceivePacket(EasyBuffer* buff, EasyPeer& host, PeerList& peer_cache)
         {
+            static EasyBuffer* buff2 = nullptr;
+            if (!buff2)
+                buff2 = bf.Get();
+
             bool ret = true;
 
-            EasyPeer& actualHost = host;
             EasyPacket packet(buff);
             SessionID_t session_id = *packet.SessionID();
 
             PeerList::iterator cache_peer = peer_cache.find(session_id);
             if (cache_peer == peer_cache.end())
             {
-                actualHost.session_id = session_id;
-                actualHost.lastReceive = std::chrono::high_resolution_clock::now();
-                ret = ReadKeyFromMYSQL(*packet.SessionID(), actualHost.secret.first);
+                host.session_id = session_id;
+                host.lastReceive = std::chrono::high_resolution_clock::now();
+                ret = ReadKeyFromMYSQL(*packet.SessionID(), host.secret.first);
             }
             else
             {
-                actualHost = cache_peer->second;
-                bool alive = actualHost.alive();
+                bool alive = cache_peer->second.alive();
                 if ((session_id == cache_peer->second.session_id) && alive)
                 {
                     if (host.addr != cache_peer->second.addr)
                     {
                         std::cout << "Peer cache, reconnected with different addr\n";
 
-                        actualHost.addr = host.addr;
-                        actualHost.ip = host.ip;
-                        actualHost.port = host.port;
-                        actualHost.sockAddr = host.sockAddr;
+                        cache_peer->second.addr = host.addr;
+                        cache_peer->second.ip = host.ip;
+                        cache_peer->second.port = host.port;
+                        cache_peer->second.sockAddr = host.sockAddr;
                     }
                     else
                     {
-                        std::cout << "Peer cache, reconnected\n";
+                        std::cout << "Peer cache, existing session! Received sequence: " << host.sequence_id_in << ", Peer sequence: " << cache_peer->second.sequence_id_in << "\n";
                     }
-                    actualHost.lastReceive = std::chrono::high_resolution_clock::now();
+                    cache_peer->second.lastReceive = std::chrono::high_resolution_clock::now();
                 }
                 else
                 {
@@ -339,39 +314,23 @@ namespace Server {
                         peer_cache.erase(cache_peer);
                     ret = false;
                 }
-            }
-
-            EasyBuffer* buff2 = nullptr;
+            }            
             
-            if (ret)
+            if (ret && cache_peer == peer_cache.end())
                 ret = EasyPacket::MakeDecrypted(host, buff);
-
-            if (ret)
-            {
-                buff2 = bf.Get();
-                ret = buff2;
-            }
+            else if(ret && cache_peer != peer_cache.end())
+                ret = EasyPacket::MakeDecrypted(cache_peer->second, buff);
 
             if (ret)
                 ret = EasyPacket::MakeDecompressed(buff, buff2);
 
-            if (ret)
-            {
-                if (cache_peer == peer_cache.end())
-                {
-                    std::pair<PeerList::iterator, bool> res = peer_cache.insert({ session_id, host });
-                    (*res.first).second.receiveBuffer.push_back(buff2);
-                }
-                else
-                {
-                    cache_peer->second.receiveBuffer.push_back(buff2);
-                }
-            }
-            else
-            {
-                std::cout << "Server Error while processing incoming packet!" << std::endl;
-                bf.Free(buff2);
-            }
+            if (ret && cache_peer == peer_cache.end())
+                ret = MakeDeserialized(buff2, host.receive);
+            else if (ret && cache_peer != peer_cache.end())
+                ret = MakeDeserialized(buff2, cache_peer->second.receive);
+
+            if(ret && cache_peer == peer_cache.end())
+                peer_cache.insert({ session_id, host });
 
             return ret;
         }
@@ -517,38 +476,34 @@ namespace ClientTest {
         return 0;
     }
 
-    int ClientPacket(lua_State* L)
+    int ClientResetSendSequenceCounter(lua_State* L)
+    {
+        client.sequence_id_out= 0U;
+        return 0;
+    }
+
+    int ClientResetReceiveSequenceCounter(lua_State* L)
+    {
+        client.sequence_id_in = 0U;
+        return 0;
+    }
+
+    int ClientSend(lua_State* L)
     {
         EasyBuffer* buff = bf.Get();
         EasyBuffer* buff2 = bf.Get();
-        EasyBuffer* buff3 = bf.Get();
-
-        if (buff && buff2 && buff3)
+        if (buff && buff2)
         {
             // Sample Payload
-            b2::pMaterial m;
-            m.friction = 1;
-            m.restitution = 2;
-            m.rollingResistance = 3;
-            m.tangentSpeed = 4;
-            m.a = { 12,465,112,534,84 };
-            m.b = "helloclient11";
-
-            b2::pMaterial m2;
-            m2.friction = 21;
-            m2.restitution = 24;
-            m2.rollingResistance = 113;
-            m2.tangentSpeed = 554;
-            m2.a = { 1234,1234,55,66 };
-            m2.b = "helloWWWclient2222";
-
-            EasySerializer ser(buff);
-            ser.head = EasyPacket::HeaderSize();
-            ser.Serialize(m);
-            ser.Serialize(m2);
+            std::vector<EasyNetObj*> objs;
+            objs.push_back(new pHello("Hi! I'm client."));
 
             // Prepare Packet
             bool result = true;
+
+            if (result)
+                result = MakeSerialized(buff, objs);
+
             if (result)
                 result = EasyPacket::MakeCompressed(buff, buff2);
 
@@ -568,7 +523,6 @@ namespace ClientTest {
         }
         bf.Free(buff);
         bf.Free(buff2);
-        bf.Free(buff3);
         return 0;
     }
 
@@ -581,7 +535,8 @@ namespace ClientTest {
             EasyIpAddress receiveIP;
             unsigned short receivePort;
             auto res = socket.receive(buff->begin(), buff->capacity(), buff->m_payload_size, receiveIP, receivePort);
-            std::cout << "Client Packet Receive! Result: " << res << std::endl;
+
+            std::vector<EasyNetObj*> objs;
 
             bool status = (res == WSAEISCONN);
 
@@ -592,13 +547,13 @@ namespace ClientTest {
                 status = EasyPacket::MakeDecompressed(buff, buff2);
 
             if (status)
+                status = MakeDeserialized(buff2, objs);
+
+            if (status)
             {
-                b2::pMaterial m1, m2;
-                EasySerializer deser(buff2);
-                deser.head = EasyPacket::HeaderSize();
-                deser.Deserialize(m1);
-                deser.Deserialize(m2);
-                std::cout << "client receive m1: " << m1.b << ", m2: " << m2.b << std::endl;
+                for (EasyNetObj* o : objs)
+                    if (o->packetID == HELLO)
+                        std::cout << "Client Received Hello Packet. Message: " << (*(pHello*)o).message << "\n";
             }
             else
             {
@@ -613,8 +568,16 @@ namespace ClientTest {
     int ClientBoth(lua_State* L)
     {
         ClientWebRequest(L);
-        ClientPacket(L);
+        ClientSend(L);
         std::this_thread::sleep_for(std::chrono::milliseconds(1500U));
+        ClientReceive(L);
+        return 0;
+    }
+
+    int ClientSR(lua_State* L)
+    {
+        ClientSend(L);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
         ClientReceive(L);
         return 0;
     }
@@ -629,9 +592,12 @@ void LUAListen(bool& running)
     L = luaL_newstate();
     luaL_openlibs(L);
     lua_register(L, "W", ClientTest::ClientWebRequest);
-    lua_register(L, "P", ClientTest::ClientPacket);
+    lua_register(L, "S", ClientTest::ClientSend);
     lua_register(L, "R", ClientTest::ClientReceive);
     lua_register(L, "B", ClientTest::ClientBoth);
+    lua_register(L, "SR", ClientTest::ClientSR);
+    lua_register(L, "RSC", ClientTest::ClientResetSendSequenceCounter);
+    lua_register(L, "RRC", ClientTest::ClientResetReceiveSequenceCounter);
 
     std::string input = "", input2 = "";
     while (running)

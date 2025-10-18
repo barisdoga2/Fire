@@ -16,6 +16,10 @@ bool EasyCompression::BZ2Compress(uint8_t* in, size_t in_bytes, uint8_t* out, si
         out_bytes = destLen;
         ret = true;
     }
+    else
+    {
+        std::cout << "Error BZ2Compress " << ret << "\n";
+    }
 
     return ret;
 }
@@ -30,6 +34,10 @@ bool EasyCompression::BZ2Decompress(uint8_t* in, size_t in_bytes, uint8_t* out, 
     {
         out_bytes = destLen;
         ret = true;
+    }
+    else
+    {
+        std::cout << "Error BZ2Compress " << ret << "\n";
     }
 
     return ret;

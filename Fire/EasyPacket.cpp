@@ -55,10 +55,12 @@ bool EasyPacket::MakeEncrypted(EasyPeer& peer)
         }
         else
         {
+            std::cout << "Error MakeDecrypted SizeCheck: " << (m_buffer->m_payload_size > 0U) << "\n";
             return false;
         }
     }
     catch (...) {
+        std::cout << "Error MakeEncrypted Exception!\n";
         return false;
     }
 }
@@ -94,15 +96,18 @@ bool EasyPacket::MakeDecrypted(EasyPeer& peer)
             }
             else
             {
+                std::cout << "Error MakeDecrypted SequenceInCheck: " << (peer.sequence_id_in < *(SequenceID())) << "\n";
                 return false;
             }
         }
         else
         {
+            std::cout << "Error MakeDecrypted SessionCheck: " << ((*SessionID() == peer.session_id)) << ", SizeCheck: " << (m_buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE) << "\n";
             return false;
         }
     }
     catch (Exception e) {
+        std::cout << "Error MakeDecrypted Exception!\n";
         return false;
     }
 }
@@ -115,6 +120,10 @@ bool EasyPacket::MakeCompressed(EasyBuffer* out)
     {
         memcpy(out->begin(), this->m_buffer->begin(), HeaderSize());
     }
+    else
+    {
+        std::cout << "Error MakeCompressed!\n";
+    }
     return ret;
 }
 
@@ -125,6 +134,10 @@ bool EasyPacket::MakeDecompressed(EasyBuffer* out)
     if (ret)
     {
         memcpy(out->begin(), this->m_buffer->begin(), HeaderSize());
+    }
+    else
+    {
+        std::cout << "Error MakeDecompressed!\n";
     }
     return ret;
 }

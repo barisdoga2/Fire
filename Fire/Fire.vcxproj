@@ -90,7 +90,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x86/debug/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ozz_animation_d.lib;ozz_animation_offline_d.lib;ozz_base_d.lib;ozz_geometry_d.lib;ozz_options_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -109,7 +109,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x86/release/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ozz_animation_offline_r.lib;ozz_animation_r.lib;ozz_base_r.lib;ozz_geometry_r.lib;ozz_options_r.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -161,7 +161,6 @@
     <ClCompile Include="EasyModel.cpp" />
     <ClCompile Include="EasyPacket.cpp" />
     <ClCompile Include="EasyPlayground.cpp" />
-    <ClCompile Include="EasySerializer.cpp" />
     <ClCompile Include="EasyShader.cpp" />
     <ClCompile Include="EasySocket.cpp" />
     <ClCompile Include="EasyTexture.cpp" />
@@ -193,6 +192,8 @@
     <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="imgui_impl_opengl3_loader.h" />
     <ClInclude Include="EasyUtility.hpp" />
+    <ClInclude Include="Net.hpp" />
+    <ClInclude Include="Serializer.hpp" />
     <ClInclude Include="World.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
