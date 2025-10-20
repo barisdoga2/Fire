@@ -49,7 +49,7 @@ void EasySocket::unbind()
 	close();
 }
 
-uint64_t EasySocket::send(const void* data, const std::size_t& size, const EasyIpAddress& remoteAddress, const unsigned short& remotePort)
+uint64_t EasySocket::send(const void* data, const std::size_t size, const EasyIpAddress& remoteAddress, const unsigned short& remotePort)
 {
 	create();
 
@@ -62,14 +62,14 @@ uint64_t EasySocket::send(const void* data, const std::size_t& size, const EasyI
 	return WSAEISCONN;
 }
 
-uint64_t EasySocket::send(const void* data, const std::size_t& size, EasyPeer& peer) // Server use only
+uint64_t EasySocket::send(const void* data, const std::size_t size, uint64_t addrU64) // Server use only
 {
 	create();
 
 	sockaddr_in addr{};
 	addr.sin_family = AF_INET;
-	addr.sin_port = static_cast<uint16_t>(peer.addr & 0xFFFF);
-	addr.sin_addr.s_addr = static_cast<uint32_t>(peer.addr >> 16);
+	addr.sin_port = static_cast<uint16_t>(addrU64 & 0xFFFF);
+	addr.sin_addr.s_addr = static_cast<uint32_t>(addrU64 >> 16);
 
 	const int sent = static_cast<int>(sendto((SOCKET)m_socket, static_cast<const char*>(data), static_cast<Size>(size), 0, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
 
@@ -101,9 +101,11 @@ uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_
 	return WSAEISCONN;
 }
 
-uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, EasyPeer& peer)  // Server use only
+uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, PeerSocketInfo& info)  // Server use only
 {
 	create();
+
+	info = PeerSocketInfo();
 
 	received = 0;
 
@@ -116,7 +118,7 @@ uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_
 
 	received = static_cast<std::size_t>(recv);
 
-	peer.addr = (static_cast<uint64_t>(addr.sin_addr.s_addr) << 16) | addr.sin_port;
+	info.addr = (static_cast<uint64_t>(addr.sin_addr.s_addr) << 16) | addr.sin_port;
 
 	return WSAEISCONN;
 }

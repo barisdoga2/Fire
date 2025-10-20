@@ -3,6 +3,8 @@
 #include <iostream>
 #include <vector>
 #include <mutex>
+#include <string>
+#include <stdio.h>
 
 
 
@@ -30,6 +32,11 @@ public:
 		memset(m_begin, 0, m_capacity);
 	}
 
+	void reset()
+	{
+		m_payload_size = 0U;
+	}
+
 	uint8_t* begin() const
 	{
 		return m_begin;
@@ -47,6 +54,7 @@ public:
 	const size_t buffer_count, buffer_length;
 	BufferPool free_buffers;
 	BufferPool busy_buffers;
+	size_t gets = 0U, frees = 0U;
 	std::mutex lock;
 
 	EasyBufferManager() = delete;
@@ -72,37 +80,66 @@ public:
 		lock.unlock();
 	}
 
-	EasyBuffer* Get()
+	EasyBuffer* Get(bool force = false)
 	{
 		EasyBuffer* buff = nullptr;
-		if (lock.try_lock())
+		if (force)
 		{
-			if (free_buffers.size() > 0)
-			{
-				buff = free_buffers.back();
-				buff->clear();
-				buff->m_payload_size = 0U;
-				busy_buffers.push_back(buff);
-				free_buffers.pop_back();
-			}
+			lock.lock();
+			gets++;
+			buff = free_buffers.back();
+			buff->clear();
+			buff->m_payload_size = 0U;
+			busy_buffers.push_back(buff);
+			free_buffers.pop_back();
 			lock.unlock();
+		}
+		else
+		{
+			if (lock.try_lock())
+			{
+				if (busy_buffers.size() > 0)
+				{
+					gets++;
+					buff = free_buffers.back();
+					buff->clear();
+					buff->m_payload_size = 0U;
+					busy_buffers.push_back(buff);
+					free_buffers.pop_back();
+				}
+				lock.unlock();
+			}
 		}
 		return buff;
 	}
 
 	bool Free(EasyBuffer* buffer)
 	{
-		if (!buffer)
-			return false;
-		bool ret = false;
 		lock.lock();
+		if (!buffer)
+		{
+			lock.unlock();
+			return false;
+		}
+		bool ret = false;
 		if (auto it = std::find(busy_buffers.begin(), busy_buffers.end(), buffer); it != busy_buffers.end())
 		{
+			frees++;
 			(*it)->m_payload_size = 0U;
 			free_buffers.push_back(*it);
 			busy_buffers.erase(it);
 			ret = true;
 		}
+		lock.unlock();
+		return ret;
+	}
+
+	std::string Stats()
+	{
+		lock.lock();
+		std::string ret;
+		ret += "Buffer Manager Statistics:";
+		ret += "    Total Buffers: " + std::to_string(free_buffers.size() + busy_buffers.size()) + "\nFree Buffers : " + std::to_string(free_buffers.size()) + "\nBusy Buffers : " + std::to_string(busy_buffers.size()) + "\nTotal Get : " + std::to_string(gets) + "\nTotal Free : " + std::to_string(frees) + "\n";
 		lock.unlock();
 		return ret;
 	}

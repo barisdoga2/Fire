@@ -4,7 +4,6 @@
 #include "EasyNet.hpp"
 #include "EasyBuffer.hpp"
 #include "EasyPeer.hpp"
-#include "EasyCompression.hpp"
 
 
 
@@ -15,14 +14,8 @@ private:
 public:
     EasyPacket(EasyBuffer* buffer);
 
-    bool MakeEncrypted(EasyPeer& peer);
-    bool MakeDecrypted(EasyPeer& peer);
-
-    bool MakeCompressed(EasyBuffer* out);
-    bool MakeDecompressed(EasyBuffer* out);
-
-    static bool MakeEncrypted(EasyPeer& peer, EasyBuffer* buffer);
-    static bool MakeDecrypted(EasyPeer& peer, EasyBuffer* buffer);
+    static bool MakeEncrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer);
+    static bool MakeDecrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer);
 
     static bool MakeCompressed(EasyBuffer* in, EasyBuffer* out);
     static bool MakeDecompressed(EasyBuffer* in, EasyBuffer* out);
@@ -49,5 +42,9 @@ public:
 
     static inline size_t HeaderSize() {
         return sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE;
+    }
+
+    static inline size_t MinimumSize() {
+        return sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + 1U + TAG_SIZE;
     }
 };

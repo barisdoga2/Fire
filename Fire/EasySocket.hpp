@@ -3,10 +3,11 @@
 #include <optional>
 #include <vector>
 
+#include "EasyNet.hpp"
 #include "EasyIpAddress.hpp"
 
-#define WSABASEERR              10000
 #ifndef WSAEWOULDBLOCK
+#define WSABASEERR              10000
 #define WSAEWOULDBLOCK          (WSABASEERR+35)
 #define WSAEINPROGRESS          (WSABASEERR+36)
 #define WSAEALREADY             (WSABASEERR+37)
@@ -44,11 +45,13 @@
 #define WSAEDQUOT               (WSABASEERR+69)
 #define WSAESTALE               (WSABASEERR+70)
 #define WSAEREMOTE              (WSABASEERR+71)
+#define WSANO_DATA                       11004L
 #endif
 
 
 
 class EasyPeer;
+class PeerInfo;
 class EasySocket {
 private:
 	using AddrLength = int;
@@ -69,11 +72,11 @@ public:
 	void unbind();
 
 
-	uint64_t send(const void* data, const size_t& size, const EasyIpAddress& remoteAddress, const unsigned short& remotePort);
-	uint64_t send(const void* data, const size_t& size, EasyPeer& peer); // Server use only
+	uint64_t send(const void* data, const size_t size, const EasyIpAddress& remoteAddress, const unsigned short& remotePort);
+	uint64_t send(const void* data, const size_t size, uint64_t addrU64); // Server use only
 
 	uint64_t receive(void* data, const size_t& size, size_t& received, EasyIpAddress& remoteAddress, unsigned short& remotePort);
-	uint64_t receive(void* data, const std::size_t& capacity, std::size_t& received, EasyPeer& peer); // Server use only
+	uint64_t receive(void* data, const std::size_t& capacity, std::size_t& received, PeerSocketInfo& info); // Server use only
 
 	void setBlocking(bool block);
 

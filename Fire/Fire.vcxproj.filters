@@ -27,6 +27,9 @@
     <Filter Include="Source Files\Game">
       <UniqueIdentifier>{aaeb0528-5d79-4ea1-a24e-6786fd451e3c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Game\Server">
+      <UniqueIdentifier>{76be3999-469b-453f-bd44-8e758319dd92}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="imgui_impl_glfw.cpp">
@@ -71,9 +74,6 @@
     <ClCompile Include="EasyPacket.cpp">
       <Filter>Source Files\Core\Net</Filter>
     </ClCompile>
-    <ClCompile Include="EasyCompression.cpp">
-      <Filter>Source Files\Core\Net</Filter>
-    </ClCompile>
     <ClCompile Include="World.cpp">
       <Filter>Source Files\Game</Filter>
     </ClCompile>
@@ -82,6 +82,27 @@
     </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ClientTest.cpp">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="WinUtils.cpp">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Serializer.cpp">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Server.cpp">
+      <Filter>Source Files\Game\Server</Filter>
+    </ClCompile>
+    <ClCompile Include="Server_Receive.cpp">
+      <Filter>Source Files\Game\Server</Filter>
+    </ClCompile>
+    <ClCompile Include="Server_Send.cpp">
+      <Filter>Source Files\Game\Server</Filter>
+    </ClCompile>
+    <ClCompile Include="Server_Update.cpp">
+      <Filter>Source Files\Game\Server</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -142,9 +163,6 @@
     <ClInclude Include="EasyNet.hpp">
       <Filter>Source Files\Core\Net</Filter>
     </ClInclude>
-    <ClInclude Include="EasyCompression.hpp">
-      <Filter>Source Files\Core\Net</Filter>
-    </ClInclude>
     <ClInclude Include="World.hpp">
       <Filter>Source Files\Game</Filter>
     </ClInclude>
@@ -159,6 +177,18 @@
     </ClInclude>
     <ClInclude Include="EasyPlayground.hpp">
       <Filter>Source Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientTest.hpp">
+      <Filter>Source Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyManager.hpp">
+      <Filter>Source Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="WinUtils.hpp">
+      <Filter>Source Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Server.hpp">
+      <Filter>Source Files\Game\Server</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

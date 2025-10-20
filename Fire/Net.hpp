@@ -8,6 +8,9 @@
 #define WORLD_DEF ((PacketID_t)(13U))
 #define HELLO ((PacketID_t)(14U))
 
+#define MAX_SESSIONS ((SessionID_t)(0b00000000'00001111'11111111'11111111))
+#define IS_SESSION(x) ((((SessionID_t)x) | ~MAX_SESSIONS) > 0U)
+
 class pHello : public EasyNetObj {
 public:
     std::string message;
@@ -17,9 +20,9 @@ public:
 
     }
 
-    void Serialize(EasySerializer* ser)
+    void Serialize(EasySerializer* ser) override
     {
-        EasyNetObj::Serialize(ser);
+        ser->Put(packetID);
         ser->Put(message);
     }
 };

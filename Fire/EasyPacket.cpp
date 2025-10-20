@@ -9,6 +9,8 @@
 #include <cryptopp/gcm.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/cryptlib.h>
+#include <bzlib.h>
+
 
 using namespace CryptoPP;
 
@@ -19,153 +21,153 @@ EasyPacket::EasyPacket(EasyBuffer* buffer) : m_buffer(buffer)
 
 }
 
-bool EasyPacket::MakeEncrypted(EasyPeer& peer)
+bool EasyPacket::MakeEncrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
 {
-    try {
-        if (m_buffer->m_payload_size > 0U)
+    EasyPacket source(buffer);
+    try 
+    {
+        if (buffer->m_payload_size > 0U)
         {
+            static IV_t iv(IV_SIZE);
             AutoSeededRandomPool prng;
-            prng.GenerateBlock(peer.secret.second.data(), IV_SIZE);
-
-            ++peer.sequence_id_out;
+            prng.GenerateBlock(iv.data(), IV_SIZE);
 
             // Fill Header
-            memcpy(SessionID(), &peer.session_id, sizeof(SessionID_t));
-            memcpy(SequenceID(), &peer.sequence_id_out, sizeof(SequenceID_t));
-            memcpy(IV(), peer.secret.second.data(), IV_SIZE);
+            memcpy(source.SessionID(), &crypt.session_id, sizeof(SessionID_t));
+            memcpy(source.SequenceID(), &crypt.sequence_id_out, sizeof(SequenceID_t));
 
             // Set Key
             GCM<AES>::Encryption enc;
-            enc.SetKeyWithIV(peer.secret.first.data(), KEY_SIZE, (uint8_t*)IV(), IV_SIZE);
+            enc.SetKeyWithIV(crypt.key.data(), KEY_SIZE, (uint8_t*)source.IV(), IV_SIZE);
 
             // GCM Filter
-            AuthenticatedEncryptionFilter aef(enc, new ArraySink(Payload(), PayloadSize() + TAG_SIZE), false, TAG_SIZE);
+            AuthenticatedEncryptionFilter aef(enc, new ArraySink(source.Payload(), source.PayloadSize() + TAG_SIZE), false, TAG_SIZE);
 
             // Fill AAD Channel
-            aef.ChannelPut(AAD_CHANNEL, (const byte*)SessionID(), sizeof(SessionID_t));
-            aef.ChannelPut(AAD_CHANNEL, (const byte*)SequenceID(), sizeof(SequenceID_t));
+            aef.ChannelPut(AAD_CHANNEL, (const byte*)source.SessionID(), sizeof(SessionID_t));
+            aef.ChannelPut(AAD_CHANNEL, (const byte*)source.SequenceID(), sizeof(SequenceID_t));
             aef.ChannelMessageEnd(AAD_CHANNEL);
 
-            // Encrypt Payload
-            aef.ChannelPut(DEFAULT_CHANNEL, (const byte*)Payload(), m_buffer->m_payload_size);
+            // Payload
+            aef.ChannelPut(DEFAULT_CHANNEL, (const byte*)source.Payload(), buffer->m_payload_size);
             aef.ChannelMessageEnd(DEFAULT_CHANNEL);
 
-            m_buffer->m_payload_size += TAG_SIZE;
+            buffer->m_payload_size += TAG_SIZE;
 
             return true;
         }
         else
         {
-            std::cout << "Error MakeDecrypted SizeCheck: " << (m_buffer->m_payload_size > 0U) << "\n";
+            std::cout << "Error MakeDecrypted SizeCheck: " << (buffer->m_payload_size > 0U) << "\n";
             return false;
         }
     }
-    catch (...) {
+    catch (...) 
+    {
         std::cout << "Error MakeEncrypted Exception!\n";
         return false;
     }
 }
 
-bool EasyPacket::MakeDecrypted(EasyPeer& peer)
+bool EasyPacket::MakeDecrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
 {
-    try {
-        if ((*SessionID() == peer.session_id) && (m_buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE))
+    EasyPacket source(buffer);
+    try 
+    {
+        if ((*source.SessionID() == crypt.session_id) && (buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE))
         {
-            // Set IV
-            memcpy(peer.secret.second.data(), IV(), IV_SIZE);
-
             // Set Key
             GCM<AES>::Decryption dec;
-            dec.SetKeyWithIV(peer.secret.first.data(), KEY_SIZE, (uint8_t*)IV(), IV_SIZE);
+            dec.SetKeyWithIV(crypt.key.data(), KEY_SIZE, (uint8_t*)source.IV(), IV_SIZE);
 
             // GCM Filter
-            AuthenticatedDecryptionFilter adf(dec, new ArraySink(Payload(), PayloadSize() - TAG_SIZE), AuthenticatedDecryptionFilter::DEFAULT_FLAGS, TAG_SIZE);
+            AuthenticatedDecryptionFilter adf(dec, new ArraySink(source.Payload(), source.PayloadSize() - TAG_SIZE), AuthenticatedDecryptionFilter::DEFAULT_FLAGS, TAG_SIZE);
 
             // Fill AAD Channel
-            adf.ChannelPut(AAD_CHANNEL, (const byte*)SessionID(), sizeof(SessionID_t));
-            adf.ChannelPut(AAD_CHANNEL, (const byte*)SequenceID(), sizeof(SequenceID_t));
+            adf.ChannelPut(AAD_CHANNEL, (const byte*)source.SessionID(), sizeof(SessionID_t));
+            adf.ChannelPut(AAD_CHANNEL, (const byte*)source.SequenceID(), sizeof(SequenceID_t));
             adf.ChannelMessageEnd(AAD_CHANNEL);
-            auto ss = PayloadSize();
-            auto bb = PayloadSize() - sizeof(SessionID_t) - sizeof(SequenceID_t) - IV_SIZE;
-            adf.ChannelPut(DEFAULT_CHANNEL, (const byte*)Payload(), PayloadSize() - sizeof(SessionID_t) - sizeof(SequenceID_t) - IV_SIZE);
+
+            // Payload
+            adf.ChannelPut(DEFAULT_CHANNEL, (const byte*)source.Payload(), source.PayloadSize() - sizeof(SessionID_t) - sizeof(SequenceID_t) - IV_SIZE);
             adf.ChannelMessageEnd(DEFAULT_CHANNEL);
 
-            if (adf.GetLastResult() && peer.sequence_id_in < *(SequenceID()))
+            if (adf.GetLastResult()/* && crypt.sequence_id_in < *(SequenceID())*/)
             {
-                peer.sequence_id_in = *(SequenceID());
-                m_buffer->m_payload_size = m_buffer->m_payload_size - (sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE);
+                buffer->m_payload_size = buffer->m_payload_size - (sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE);
                 return true;
             }
             else
             {
-                std::cout << "Error MakeDecrypted SequenceInCheck: " << (peer.sequence_id_in < *(SequenceID())) << "\n";
+                std::cout << "Error MakeDecrypted SequenceInCheck: " /*<< (crypt.sequence_id_in <= *(SequenceID()))*/ << "\n";
                 return false;
             }
         }
         else
         {
-            std::cout << "Error MakeDecrypted SessionCheck: " << ((*SessionID() == peer.session_id)) << ", SizeCheck: " << (m_buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE) << "\n";
+            std::cout << "Error MakeDecrypted SessionCheck: " << ((*source.SessionID() == crypt.session_id)) << ", SizeCheck: " << (buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE) << "\n";
             return false;
         }
     }
-    catch (Exception e) {
+    catch (Exception e) 
+    {
         std::cout << "Error MakeDecrypted Exception!\n";
         return false;
     }
 }
 
-bool EasyPacket::MakeCompressed(EasyBuffer* out)
-{
-    EasyPacket destination(out);
-    bool ret = EasyCompression::BZ2Compress(Payload(), PayloadSize(), destination.Payload(), out->capacity(), out->m_payload_size);
-    if (ret)
-    {
-        memcpy(out->begin(), this->m_buffer->begin(), HeaderSize());
-    }
-    else
-    {
-        std::cout << "Error MakeCompressed!\n";
-    }
-    return ret;
-}
-
-bool EasyPacket::MakeDecompressed(EasyBuffer* out)
-{
-    EasyPacket destination(out);
-    bool ret = EasyCompression::BZ2Decompress(Payload(), PayloadSize(), destination.Payload(), out->capacity(), out->m_payload_size);
-    if (ret)
-    {
-        memcpy(out->begin(), this->m_buffer->begin(), HeaderSize());
-    }
-    else
-    {
-        std::cout << "Error MakeDecompressed!\n";
-    }
-    return ret;
-}
-
-// STATIC
-bool EasyPacket::MakeEncrypted(EasyPeer& peer, EasyBuffer* buffer)
-{
-    EasyPacket enc(buffer);
-    return enc.MakeEncrypted(peer);
-}
-
-bool EasyPacket::MakeDecrypted(EasyPeer& peer, EasyBuffer* buffer)
-{
-    EasyPacket dec(buffer);
-    return dec.MakeDecrypted(peer);
-}
-
 bool EasyPacket::MakeCompressed(EasyBuffer* in, EasyBuffer* out)
 {
-    EasyPacket source(in);
-    return source.MakeCompressed(out);
+    bool ret = false;
+
+    EasyPacket rawPacket(in);
+    EasyPacket compressedPacket(out);
+
+    unsigned int compressedSize = static_cast<unsigned int>(in->capacity());
+    int result = BZ2_bzBuffToBuffCompress(
+        reinterpret_cast<char*>(compressedPacket.Payload()), &compressedSize,
+        reinterpret_cast<char*>(rawPacket.Payload()), static_cast<unsigned int>(in->m_payload_size),
+        9, 0, 30
+    );
+
+    if (result == BZ_OK) 
+    {
+        memcpy(out->begin(), in->begin(), HeaderSize());
+        out->m_payload_size = compressedSize;
+        ret = true;
+    }
+    else
+    {
+        std::cerr << "Error BZ2Compress | Compression failed: " << result << "\n";
+    }
+
+    return ret;
 }
 
 bool EasyPacket::MakeDecompressed(EasyBuffer* in, EasyBuffer* out)
 {
-    EasyPacket source(in);
-    return source.MakeDecompressed(out);
+    bool ret = false;
+
+    EasyPacket decompressedPacket(out);
+    EasyPacket compressedPacket(in);
+
+    unsigned int decompressedSize = static_cast<unsigned int>(in->capacity());
+    int result = BZ2_bzBuffToBuffDecompress(
+        reinterpret_cast<char*>(decompressedPacket.Payload()), &decompressedSize,
+        reinterpret_cast<char*>(compressedPacket.Payload()), static_cast<unsigned int>(in->m_payload_size),
+        0, 0
+    );
+
+    if (result == BZ_OK) 
+    {
+        memcpy(out->begin(), in->begin(), HeaderSize());
+        out->m_payload_size = decompressedSize;
+        ret = true;
+    }
+    else
+    {
+        std::cerr << "Error BZ2Decompress | Decompression failed: " << result << "\n";
+    }
+
+    return ret;
 }
-// END

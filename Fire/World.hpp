@@ -33,9 +33,9 @@ namespace b2 {
 
         }
 
-        void Serialize(EasySerializer* ser)
+        void Serialize(EasySerializer* ser) override
         {
-            EasyNetObj::Serialize(ser);
+            ser->Put(packetID);
             ser->Put(gravity);
         }
     };
@@ -54,9 +54,9 @@ namespace b2 {
 
         }
 
-        void Serialize(EasySerializer* ser)
+        void Serialize(EasySerializer* ser) override
         {
-            EasyNetObj::Serialize(ser);
+            ser->Put(packetID);
             ser->Put(friction);
             ser->Put(restitution);
             ser->Put(rollingResistance); 
@@ -78,7 +78,7 @@ namespace b2 {
         float radius;
         const ShapeType Type() const override { return ShapeType::Circle; }
 
-        pCircleShape() : EasyNetObj(static_cast<PacketID_t>(CIRCLE_DEF))
+        pCircleShape() : EasyNetObj(static_cast<PacketID_t>(CIRCLE_DEF)), radius(1.f)
         {
 
 
@@ -86,7 +86,7 @@ namespace b2 {
 
         void Serialize(EasySerializer* ser)
         {
-            EasyNetObj::Serialize(ser);
+            ser->Put(packetID);
             ser->Put(material);
             ser->Put(radius);
         }
@@ -105,7 +105,7 @@ namespace b2 {
 
         void Serialize(EasySerializer* ser)
         {
-            EasyNetObj::Serialize(ser);
+            ser->Put(packetID);
             ser->Put(material);
             ser->Put(vertices);
         }
