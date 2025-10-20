@@ -124,7 +124,8 @@ int main()
             while (running)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
-                running = server->IsRunning();
+                if(running)
+                    running = server->IsRunning();
             }
 #endif
         }
