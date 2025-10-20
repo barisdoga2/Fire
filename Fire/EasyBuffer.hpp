@@ -33,7 +33,7 @@ public:
 	const size_t buffer_count, buffer_length;
 	BufferPool free_buffers;
 	BufferPool busy_buffers;
-	size_t gets = 0U, frees = 0U;
+	size_t gets = 0U, frees = 0U, get_fails = 0U, free_fails = 0U;
 	std::mutex lock;
 
 	EasyBufferManager() = delete;

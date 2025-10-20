@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
+#include <atomic>
 
 typedef uint64_t Addr_t;
 typedef uint32_t SessionID_t;
@@ -20,6 +21,7 @@ typedef std::vector<uint8_t> Payload_t;
 
 typedef std::vector<uint8_t> IV_t;
 typedef std::vector<uint8_t> Key_t;
+using StatisticsCounter_t = std::atomic<size_t>;
 
 using Clock = std::chrono::high_resolution_clock;
 

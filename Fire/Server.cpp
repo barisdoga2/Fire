@@ -14,7 +14,7 @@
 
 Server::Server(EasyBufferManager* bf, unsigned short port) : bf(bf), running(false), port(port), sock(nullptr), db(nullptr), m(nullptr), world(nullptr)
 {
-    Server::instance = this;
+
 }
 
 Server::~Server()
@@ -55,6 +55,8 @@ bool Server::Start()
 
     running = true;
 
+    Server::instance = this;
+
     receive = std::thread(&Server::Receive, this);
     update = std::thread(&Server::Update, this);
     send = std::thread(&Server::Send, this);
@@ -70,6 +72,8 @@ bool Server::Stop()
     std::cout << "Server is stopping..." << std::endl;
 
     running = false;
+
+    Server::instance = nullptr;
 
     delete world;
     world = nullptr;
@@ -90,3 +94,24 @@ bool Server::Stop()
     return true;
 }
 
+int Server::Stats(lua_State* L)
+{
+    std::cout << Server::instance->StatsReceive() << Server::instance->StatsSend() << Server::instance->StatsUpdate();
+    return 0;
+}
+
+bool Server::IsRunning()
+{
+    return running;
+}
+
+bool Server::CreateSession(Session* session)
+{
+    bool ret = false;
+    if(m->sessions[session->sessionID] == nullptr)
+    {
+        m->sessions[session->sessionID] = session;
+        ret = true;
+    }
+    return ret;
+}

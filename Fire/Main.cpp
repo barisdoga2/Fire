@@ -56,6 +56,7 @@ void LUAListen(bool& running)
     lua_register(L, "RRC", ClientTest::ClientResetReceiveSequenceCounterS);
     lua_register(L, "BF", BufferManagerStatistics);
     lua_register(L, "ServerStats", Server::Stats);
+    lua_register(L, "Q", Server::Stats);
 
     std::string input = "", input2 = "";
     while (running)
@@ -72,8 +73,8 @@ void LUAListen(bool& running)
         }
         if(_kbhit()) 
         { 
-            char c = (char)_getch();
-            if (c == '\r' || c == '\n') {
+            int c = _getch();
+            if ((char)c == '\r' || (char)c == '\n') {
                 if (input2 == "exit") {
                     running = false;
                     break;
@@ -82,15 +83,15 @@ void LUAListen(bool& running)
                 std::cout << std::endl;
                 input2.clear();
             }
-            else if (c == '\b') {
+            else if ((char)c == '\b') {
                 if (!input2.empty()) {
                     input2.pop_back();
                     std::cout << "\b \b";
                 }
             }
             else {
-                input2.push_back(c);
-                std::cout << c;
+                input2.push_back((char)c);
+                std::cout << (char)c;
             }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -114,7 +115,7 @@ int main()
     if (server->Start())
     {
 #ifndef CLIENT
-        while (luaRunning && server->running)
+        while (luaRunning && server->IsRunning())
             std::this_thread::sleep_for(std::chrono::milliseconds(10000U));
 #endif
     }

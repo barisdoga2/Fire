@@ -83,6 +83,8 @@ EasyBuffer* EasyBufferManager::Get(bool force)
 			lock.unlock();
 		}
 	}
+	if (!buff)
+		get_fails++;
 	return buff;
 }
 
@@ -104,6 +106,8 @@ bool EasyBufferManager::Free(EasyBuffer* buffer)
 		ret = true;
 	}
 	lock.unlock();
+	if (!ret)
+		free_fails++;
 	return ret;
 }
 
@@ -112,7 +116,7 @@ std::string EasyBufferManager::Stats()
 	lock.lock();
 	std::string ret;
 	ret += "Buffer Manager Statistics:";
-	ret += "    Total Buffers: " + std::to_string(free_buffers.size() + busy_buffers.size()) + "\nFree Buffers : " + std::to_string(free_buffers.size()) + "\nBusy Buffers : " + std::to_string(busy_buffers.size()) + "\nTotal Get : " + std::to_string(gets) + "\nTotal Free : " + std::to_string(frees) + "\n";
+	ret += "    Total Buffers: " + std::to_string(free_buffers.size() + busy_buffers.size()) + "\nFree Buffers : " + std::to_string(free_buffers.size()) + "\nBusy Buffers : " + std::to_string(busy_buffers.size()) + "\nTotal Get : " + std::to_string(gets) + "\nTotal Free : " + std::to_string(frees) + "\nTotal Free Fail : " + std::to_string(free_fails) + "\nTotal Get Fail : " + std::to_string(get_fails) + "\n";
 	lock.unlock();
 	return ret;
 }
