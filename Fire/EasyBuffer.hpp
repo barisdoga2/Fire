@@ -2,50 +2,53 @@
 
 #include <vector>
 #include <mutex>
+#include <algorithm>
 #include <string>
+#include <memory>
+#include <cstring>
 
-
+class EasyBuffer;
+class EasyBufferManager;
 
 class EasyBuffer {
-private:
-	const size_t m_capacity;
-	uint8_t* m_begin;
-
 public:
-	size_t m_payload_size;
+    explicit EasyBuffer(size_t capacity);
+    ~EasyBuffer();
 
-	EasyBuffer(size_t capacity);
+    void clear() noexcept;
+    void reset() noexcept;
 
-	~EasyBuffer();
+    [[nodiscard]] uint8_t* begin() noexcept;
+    [[nodiscard]] const uint8_t* begin() const noexcept;
+    [[nodiscard]] size_t capacity() const noexcept;
+    [[nodiscard]] size_t size() const noexcept;
 
-	void clear();
+    void setSize(size_t sz) noexcept;
 
-	void reset();
+    /**/
+    size_t m_payload_size;
+    /**/
+private:
+    const size_t m_capacity;
+    std::unique_ptr<uint8_t[]> m_data;
 
-	uint8_t* begin() const;
-
-	size_t capacity() const;
+    friend class EasyBufferManager;
 };
 
 class EasyBufferManager {
 public:
-	using BufferPool = std::vector<EasyBuffer*>;
-	const size_t buffer_count, buffer_length;
-	BufferPool free_buffers;
-	BufferPool busy_buffers;
-	size_t gets = 0U, frees = 0U, get_fails = 0U, free_fails = 0U;
-	std::mutex lock;
+    EasyBufferManager(size_t bufferCount, size_t bufferLength);
+    ~EasyBufferManager();
 
-	EasyBufferManager() = delete;
+    EasyBuffer* Get(bool force = false);
+    bool Free(EasyBuffer* buffer);
+    [[nodiscard]] std::string Stats() const;
 
-	EasyBufferManager(const size_t buffer_count, const size_t buffer_length);
+private:
+    const size_t buffer_count;
+    const size_t buffer_length;
 
-	~EasyBufferManager();
-
-	EasyBuffer* Get(bool force = false);
-
-	bool Free(EasyBuffer* buffer);
-
-	std::string Stats();
-
+    mutable std::mutex mutex;
+    std::vector<std::unique_ptr<EasyBuffer>> free_buffers;
+    std::vector<EasyBuffer*> busy_buffers;
 };

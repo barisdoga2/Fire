@@ -7,7 +7,6 @@
 
 #include "Net.hpp"
 
-#define SERVER_STATISTICS
 
 
 

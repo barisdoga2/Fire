@@ -374,6 +374,7 @@ namespace Server_Receive_internal {
                     {
                         STATS_DECRYPT_FAIL;
                     }
+                    bf->Free(it2->buffer);
                     ++cryptInfo.sequence_id_in;
                 }
             }

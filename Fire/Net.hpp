@@ -4,6 +4,8 @@
 #include "EasyNet.hpp"
 #include "EasySerializer.hpp"
 
+#define SERVER_STATISTICS
+
 #define CIRCLE_DEF ((PacketID_t)(10U))
 #define POLY_DEF ((PacketID_t)(11U))
 #define MATERIAL_DEF ((PacketID_t)(12U))

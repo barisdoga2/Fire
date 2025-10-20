@@ -8,9 +8,9 @@
 #include "ClientTest.hpp"
 #include "WinUtils.hpp"
 
-//#define REMOTE
+#define REMOTE
 //#define CLIENT
-#define SERVER
+//#define SERVER
 #define SERVER_PORT 54000U
 
 
@@ -35,11 +35,12 @@ ClientTest client(bf, SERVER_IP, SERVER_PORT);
 
 int BufferManagerStatistics(lua_State* L)
 {
-    std::cout << bf.Stats()<<"\n";
+    std::cout << bf.Stats();
     return 0;
 }
 
-void LUAListen(bool& running)
+bool running = false;
+void LUAListen()
 {
     std::cout << "LUA commander is starting..." << std::endl;
 
@@ -55,9 +56,10 @@ void LUAListen(bool& running)
     lua_register(L, "RSC", ClientTest::ClientResetSendSequenceCounterS);
     lua_register(L, "RRC", ClientTest::ClientResetReceiveSequenceCounterS);
     lua_register(L, "BF", BufferManagerStatistics);
+#ifdef SERVER
     lua_register(L, "ServerStats", Server::Stats);
     lua_register(L, "Q", Server::Stats);
-
+#endif
     std::string input = "", input2 = "";
     while (running)
     {
@@ -107,24 +109,31 @@ int main()
 {
     WinUtils::Init();
 
-    bool luaRunning = true;
-    std::thread luaThread = std::thread([&]() { LUAListen(luaRunning); });
+    std::thread luaThread;
 
 #ifdef SERVER
     Server* server = new Server(&bf, SERVER_PORT);
     if (server->Start())
     {
+        if (running = server->IsRunning(); running)
+        {
+            luaThread = std::thread([&]() { LUAListen(); });
 #ifndef CLIENT
-        while (luaRunning && server->IsRunning())
-            std::this_thread::sleep_for(std::chrono::milliseconds(10000U));
+            while (running)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
+                running = server->IsRunning();
+            }
 #endif
+        }
     }
-#endif
-#if CLIENT && !defined(RELEASE_BUILD)
+#elif defined(CLIENT)
     if (EasyDisplay display({ 1024,768 }); display.Init())
     {
         if (EasyPlayground playground(display); playground.Init())
         {
+            luaThread = std::thread([&]() { LUAListen(); });
+
             std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
             std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
 
@@ -134,8 +143,8 @@ int main()
             double fps_timer = 0.0;
             double ups_timer = 0.0;
 
-            bool success = true;
-            while (success)
+            running = true;
+            while (running)
             {
                 currentTime = std::chrono::high_resolution_clock::now();
                 double elapsed_ms = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
@@ -147,7 +156,7 @@ int main()
                 if (fps_timer >= fps_constant)
                 {
                     playground.StartRender(fps_timer / 1000.0);
-                    success &= playground.Render(fps_timer / 1000.0);
+                    running &= playground.Render(fps_timer / 1000.0);
                     playground.ImGUIRender();
                     playground.EndRender();
                     fps_timer = 0.0;
@@ -155,24 +164,22 @@ int main()
 
                 if (ups_timer >= ups_constant)
                 {
-                    success &= playground.Update(ups_timer / 1000.0);
+                    running &= playground.Update(ups_timer / 1000.0);
                     ups_timer = 0.0;
                 }
 
-                success &= !display.ShouldClose();
+                running &= !display.ShouldClose();
             }
-
-            luaRunning = false;
         }
     }
 #endif
 
-#if !defined(CLIENT) || !defined(SERVER)
-    while (luaRunning)
-        std::this_thread::sleep_for(std::chrono::milliseconds(10000U));
+#if !defined(CLIENT) && !defined(SERVER)
+    running = true;
+    luaThread = std::thread([&]() { LUAListen(); });
+    while (running)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
 #endif
-
-    luaRunning = false;
 
 #ifdef SERVER
     delete server;
