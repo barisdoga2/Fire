@@ -20,7 +20,7 @@ ClientPeer::~ClientPeer()
 
 ClientTest::ClientTest(EasyBufferManager& bf, std::string ip, unsigned short port) : bf(bf), ip(ip), port(port)
 {
-    ClientTest::instance = this;
+    
 }
 
 ClientTest::~ClientTest()
@@ -28,7 +28,7 @@ ClientTest::~ClientTest()
 
 }
 
-int ClientTest::ClientWebRequest(lua_State* L)
+int ClientTest::ClientWebRequest()
 {
     CURL* curl = curl_easy_init();
     if (!curl) {
@@ -97,19 +97,19 @@ int ClientTest::ClientWebRequest(lua_State* L)
     return 0;
 }
 
-int ClientTest::ClientResetSendSequenceCounter(lua_State* L)
+int ClientTest::ClientResetSendSequenceCounter()
 {
     client.crypt->sequence_id_out = 0U;
     return 0;
 }
 
-int ClientTest::ClientResetReceiveSequenceCounter(lua_State* L)
+int ClientTest::ClientResetReceiveSequenceCounter()
 {
     client.crypt->sequence_id_in = 0U;
     return 0;
 }
 
-int ClientTest::ClientSend(lua_State* L)
+int ClientTest::ClientSend()
 {
     EasyBuffer* buff = bf.Get();
     EasyBuffer* buff2 = bf.Get();
@@ -163,7 +163,7 @@ int ClientTest::ClientSend(lua_State* L)
     return 0;
 }
 
-int ClientTest::ClientReceive(lua_State* L)
+int ClientTest::ClientReceive()
 {
     EasyBuffer* buff = bf.Get();
     EasyBuffer* buff2 = bf.Get();
@@ -202,27 +202,20 @@ int ClientTest::ClientReceive(lua_State* L)
     return 0;
 }
 
-int ClientTest::ClientBoth(lua_State* L)
+int ClientTest::ClientBoth()
 {
-    ClientWebRequest(L);
-    ClientSend(L);
+    ClientWebRequest();
+    ClientSend();
     std::this_thread::sleep_for(std::chrono::milliseconds(1500U));
-    ClientReceive(L);
+    ClientReceive();
     return 0;
 }
 
-int ClientTest::ClientSR(lua_State* L)
+int ClientTest::ClientSR()
 {
-    ClientSend(L);
+    ClientSend();
     std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
-    ClientReceive(L);
+    ClientReceive();
     return 0;
 }
 
-int ClientTest::ClientWebRequestS(lua_State* L) { return instance->ClientWebRequest(L); }
-int ClientTest::ClientResetSendSequenceCounterS(lua_State* L) { return instance->ClientResetSendSequenceCounter(L); }
-int ClientTest::ClientResetReceiveSequenceCounterS(lua_State* L) { return instance->ClientResetReceiveSequenceCounter(L); }
-int ClientTest::ClientSendS(lua_State* L) { return instance->ClientSend(L); }
-int ClientTest::ClientReceiveS(lua_State* L) { return instance->ClientReceive(L); }
-int ClientTest::ClientBothS(lua_State* L) { return instance->ClientBoth(L); }
-int ClientTest::ClientSRS(lua_State* L) { return instance->ClientSR(L); }
