@@ -9,8 +9,12 @@
 class EasySerializer;
 class EasySerializeable {
 public:
+    PacketID_t packetID;
     virtual void Serialize(EasySerializer* ser) = 0U;
+    EasySerializeable(PacketID_t packetID) : packetID(packetID)
+    {
 
+    }
 };
 
 class EasySerializer {
@@ -27,12 +31,14 @@ public:
     void Serialize(EasySerializeable& serializeable)
     {
         state = 1U;
+        Put(serializeable.packetID);
         serializeable.Serialize(this);
     }
 
     void Deserialize(EasySerializeable& serializeable)
     {
         state = 2U;
+        Put(serializeable.packetID);
         serializeable.Serialize(this);
     }
 

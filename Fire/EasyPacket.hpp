@@ -1,12 +1,10 @@
 #pragma once
 
-#include <queue>
 #include "EasyNet.hpp"
 #include "EasyBuffer.hpp"
-#include "EasyPeer.hpp"
 
 
-
+class EasyBuffer;
 class EasyPacket {
 private:
     EasyBuffer* m_buffer;

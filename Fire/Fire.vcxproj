@@ -188,7 +188,6 @@
     <ClInclude Include="EasyModel.hpp" />
     <ClInclude Include="EasyNet.hpp" />
     <ClInclude Include="EasyPacket.hpp" />
-    <ClInclude Include="EasyPeer.hpp" />
     <ClInclude Include="EasyPlayground.hpp" />
     <ClInclude Include="EasySerializer.hpp" />
     <ClInclude Include="EasyShader.hpp" />

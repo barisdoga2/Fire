@@ -1,8 +1,6 @@
 #pragma once
 
-#include <iostream>
-#include "EasyNet.hpp"
-#include "EasyPeer.hpp"
+#include "Net.hpp"
 
 class EasySocket;
 class ClientPeer : public EasyPeer {

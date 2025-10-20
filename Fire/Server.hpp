@@ -7,7 +7,9 @@
 
 #include "Net.hpp"
 
-using ROCacheType_t = std::unordered_map<SessionID_t, std::vector<EasyNetObj*>>;
+#define SERVER_STATISTICS
+
+using ROCacheType_t = std::unordered_map<SessionID_t, std::vector<EasySerializeable*>>;
 
 class Session {
 public:
@@ -35,6 +37,7 @@ public:
 
 
 
+struct lua_State;
 class EasySocket;
 class EasyDB;
 class World;
@@ -42,6 +45,8 @@ class MainContex;
 class EasyBufferManager;
 class Server {
 public:
+    static inline Server* instance;
+
     // Flags
     bool running;
 
@@ -74,5 +79,11 @@ public:
     bool Start();
     bool Stop();
 
+    std::string StatsReceive();
 
+    static int Stats(lua_State* L)
+    {
+        std::cout << instance->StatsReceive();
+        return 0;
+    }
 };

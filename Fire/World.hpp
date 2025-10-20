@@ -5,7 +5,6 @@
 #include <glm/glm.hpp>
 #include <box2d/box2d.h>
 #include "EasyNet.hpp"
-#include "EasyPeer.hpp"
 #include "EasySerializer.hpp"
 #include "Net.hpp"
 
@@ -24,23 +23,22 @@ constexpr float VIEW_RADIUS = 100.f;
 namespace b2 {
     enum class ShapeType : uint8_t { Polygon, Circle };
 
-    class pWorld : public EasyNetObj {
+    class pWorld : public EasySerializeable {
     public:
         glm::vec2 gravity{};
 
-        pWorld() : EasyNetObj(static_cast<PacketID_t>(WORLD_DEF))
+        pWorld() : EasySerializeable(static_cast<PacketID_t>(WORLD_DEF))
         {
 
         }
 
         void Serialize(EasySerializer* ser) override
         {
-            ser->Put(packetID);
             ser->Put(gravity);
         }
     };
 
-    class pMaterial : public EasyNetObj {
+    class pMaterial : public EasySerializeable {
     public:
         float friction{};
         float restitution{};
@@ -49,14 +47,13 @@ namespace b2 {
         std::string b{};
         std::vector<float> a{};
 
-        pMaterial() : EasyNetObj(static_cast<PacketID_t>(MATERIAL_DEF))
+        pMaterial() : EasySerializeable(static_cast<PacketID_t>(MATERIAL_DEF))
         {
 
         }
 
         void Serialize(EasySerializer* ser) override
         {
-            ser->Put(packetID);
             ser->Put(friction);
             ser->Put(restitution);
             ser->Put(rollingResistance); 
@@ -73,12 +70,12 @@ namespace b2 {
 
     };
 
-    class pCircleShape : public pShape , public EasyNetObj {
+    class pCircleShape : public pShape , public EasySerializeable {
     public:
         float radius;
         const ShapeType Type() const override { return ShapeType::Circle; }
 
-        pCircleShape() : EasyNetObj(static_cast<PacketID_t>(CIRCLE_DEF)), radius(1.f)
+        pCircleShape() : EasySerializeable(static_cast<PacketID_t>(CIRCLE_DEF)), radius(1.f)
         {
 
 
@@ -86,18 +83,17 @@ namespace b2 {
 
         void Serialize(EasySerializer* ser)
         {
-            ser->Put(packetID);
             ser->Put(material);
             ser->Put(radius);
         }
     };
 
-    class pPolyShape : public pShape, public EasyNetObj {
+    class pPolyShape : public pShape, public EasySerializeable {
     public:
         std::vector<glm::vec2> vertices;
         const ShapeType Type() const override { return ShapeType::Polygon; }
 
-        pPolyShape() : EasyNetObj(static_cast<PacketID_t>(POLY_DEF))
+        pPolyShape() : EasySerializeable(static_cast<PacketID_t>(POLY_DEF))
         {
 
 
@@ -105,7 +101,6 @@ namespace b2 {
 
         void Serialize(EasySerializer* ser)
         {
-            ser->Put(packetID);
             ser->Put(material);
             ser->Put(vertices);
         }

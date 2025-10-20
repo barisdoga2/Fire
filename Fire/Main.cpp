@@ -55,6 +55,7 @@ void LUAListen(bool& running)
     lua_register(L, "RSC", ClientTest::ClientResetSendSequenceCounterS);
     lua_register(L, "RRC", ClientTest::ClientResetReceiveSequenceCounterS);
     lua_register(L, "BF", BufferManagerStatistics);
+    lua_register(L, "ServerStats", Server::Stats);
 
     std::string input = "", input2 = "";
     while (running)

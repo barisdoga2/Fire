@@ -9,7 +9,38 @@
 
 #include <unordered_map>
 #include <array>
+#include <sstream>
 
+#ifdef SERVER_STATISTICS
+class Statistics {
+public:
+    size_t receive = 0U;
+    size_t receiveFail = 0U;
+    size_t drop = 0U;
+    size_t dbKeyRead = 0U;
+    size_t dbKeyFail = 0U;
+    size_t deserialize = 0U;
+    size_t sessionRead = 0U;
+    size_t decryptFail = 0U;
+    size_t decompressFail = 0U;
+    size_t deserializeFail = 0U;
+};
+Statistics stats;
+#define STATS(x) stats.x
+#else
+size_t tmp = 0U;
+#define STATS(x) tmp
+#endif
+#define STATS_RECEIVED STATS(receive)
+#define STATS_RECEIVE_FAIL STATS(receiveFail)
+#define STATS_DROPPED STATS(drop)
+#define STATS_DB_READ STATS(dbKeyRead)
+#define STATS_DB_FAIL STATS(dbKeyFail)
+#define STATS_DESERIALIZE STATS(deserialize)
+#define STATS_SESSION_READ STATS(sessionRead)
+#define STATS_DECRYPT_FAIL STATS(decryptFail)
+#define STATS_DECOMPRESS_FAIL STATS(decompressFail)
+#define STATS_DESERIALIZE_FAIL STATS(deserializeFail)
 
 class RawBuffer {
 public:
@@ -132,15 +163,35 @@ void BaseReceive(EasySocket* sock, EasyBufferManager* bf)
             {
                 receiveBuff->reset();
                 uint64_t ret = sock->receive(receiveBuff->begin(), receiveBuff->capacity(), receiveBuff->m_payload_size, inSockInfo);
-                if (ret == WSAEISCONN && receiveBuff->m_payload_size >= EasyPacket::MinimumSize())
+                if (ret == WSAEISCONN)
                 {
-                    EasyPacket packet(receiveBuff);
-                    SessionID_t sessionID = *packet.SessionID();
-                    if (IS_SESSION(sessionID))
+                    if (receiveBuff->m_payload_size >= EasyPacket::MinimumSize())
                     {
-                        rawCache[sessionID].cache.emplace_back(sessionID, inSockInfo.addr, receiveBuff);
-                        receiveBuff = bf->Get();
+                        EasyPacket packet(receiveBuff);
+                        SessionID_t sessionID = *packet.SessionID();
+                        if (IS_SESSION(sessionID))
+                        {
+                            rawCache[sessionID].cache.emplace_back(sessionID, inSockInfo.addr, receiveBuff);
+                            receiveBuff = bf->Get();
+                            STATS_RECEIVED++;
+                        }
+                        else
+                        {
+                            STATS_DROPPED++;
+                        }
                     }
+                    else
+                    {
+                        STATS_DROPPED++;
+                    }
+                }
+                else if(ret == WSAEWOULDBLOCK || ret == WSAEALREADY)
+                {
+                    // nop
+                }
+                else
+                {
+                    STATS_RECEIVE_FAIL++;
                 }
             }
             else
@@ -219,12 +270,14 @@ void ReadKeysFromDB(EasyDB* db, EasyBufferManager* bf)
                         std::forward_as_tuple(it->first),
                         std::forward_as_tuple(R2PBuffer::R2PData(it->first, it->second.cache.at(0).addr, key, 0U), it->second.cache)
                     );
+                    STATS_DB_READ++;
                 }
                 else
                 {
                     // Not found in database, free the buffers
                     for (auto& b : it->second.cache)
                         bf->Free(b.buffer);
+                    STATS_DB_FAIL++;
                 }
                 it = unknownRawCache.erase(it);
             }
@@ -234,7 +287,6 @@ void ReadKeysFromDB(EasyDB* db, EasyBufferManager* bf)
             }
         }
     }
-    
 }
 
 void ReadKeysFromSessions(MainContex* m)
@@ -255,6 +307,7 @@ void ReadKeysFromSessions(MainContex* m)
                     // Sanity checks, addr, sequence etc.
                     r2pCache.emplace(it->first, R2PBuffer(session, it->second.cache)); // r2pCache cache is empty but we have session for Crypt data read from Session and removed from unknowns
                     it = unknownRawCache.erase(it);
+                    STATS_SESSION_READ++;
                 }
                 else
                 {
@@ -289,20 +342,24 @@ void Process(EasyBufferManager* bf)
                         if (MakeDeserialized(decompressionBuff, internal_readObjCache[it->first]))
                         {
                             status = true;
+                            STATS_DESERIALIZE++;
                         }
                         else
                         {
                             error_code = 2U;
+                            STATS_DESERIALIZE_FAIL++;
                         }
                     }
                     else
                     {
                         error_code = 2U;
+                        STATS_DECOMPRESS_FAIL++;
                     }
                 }
                 else
                 {
                     error_code = 1U;
+                    STATS_DECRYPT_FAIL++;
                 }
                 ++cryptInfo.sequence_id_in;
                 decompressionBuff->reset();
@@ -354,4 +411,26 @@ void Server::Receive()
         // Flush, move 'internal_readObjCache' into main context's 'internal_readObjCache', run every 5ms
         Flush(m);
     }
+}
+
+std::string Server::StatsReceive()
+{
+#ifdef SERVER_STATISTICS
+    std::ostringstream ss;
+    ss << "=== Server Statistics ===\n";
+    ss << "    Received:        " << stats.receive << "\n";
+    ss << "    Receive Fail:    " << stats.receiveFail << "\n";
+    ss << "    Dropped:         " << stats.drop << "\n";
+    ss << "    DB Key Read:     " << stats.dbKeyRead << "\n";
+    ss << "    DB Key Fail:     " << stats.dbKeyFail << "\n";
+    ss << "    Deserialize:     " << stats.deserialize << "\n";
+    ss << "    Session Read:    " << stats.sessionRead << "\n";
+    ss << "    Decrypt Fail:    " << stats.decryptFail << "\n";
+    ss << "    Decompress Fail: " << stats.decompressFail << "\n";
+    ss << "    Deserialize Fail:" << stats.deserializeFail << "\n";
+    ss << "=========================\n";
+    return ss.str();
+#else
+    return "Server statistics disabled.\n";
+#endif
 }

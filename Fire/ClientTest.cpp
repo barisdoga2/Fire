@@ -122,7 +122,7 @@ int ClientTest::ClientSend(lua_State* L)
         buff2->reset();
 
         // Sample Payload
-        std::vector<EasyNetObj*> objs;
+        std::vector<EasySerializeable*> objs;
         static int i = 0;
         objs.emplace_back(new pHello(str + std::to_string(++i)));
 
@@ -173,7 +173,7 @@ int ClientTest::ClientReceive(lua_State* L)
         unsigned short receivePort;
         auto res = client.socket->receive(buff->begin(), buff->capacity(), buff->m_payload_size, receiveIP, receivePort);
 
-        std::vector<EasyNetObj*> objs;
+        std::vector<EasySerializeable*> objs;
 
         bool status = (res == WSAEISCONN);
 
@@ -188,7 +188,7 @@ int ClientTest::ClientReceive(lua_State* L)
 
         if (status)
         {
-            for (EasyNetObj* o : objs)
+            for (EasySerializeable* o : objs)
                 if (o->packetID == HELLO)
                     std::cout << "Client Received Hello Packet. Message: " << (*(pHello*)o).message << "\n";
         }

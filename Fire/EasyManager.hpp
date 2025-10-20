@@ -3,12 +3,11 @@
 #include <mutex>
 #include <queue>
 #include <map>
-#include "EasyPeer.hpp"
-#include "EasyNet.hpp"
+#include "Net.hpp"
 
 class EasyManager {
 public:
-    using InBuffer_t = std::queue<std::map<EasyPeer, std::vector<EasyNetObj*>>>;
+    using InBuffer_t = std::queue<std::map<EasyPeer, std::vector<EasySerializeable*>>>;
     struct In_t {
         InBuffer_t buffer;
         std::mutex lock;

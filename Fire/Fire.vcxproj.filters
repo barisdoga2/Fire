@@ -157,9 +157,6 @@
     <ClInclude Include="EasyPacket.hpp">
       <Filter>Source Files\Core\Net</Filter>
     </ClInclude>
-    <ClInclude Include="EasyPeer.hpp">
-      <Filter>Source Files\Core\Net</Filter>
-    </ClInclude>
     <ClInclude Include="EasyNet.hpp">
       <Filter>Source Files\Core\Net</Filter>
     </ClInclude>

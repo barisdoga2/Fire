@@ -14,7 +14,7 @@
 
 Server::Server(EasyBufferManager* bf, unsigned short port) : bf(bf), running(false), port(port), sock(nullptr), db(nullptr), m(nullptr), world(nullptr)
 {
-    
+    Server::instance = this;
 }
 
 Server::~Server()

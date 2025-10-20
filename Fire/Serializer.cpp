@@ -6,7 +6,7 @@
 #include "World.hpp"
 
 
-bool MakeDeserialized(EasyBuffer* buff, std::vector<EasyNetObj*>& peer_cache)
+bool MakeDeserialized(EasyBuffer* buff, std::vector<EasySerializeable*>& peer_cache)
 {
     EasySerializer des(buff);
     des.head = EasyPacket::HeaderSize();
@@ -68,12 +68,12 @@ bool MakeDeserialized(EasyBuffer* buff, std::vector<EasyNetObj*>& peer_cache)
     return status;
 }
 
-bool MakeSerialized(EasyBuffer* buff, std::vector<EasyNetObj*>& peer_cache)
+bool MakeSerialized(EasyBuffer* buff, std::vector<EasySerializeable*>& peer_cache)
 {
     EasySerializer ser(buff);
     bool status = true;
     ser.head = EasyPacket::HeaderSize();
-    for (EasyNetObj* o : peer_cache)
+    for (EasySerializeable* o : peer_cache)
     {
         ser.Serialize(*o);
     }

@@ -8,7 +8,6 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
-#include "EasySerializer.hpp"
 
 typedef uint64_t Addr_t;
 typedef uint32_t SessionID_t;
@@ -126,25 +125,3 @@ public:
     }
 };
 
-class EasyNetObj : public EasySerializeable {
-public:
-    PacketID_t packetID;
-
-    EasyNetObj(PacketID_t packetID) : packetID(packetID)
-    {
-
-    }
-
-    EasyNetObj(const EasyNetObj& o) : packetID(o.packetID)
-    {
-
-    }
-
-    EasyNetObj() : packetID(0xFFFFU)
-    {
-
-    }
-
-    virtual void Serialize(EasySerializer* ser) = 0;
-
-};

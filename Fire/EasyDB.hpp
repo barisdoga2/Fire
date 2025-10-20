@@ -1,11 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <thread>
-#include <mutex>
-#include <deque>
-#include <string>
-
 #include <jdbc/cppconn/prepared_statement.h>
 
 namespace sql {
