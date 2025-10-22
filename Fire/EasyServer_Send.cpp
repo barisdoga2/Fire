@@ -1,4 +1,4 @@
-#include "Server.hpp"
+#include "EasyServer.hpp"
 #include "EasyPacket.hpp"
 #include "EasySocket.hpp"
 #include "Serializer.hpp"
@@ -217,7 +217,7 @@ namespace Server_Send_internal {
     }
 }
 
-void Server::Send()
+void EasyServer::Send()
 {
     using namespace Server_Send_internal;
 
@@ -237,7 +237,7 @@ void Server::Send()
     }
 }
 
-std::string Server::StatsSend()
+std::string EasyServer::StatsSend()
 {
 #ifdef SERVER_STATISTICS
     std::ostringstream ss;

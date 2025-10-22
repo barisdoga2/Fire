@@ -168,10 +168,11 @@
     <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Serializer.cpp" />
+    <ClCompile Include="EasyServer.cpp" />
+    <ClCompile Include="EasyServer_Receive.cpp" />
+    <ClCompile Include="EasyServer_Send.cpp" />
+    <ClCompile Include="EasyServer_Update.cpp" />
     <ClCompile Include="Server.cpp" />
-    <ClCompile Include="Server_Receive.cpp" />
-    <ClCompile Include="Server_Send.cpp" />
-    <ClCompile Include="Server_Update.cpp" />
     <ClCompile Include="WinUtils.cpp" />
     <ClCompile Include="World.cpp" />
   </ItemGroup>
@@ -200,6 +201,7 @@
     <ClInclude Include="EasyUtility.hpp" />
     <ClInclude Include="Net.hpp" />
     <ClInclude Include="Serializer.hpp" />
+    <ClInclude Include="EasyServer.hpp" />
     <ClInclude Include="Server.hpp" />
     <ClInclude Include="WinUtils.hpp" />
     <ClInclude Include="World.hpp" />

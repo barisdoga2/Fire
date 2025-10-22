@@ -1,4 +1,4 @@
-#include "Server.hpp"
+#include "EasyServer.hpp"
 
 #include "EasySocket.hpp"
 #include "EasyBuffer.hpp"
@@ -402,7 +402,7 @@ namespace Server_Receive_internal {
         }
     }
 
-    void CreateSessions(Server* server)
+    void CreateSessions(EasyServer* server)
     {
         static Timestamp_t nextCreate = Clock::now();
         Timestamp_t currentTime = Clock::now();
@@ -420,7 +420,7 @@ namespace Server_Receive_internal {
     }
 }
 
-void Server::Receive()
+void EasyServer::Receive()
 {
     using namespace Server_Receive_internal;
 
@@ -449,7 +449,7 @@ void Server::Receive()
     }
 }
 
-std::string Server::StatsReceive()
+std::string EasyServer::StatsReceive()
 {
 #ifdef SERVER_STATISTICS
     std::ostringstream ss;

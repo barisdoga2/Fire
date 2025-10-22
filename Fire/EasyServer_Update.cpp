@@ -1,4 +1,4 @@
-#include "Server.hpp"
+#include "EasyServer.hpp"
 #include "World.hpp"
 #include "Net.hpp"
 #include <sstream>
@@ -113,7 +113,7 @@ namespace Server_Update_internal {
     }
 }
 
-void Server::Update()
+void EasyServer::Update()
 {
     using namespace Server_Update_internal;
     while (running)
@@ -124,7 +124,7 @@ void Server::Update()
     }
 }
 
-std::string Server::StatsUpdate()
+std::string EasyServer::StatsUpdate()
 {
 #ifdef SERVER_STATISTICS
     std::ostringstream ss;

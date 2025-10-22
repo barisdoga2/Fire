@@ -1,4 +1,23 @@
-﻿
+﻿/* ########################### TODO ###########################
+* 
+* Session Management
+* Addr Checks
+* Session ID Checks
+* Sequence ID Checks
+* Key Expiry
+* Alive Checks
+* EasySerializeable Leak Check
+* Advanced Resource Sharing and Threading
+* Server Graphical UI
+* Handshake/Ack System
+* Packet Loss Handling
+* Ping Measurement System
+* Character Reading/Saving using Database
+* Simple World Share
+* Simple World Sync
+* Simple Movement 
+*  
+* ########################################################## */
 #include <iostream>
 #include <chrono>
 #include <conio.h>
@@ -8,9 +27,9 @@
 #include "ClientTest.hpp"
 #include "WinUtils.hpp"
 
-#define REMOTE
+//#define REMOTE
 //#define CLIENT
-//#define SERVER
+#define SERVER
 #define SERVER_PORT 54000U
 
 

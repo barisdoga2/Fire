@@ -1,6 +1,6 @@
 #include "EasyBuffer.hpp"
+#include "EasyNet.hpp"
 
-#include "Net.hpp"
 #include <sstream>
 
 #ifdef SERVER_STATISTICS
