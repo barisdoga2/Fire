@@ -8,6 +8,7 @@ public:
 	World* world;
 
 	Server(EasyBufferManager* bf, unsigned short port);
+	bool Start();
 
 	void Tick(double _dt) override;
 	void OnInit() override;

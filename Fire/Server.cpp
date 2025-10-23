@@ -5,7 +5,12 @@
 
 Server::Server(EasyBufferManager* bf, unsigned short port) : EasyServer(bf, 54000), world(nullptr)
 {
-	this->Start();
+	
+}
+
+bool Server::Start()
+{
+	return EasyServer::Start();
 }
 
 void Server::Tick(double _dt)

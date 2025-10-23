@@ -6,6 +6,7 @@
 #include <array>
 
 #include "Net.hpp"
+#include "EasyScheduler.hpp"
 
 
 
@@ -65,9 +66,6 @@ private:
     // Flags
     bool running;
 
-    // Res
-    EasyBufferManager* bf;
-
     // Net
     EasySocket* sock;
     const unsigned short port;
@@ -79,7 +77,10 @@ private:
     EasyDB* db;
 
 public:
+    // Context
     MainContex* m;
+    uint32_t sessionTimeout;
+    EasyBufferManager* bf;
 
     EasyServer(EasyBufferManager* bf, unsigned short port);
     ~EasyServer();
@@ -88,20 +89,28 @@ public:
     bool Stop();
     bool IsRunning();
 
-    bool CreateSession(Session* session);
-
     static int Stats(lua_State* L);
+
+    bool CreateSession_internal(Session* session);
+    bool DestroySession_internal(SessionID_t sessionID);
 
 private:
     void Update();
     void Receive();
     void Send();
 
+
+
     std::string StatsReceive();
     std::string StatsSend();
     std::string StatsUpdate();
 
 protected:
+    bool DestroySession(SessionID_t sessionID);
+    bool DestroySession(Session* session);
+    Session* GetSession(SessionID_t sessionID);
+    bool SetSessionTimeout(uint32_t ms);
+
     virtual void Tick(double _dt) = 0U;
     virtual void OnInit() = 0U;
     virtual void OnDestroy() = 0U;

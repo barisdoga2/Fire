@@ -4,6 +4,7 @@
 #define KEY_SIZE 16U
 #define TAG_SIZE 12U
 #define IV_SIZE 8U
+#define SERVER_STATISTICS
 
 #include <iostream>
 #include <vector>

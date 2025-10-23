@@ -45,4 +45,9 @@ public:
     static inline size_t MinimumSize() {
         return sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + 1U + TAG_SIZE;
     }
+
+    // Static Accesssers
+    static inline SequenceID_t* SequenceID(const EasyBuffer* buffer) {
+        return (SequenceID_t*)(buffer->begin() + sizeof(SessionID_t));
+    }
 };

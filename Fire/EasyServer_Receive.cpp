@@ -27,6 +27,10 @@ public:
     StatisticsCounter_t decompressFail{};
     StatisticsCounter_t deserializeFail{};
     StatisticsCounter_t bmFail{};
+    StatisticsCounter_t sessionFail{};
+    StatisticsCounter_t sessionFailAddr{};
+    StatisticsCounter_t sessionFailSequenceIDIn{};
+    StatisticsCounter_t sessionFailAlive{};
 };
 Statistics stats_receive;
 #else
@@ -48,6 +52,10 @@ StatisticsCounter_t stats_receive{};
 #define STATS_DECOMPRESS_FAIL               STATS_INCREASE(decompressFail)
 #define STATS_DESERIALIZE_FAIL              STATS_INCREASE(deserializeFail)
 #define STATS_BM_FAIL                       STATS_INCREASE(bmFail)
+#define STATS_SESSION_FAIL                  STATS_INCREASE(sessionFail)
+#define STATS_SESSION_FAIL_ADDR             STATS_INCREASE(sessionFailAddr)
+#define STATS_SESSION_FAIL_SEQ_IN           STATS_INCREASE(sessionFailSequenceIDIn)
+#define STATS_SESSION_FAIL_ALIVE            STATS_INCREASE(sessionFailAlive)
 
 
 
@@ -307,25 +315,73 @@ namespace Server_Receive_internal {
         }
     }
 
-    void ReadKeysFromSessions(MainContex* m)
+    void ReadKeysFromSessions(EasyServer* server)
     {
         static Timestamp_t nextRead = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (unknownRawCache.size() > 0U && nextRead < currentTime)
         {
             // Try read Crypt data from sessions
-            if (m->sessionsMutex.try_lock())
+            if (server->m->sessionsMutex.try_lock())
             {
                 nextRead = currentTime + Millis_t(10U);
+                currentTime = Clock::now();
                 for (auto it = unknownRawCache.begin(); it != unknownRawCache.end(); )
                 {
-                    Session* session = m->sessions[it->first];
+                    Session* session = server->m->sessions[it->first];
                     if (it->second.readKeyFromSessionFlag && !it->second.readKeyFromDBFlag && session)
                     {
-                        // Sanity checks, addr, sequence etc.
-                        r2pCache.emplace(it->first, R2PBuffer(session, it->second.cache)); // r2pCache cache is empty but we have session for Crypt data read from Session and removed from unknowns
-                        it = unknownRawCache.erase(it);
-                        STATS_SESSION_READ;
+                        bool destroySession = false;
+                        for (std::vector<RawBuffer>::iterator buffer = it->second.cache.begin(); buffer != it->second.cache.end() ; ++buffer)
+                        {
+                            // If packet is arrived 'server->sessionTimeout' after last receive, close session because it already should be.
+                            bool alive = std::chrono::duration_cast<std::chrono::milliseconds>(buffer->receive - session->lastReceive) < std::chrono::milliseconds(server->sessionTimeout);
+                            if (!alive)
+                            {
+                                STATS_SESSION_FAIL_ALIVE;
+                                destroySession = true;
+                                break;
+                            }
+                            else
+                            {
+                                session->lastReceive = buffer->receive;
+                            }
+
+                            // If addresses doesnt match, then free this packet
+                            bool addr = buffer->addr == session->addr;
+                            if (!addr)
+                            {
+                                STATS_SESSION_FAIL_ADDR;
+                                destroySession = true;
+                                continue;
+                            }
+
+                            // If sequence id in didnt increase, then free this packet
+                            bool seq_in = *EasyPacket::SequenceID(buffer->buffer) > session->sequenceID_in;
+                            if (!seq_in)
+                            {
+                                STATS_SESSION_FAIL_SEQ_IN;
+                                destroySession = true;
+                                continue;
+                            }
+                        }
+                        if (destroySession)
+                        {
+                            for (RawBuffer& b : it->second.cache)
+                            {
+                                server->bf->Free(b.buffer);
+                            }
+                            server->DestroySession_internal(session->sessionID);
+                            it = unknownRawCache.erase(it);
+                            STATS_SESSION_FAIL;
+                        }
+                        else
+                        {
+                            session->sequenceID_in += static_cast<SequenceID_t>(it->second.cache.size());
+                            r2pCache.emplace(it->first, R2PBuffer(session, it->second.cache)); // r2pCache cache is empty but we have session for Crypt data read from Session and removed from unknowns
+                            it = unknownRawCache.erase(it);
+                            STATS_SESSION_READ;
+                        }
                     }
                     else
                     {
@@ -333,7 +389,7 @@ namespace Server_Receive_internal {
                         ++it;
                     }
                 }
-                m->sessionsMutex.unlock();
+                server->m->sessionsMutex.unlock();
             }
         }
     }
@@ -412,7 +468,7 @@ namespace Server_Receive_internal {
             {
                 nextCreate = currentTime + Millis_t(100U);
                 for (Session* session : newSessions.vec)
-                    server->CreateSession(session);
+                    server->CreateSession_internal(session);
                 server->m->sessionsMutex.unlock();
                 newSessions.vec.clear();
             }
@@ -433,7 +489,7 @@ void EasyServer::Receive()
         Prepare();
 
         // 'unknownRawCache' to 'r2pCache' using Sessions, run every 10ms
-        ReadKeysFromSessions(m);
+        ReadKeysFromSessions(this);
 
         // 'unknownRawCache' to 'r2pCache' using database, run every 100ms
         ReadKeysFromDB(db, bf);
@@ -465,6 +521,10 @@ std::string EasyServer::StatsReceive()
     ss << "    Decompress Fail:     " << STATS_LOAD(decompressFail) << "\n";
     ss << "    Deserialize Fail:    " << STATS_LOAD(deserializeFail) << "\n";
     ss << "    Buffer Manager Fail: " << STATS_LOAD(bmFail) << "\n";
+    ss << "    Session Fail:        " << STATS_LOAD(sessionFailAddr) << "\n";
+    ss << "    Session Alive Fail:  " << STATS_LOAD(sessionFailAlive) << "\n";
+    ss << "    Session Seq_in Fail: " << STATS_LOAD(sessionFailAddr) << "\n";
+    ss << "    Session Addr Fail:   " << STATS_LOAD(sessionFailSequenceIDIn) << "\n";
     ss << "==============================================\n";
     return ss.str();
 #else

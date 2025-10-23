@@ -12,7 +12,7 @@
 
 
 
-EasyServer::EasyServer(EasyBufferManager* bf, unsigned short port) : bf(bf), running(false), port(port), sock(nullptr), db(nullptr), m(nullptr)
+EasyServer::EasyServer(EasyBufferManager* bf, unsigned short port) : bf(bf), running(false), port(port), sock(nullptr), db(nullptr), m(nullptr), sessionTimeout(10000U)
 {
 
 }
@@ -105,7 +105,7 @@ bool EasyServer::IsRunning()
     return running;
 }
 
-bool EasyServer::CreateSession(Session* session)
+bool EasyServer::CreateSession_internal(Session* session)
 {
     bool ret = false;
     if(m->sessions[session->sessionID] == nullptr)
@@ -115,4 +115,62 @@ bool EasyServer::CreateSession(Session* session)
         ret = true;
     }
     return ret;
+}
+
+bool EasyServer::DestroySession_internal(SessionID_t sessionID)
+{
+    bool ret = false;
+    if (m->sessions[sessionID] != nullptr)
+    {
+        this->OnSessionDestroy(m->sessions[sessionID]);
+        delete m->sessions[sessionID];
+        m->sessions[sessionID] = nullptr;
+        ret = true;
+    }
+    return ret;
+}
+
+bool EasyServer::DestroySession(Session* session)
+{
+    bool ret = false;
+    if (session)
+    {
+        m->sessionsMutex.lock();
+        ret = DestroySession_internal(session->sessionID);
+        m->sessionsMutex.unlock();
+    }
+    return ret;
+}
+
+bool EasyServer::DestroySession(SessionID_t sessionID)
+{
+    bool ret = false;
+    if (IS_SESSION(sessionID))
+    {
+        m->sessionsMutex.lock();
+        ret = DestroySession_internal(sessionID);
+        m->sessionsMutex.unlock();
+    }
+    return ret;
+}
+
+Session* EasyServer::GetSession(SessionID_t sessionID)
+{
+    Session* ret = nullptr;
+    if (IS_SESSION(sessionID))
+    {
+        m->sessionsMutex.lock();
+        if (m->sessions[sessionID])
+        {
+            ret = m->sessions[sessionID];
+        }
+        m->sessionsMutex.unlock();
+    }
+    return ret;
+}
+
+bool EasyServer::SetSessionTimeout(uint32_t ms)
+{
+    this->sessionTimeout = ms;
+    return true;
 }

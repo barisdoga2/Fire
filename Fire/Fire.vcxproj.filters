@@ -199,5 +199,9 @@
     <ClInclude Include="Server.hpp">
       <Filter>Source Files\Game\Server</Filter>
     </ClInclude>
+    <ClInclude Include="EasyScheduler.hpp">
+      <Filter>Source Files\Core\Net\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Sched.hpp" />
   </ItemGroup>
 </Project>

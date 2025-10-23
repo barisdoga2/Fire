@@ -190,6 +190,7 @@
     <ClInclude Include="EasyNet.hpp" />
     <ClInclude Include="EasyPacket.hpp" />
     <ClInclude Include="EasyPlayground.hpp" />
+    <ClInclude Include="EasyScheduler.hpp" />
     <ClInclude Include="EasySerializer.hpp" />
     <ClInclude Include="EasyShader.hpp" />
     <ClInclude Include="EasySocket.hpp" />
@@ -200,6 +201,7 @@
     <ClInclude Include="imgui_impl_opengl3_loader.h" />
     <ClInclude Include="EasyUtility.hpp" />
     <ClInclude Include="Net.hpp" />
+    <ClInclude Include="Sched.hpp" />
     <ClInclude Include="Serializer.hpp" />
     <ClInclude Include="EasyServer.hpp" />
     <ClInclude Include="Server.hpp" />

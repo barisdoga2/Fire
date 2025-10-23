@@ -48,6 +48,7 @@
 #include "EasyPlayground.hpp"
 #endif
 
+#include "Sched.hpp"
 EasyBufferManager bf(50U, 1472U);
 ClientTest client(bf, SERVER_IP, SERVER_PORT);
 
@@ -126,28 +127,54 @@ void LUAListen()
     lua_close(L);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    EasySchedTest();
+    bool isServer = true;
+    if (argc > 1) 
+    {
+        std::string arg1 = argv[1];
+        if (arg1 == "no_server") 
+        {
+            isServer = false;
+        }
+        else 
+        {
+            std::cout << "Unknown argument: " << arg1 << "\n";
+        }
+    }
+
     WinUtils::Init();
 
     std::thread luaThread;
 
 #ifdef SERVER
-    Server* server = new Server(&bf, SERVER_PORT);
-    if (server->Start())
+    Server* server = nullptr;
+    if (isServer)
     {
-        if (running = server->IsRunning(); running)
+        Server* server = new Server(&bf, SERVER_PORT);
+        if (server->Start())
         {
-            luaThread = std::thread([&]() { LUAListen(); });
-#ifndef CLIENT
-            while (running)
+            if (running = server->IsRunning(); running)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
-                if(running)
-                    running = server->IsRunning();
-            }
+                luaThread = std::thread([&]() { LUAListen(); });
+#ifndef CLIENT
+                while (running)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
+                    if (running)
+                        running = server->IsRunning();
+                }
 #endif
+            }
         }
+    }
+    else
+    {
+        running = true;
+        luaThread = std::thread([&]() { LUAListen(); });
+        while (running)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
     }
 #elif defined(CLIENT)
     if (EasyDisplay display({ 1024,768 }); display.Init())
