@@ -22,6 +22,8 @@ public:
 	float yaw = -89.f;
 	float pitch = -26.f;
 
+	float far = 0.f, near = 0.f;
+
 	glm::mat4 view_{ 1.f };
 	glm::mat4 projection_{ 1.f };
 

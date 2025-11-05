@@ -150,6 +150,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ChunkRenderer.cpp" />
     <ClCompile Include="ClientTest.cpp" />
     <ClCompile Include="EasyAnimation.cpp" />
     <ClCompile Include="EasyAnimator.cpp" />
@@ -164,6 +165,7 @@
     <ClCompile Include="EasyShader.cpp" />
     <ClCompile Include="EasySocket.cpp" />
     <ClCompile Include="EasyTexture.cpp" />
+    <ClCompile Include="HDR.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -177,6 +179,7 @@
     <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ChunkRenderer.hpp" />
     <ClInclude Include="ClientTest.hpp" />
     <ClInclude Include="EasyAnimation.hpp" />
     <ClInclude Include="EasyAnimator.hpp" />
@@ -196,6 +199,7 @@
     <ClInclude Include="EasySocket.hpp" />
     <ClInclude Include="EasyTexture.hpp" />
     <ClInclude Include="GL_Ext.hpp" />
+    <ClInclude Include="HDR.hpp" />
     <ClInclude Include="imgui_impl_glfw.h" />
     <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="imgui_impl_opengl3_loader.h" />

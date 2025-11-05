@@ -90,6 +90,17 @@ void EasyShader::BindUniforms(const std::vector<std::string>& uniforms)
     }
 }
 
+void EasyShader::BindTextures(const std::vector<std::string>& textures)
+{
+    for (unsigned int i = 0; i < textures.size(); i++)
+    {
+        GLint loc_1;
+        loc_1 = glGetUniformLocation(prog, textures.at(i).c_str());
+        uniforms.insert(std::pair<std::string, GLint> {textures.at(i), loc_1});
+        LoadUniform(textures.at(i), (int)i);
+    }
+}
+
 void EasyShader::BindUniformArray(std::string name, int size)
 {
     for (int i = 0; i < size; i++)
@@ -119,12 +130,51 @@ void EasyShader::LoadUniform(const std::string& uniform, const glm::vec3& value)
     }
 }
 
+void EasyShader::LoadUniform(const std::string& uniform, const glm::vec4& value)
+{
+    auto res = uniforms.find(uniform);
+    if (res != uniforms.end())
+    {
+        GL(Uniform4f(res->second, value.x, value.y, value.z, value.w));
+    }
+    else
+    {
+        std::cout << "Shader uniform to load not found! " << uniform << std::endl;
+    }
+}
+
+void EasyShader::LoadUniform(const std::string& uniform, const GLfloat& value)
+{
+    auto res = uniforms.find(uniform);
+    if (res != uniforms.end())
+    {
+        GL(Uniform1f(res->second, value));
+    }
+    else
+    {
+        std::cout << "Shader uniform to load not found! " << uniform << std::endl;
+    }
+}
+
 void EasyShader::LoadUniform(const std::string& uniform, const GLint& value)
 {
     auto res = uniforms.find(uniform);
     if (res != uniforms.end())
     {
         GL(Uniform1i(res->second, value));
+    }
+    else
+    {
+        std::cout << "Shader uniform to load not found! " << uniform << std::endl;
+    }
+}
+
+void EasyShader::LoadUniform(const std::string& uniform, const unsigned int& value)
+{
+    auto res = uniforms.find(uniform);
+    if (res != uniforms.end())
+    {
+        GL(Uniform1ui(res->second, value));
     }
     else
     {
@@ -156,6 +206,13 @@ void EasyShader::LoadUniform(const std::string& uniform, const std::vector<glm::
     {
         std::cout << "Shader uniform array to load not found! " << uniform << std::endl;
     }
+}
+
+void EasyShader::LoadTexture(GLint slot, GLenum type, std::string name, GLuint texture)
+{
+    glActiveTexture(GL_TEXTURE0 + slot);
+    glBindTexture(type, texture);
+    LoadUniform(name, slot);
 }
 
 void EasyShader::AttachShader(GLenum type, const char* src, const GLint* length)

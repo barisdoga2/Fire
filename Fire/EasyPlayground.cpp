@@ -1,4 +1,5 @@
 ﻿#include "EasyPlayground.hpp"
+#include "HDR.hpp"
 #include "GL_Ext.hpp"
 
 #include <iostream>
@@ -30,6 +31,37 @@ EasyPlayground::~EasyPlayground()
 	}
 }
 
+bool LoadFileBinary(std::string file, std::vector<char>* out)
+{
+	// Create the stream
+	std::ifstream infile(file, std::ios::binary | std::ios::ate);
+
+	// Check if file opened
+	if (infile.good())
+	{
+		// Get length of the file
+		size_t length = (size_t)infile.tellg();
+
+		// Move to begining
+		infile.seekg(0, std::ios::beg);
+
+		// Resize the vector
+		out->resize(length * sizeof(char));
+
+		// Read into the buffer
+		infile.read(out->data(), length);
+
+		// Close the stream
+		infile.close();
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 bool EasyPlayground::Init()
 {
 	// Callbacks
@@ -54,6 +86,21 @@ bool EasyPlayground::Init()
 		shader.BindUniforms({ "diffuse", "view", "proj", "model", "animated" });
 		shader.BindUniformArray("boneMatrices", 200);
 		shader.Stop();
+
+		HDR::Init();
+		hdr = new HDR("defaultLightingHDR");
+		ChunkRenderer::Init();
+
+		Material* back = new Material("terrainGrass");
+		Material* r = new Material("terrainMud");
+		Material* g = new Material("terrainPath");
+		Material* b = new Material("terrainBrick");
+
+		std::vector<char> blend, height;
+		LoadFileBinary("../../res/blend.png", &blend);
+		LoadFileBinary("../../res/height.png", &height);
+
+		chunks.push_back(new Chunk(back, r, g, b, blend.data(), blend.size(), height.data(), height.size()));
 	}
 
 	// ImGUI
@@ -154,6 +201,8 @@ void EasyPlayground::StartRender(double _dt)
 
 void EasyPlayground::ImGUIRender()
 {
+	return;
+
 	static bool show_demo_window = true;
 	static bool show_another_window = false;
 	static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -274,6 +323,10 @@ bool EasyPlayground::Render(double _dt)
 		}
 
 		shader.Stop();
+	}
+
+	{
+		ChunkRenderer::Render(&camera, chunks, hdr);
 	}
 
 	return success;

@@ -5,8 +5,10 @@
 #include "EasyModel.hpp"
 #include "EasyAnimator.hpp"
 #include "EasyDisplay.hpp"
+#include "ChunkRenderer.hpp"
 
 
+class HDR;
 class EasyPlayground {
 private:
 public:
@@ -18,6 +20,9 @@ public:
     EasyShader shader = EasyShader("model");
     EasyCamera camera = EasyCamera(display_, { 3,194,166 }, { 3 - 0.15,194 - 0.44,166 - 0.895 }, 74.f, 0.01f, 1000.f);
     double fps = 0.0, ups = 0.0;
+
+    HDR* hdr;
+    std::vector<Chunk*> chunks;
 
     EasyPlayground(const EasyDisplay& display);
     ~EasyPlayground();

@@ -28,8 +28,8 @@
 #include "WinUtils.hpp"
 
 //#define REMOTE
-//#define CLIENT
-#define SERVER
+#define CLIENT
+//#define SERVER
 #define SERVER_PORT 54000U
 
 
@@ -129,7 +129,7 @@ void LUAListen()
 
 int main(int argc, char* argv[])
 {
-    EasySchedTest();
+    //EasySchedTest();
     bool isServer = true;
     if (argc > 1) 
     {

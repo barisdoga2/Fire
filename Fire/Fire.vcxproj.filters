@@ -36,6 +36,9 @@
     <Filter Include="Source Files\Core\Net\Server">
       <UniqueIdentifier>{9c016e5e-85e4-42d5-a66b-0d023878f551}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Core\Render\Core">
+      <UniqueIdentifier>{a2bd0f64-e285-4396-b4ec-6c95e99a8f6b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="imgui_impl_glfw.cpp">
@@ -52,15 +55,6 @@
     </ClCompile>
     <ClCompile Include="EasyModel.cpp">
       <Filter>Source Files\Core\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyCamera.cpp">
-      <Filter>Source Files\Core\Render</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyDisplay.cpp">
-      <Filter>Source Files\Core\Render</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyShader.cpp">
-      <Filter>Source Files\Core\Render</Filter>
     </ClCompile>
     <ClCompile Include="EasyTexture.cpp">
       <Filter>Source Files\Core\Model</Filter>
@@ -113,6 +107,21 @@
     <ClCompile Include="Server.cpp">
       <Filter>Source Files\Game\Server</Filter>
     </ClCompile>
+    <ClCompile Include="EasyCamera.cpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyDisplay.cpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyShader.cpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="ChunkRenderer.cpp">
+      <Filter>Source Files\Core\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="HDR.cpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EasyUtility.hpp">
@@ -138,15 +147,6 @@
     </ClInclude>
     <ClInclude Include="EasyModel.hpp">
       <Filter>Source Files\Core\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyCamera.hpp">
-      <Filter>Source Files\Core\Render</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyDisplay.hpp">
-      <Filter>Source Files\Core\Render</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyShader.hpp">
-      <Filter>Source Files\Core\Render</Filter>
     </ClInclude>
     <ClInclude Include="EasyTexture.hpp">
       <Filter>Source Files\Core\Model</Filter>
@@ -203,5 +203,20 @@
       <Filter>Source Files\Core\Net\Base</Filter>
     </ClInclude>
     <ClInclude Include="Sched.hpp" />
+    <ClInclude Include="EasyCamera.hpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyDisplay.hpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyShader.hpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="ChunkRenderer.hpp">
+      <Filter>Source Files\Core\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="HDR.hpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -10,6 +10,8 @@
 EasyCamera::EasyCamera(const EasyDisplay& display, glm::vec3 pos, glm::vec3 target, float fov, float nearP, float farP)
     : display(display)
 {
+    far = farP;
+    near = nearP;
     position = pos;
     front = glm::normalize(target - pos);
     UpdateVectors();

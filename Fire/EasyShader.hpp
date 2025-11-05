@@ -21,13 +21,18 @@ public:
     void Stop();
 
     void BindAttribs(const std::vector<std::string>& attribs);
+    void BindTextures(const std::vector<std::string>& textures);
     void BindUniforms(const std::vector<std::string>& uniforms);
     void BindUniformArray(std::string name, int size);
 
+    void LoadTexture(GLint slot, GLenum type, std::string name, GLuint texture);
     void LoadUniform(const std::string& uniform, const glm::vec3& value);
+    void LoadUniform(const std::string& uniform, const glm::vec4& value);
     void LoadUniform(const std::string& uniform, const GLint& value);
     void LoadUniform(const std::string& uniform, const glm::mat4x4& mat4x4);
     void LoadUniform(const std::string& uniform, const std::vector<glm::mat4x4>& mat4x4);
+    void LoadUniform(const std::string& uniform, const GLfloat& value);
+    void LoadUniform(const std::string& uniform, const unsigned int& value);
 
 private:
     void AttachShader(GLenum type, const char* src, const GLint* length = nullptr);
