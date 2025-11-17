@@ -146,7 +146,8 @@ namespace FireLauncher
                 {
                     string shrt = Config.RunnableName;
                     string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Config.AppName + ".ico");
-                    CreateDesktopShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), Config.LauncherName + ".lnk"), Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Config.LauncherName + ".exe"), iconPath);
+
+                    CreateDesktopShortcut(Config.LauncherName, Path.Combine(Config.Game, Config.LauncherName) + ".exe");
                     form.progressBar1.Invoke(() =>
                     {
                         form.progressBar1.Value = 100;
@@ -305,21 +306,35 @@ namespace FireLauncher
             return content;
         }
 
-        private static void CreateDesktopShortcut(string shortcutPath, string targetPath, string iconPath)
+        private static void CreateDesktopShortcut(string name, string exePath)
         {
+            string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string shortcutPath = Path.Combine(desktop, name + ".lnk");
+
+            string exe = exePath.Replace("\\", "\\\\");
+            string workDir = Path.GetDirectoryName(exePath)?.Replace("\\", "\\\\") ?? "";
+
+            // ICON = exe’nin kendi ikonu
+            string icon = exe;
+
             string vbs = $@"
 Set oWS = WScript.CreateObject(""WScript.Shell"")
 sLinkFile = ""{shortcutPath.Replace("\\", "\\\\")}""
 Set oLink = oWS.CreateShortcut(sLinkFile)
-oLink.TargetPath = ""{targetPath.Replace("\\", "\\\\")}""
-oLink.WorkingDirectory = ""{Path.GetDirectoryName(targetPath).Replace("\\", "\\\\")}""
-oLink.IconLocation = ""{iconPath.Replace("\\", "\\\\")}""
+oLink.TargetPath = ""{exe}""
+oLink.WorkingDirectory = ""{workDir}""
+oLink.IconLocation = ""{icon}""
 oLink.Save
 ";
 
             string tempVbs = Path.Combine(Path.GetTempPath(), "create_shortcut.vbs");
             System.IO.File.WriteAllText(tempVbs, vbs);
-            System.Diagnostics.Process.Start("wscript.exe", tempVbs);
+
+            var p = new System.Diagnostics.Process();
+            p.StartInfo.FileName = "wscript.exe";
+            p.StartInfo.Arguments = "\"" + tempVbs + "\"";
+            p.StartInfo.CreateNoWindow = true;
+            p.Start();
         }
 
         private static (bool Match, string ComputedMD5)ComputeMd5AndLockIfMatch(string filePath, string expectedMd5, string relativePath)

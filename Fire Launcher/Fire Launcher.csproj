@@ -10,7 +10,12 @@
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationIcon>Fire Launcher.ico</ApplicationIcon>
     
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Fire Launcher.ico" />
+  </ItemGroup>
 
 </Project>
