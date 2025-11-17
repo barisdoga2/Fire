@@ -270,16 +270,13 @@ void ChunkRenderer::Init()
 {
 	chunkShader = new EasyShader(std::string("Chunk"));
 	chunkShader->BindAttribs({ "aPos", "aUV", "aNormal", "aTangent" });
+	chunkShader->BindUniforms(GENERAL_UNIFORMS);
 	chunkShader->BindUniforms({ "uModel", "uView", "uProj", "uCameraPos"});
 	chunkShader->BindTextures({ "diffuseTexture"});
 }
 
-void ChunkRenderer::Render(EasyCamera* camera, std::vector<Chunk*> chunks, HDR* hdr)
+void ChunkRenderer::Render(EasyCamera* camera, std::vector<Chunk*> chunks, HDR* hdr, bool fog)
 {
-    if (tri)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    
-
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_BLEND);
 	glEnable(GL_DEPTH_TEST);
@@ -294,6 +291,7 @@ void ChunkRenderer::Render(EasyCamera* camera, std::vector<Chunk*> chunks, HDR* 
 		chunkShader->LoadUniform("uView", camera->view_);
 		chunkShader->LoadUniform("uProj", camera->projection_);
 		chunkShader->LoadUniform("uCameraPos", camera->position);
+		chunkShader->LoadUniform("uIsFog", fog ? 1.0f : 0.0f);
         chunkShader->LoadTexture(0, GL_TEXTURE_2D, "diffuseTexture", chunk->backMaterial->GetTexture(EasyMaterial::ALBEDO));
 
 		glDrawElements(GL_TRIANGLES, (GLint)chunk->indices.size(), GL_UNSIGNED_INT, 0);
@@ -303,7 +301,4 @@ void ChunkRenderer::Render(EasyCamera* camera, std::vector<Chunk*> chunks, HDR* 
 	glBindVertexArray(0);
 
 	glUseProgram(0);
-
-    if(tri)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }

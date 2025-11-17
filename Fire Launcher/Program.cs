@@ -2,6 +2,7 @@ using Microsoft.VisualBasic.ApplicationServices;
 using Microsoft.VisualBasic.Logging;
 using System;
 using System.IO;
+using System.Linq;
 using System.Security.Policy;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
@@ -69,6 +70,7 @@ namespace FireLauncher
         static Form1? form;
         public static bool fast = true;
         static UpdateResult updateResult = UpdateResult.IN_PROGRESS;
+        public static Dictionary<string, (FileStream Stream, string Md5)> LockedFiles = new Dictionary<string, (FileStream, string)>(StringComparer.OrdinalIgnoreCase);
 
         static async Task<UpdateResult> Update()
         {
@@ -233,8 +235,6 @@ namespace FireLauncher
                 await Task.Delay(1000);
         }
 
-        private static List<string> locked = new List<string>();
-
         private static async Task<List<(string Path, string ServerMd5, string LocalMd5)>> GetUnmatchedFiles(List<(string Path, string Md5)> parsedList, string basePath)
         {
             Log("Checking files...");
@@ -245,18 +245,13 @@ namespace FireLauncher
             {
                 string localFilePath = Path.Combine(basePath, item.Path);
 
-                if (!locked.Contains(item.Path, StringComparer.OrdinalIgnoreCase))
+                if (!LockedFiles.ContainsKey(item.Path))
                 {
-                    var result = ComputeMd5AndLockIfMatch(localFilePath, item.Md5);
-
-                    // Eger dosya yoksa veya hash eslesmiyorsa  listeye ekle
+                    var result = ComputeMd5AndLockIfMatch(localFilePath, item.Md5, item.Path);
+                    
                     if (!result.Match)
                     {
-                        unmatched.Add((item.Path, item.Md5, result.computedMD5));
-                    }
-                    else
-                    {
-                        locked.Add(item.Path);
+                        unmatched.Add((item.Path, item.Md5, result.ComputedMD5));
                     }
                 }
             }
@@ -327,29 +322,41 @@ oLink.Save
             System.Diagnostics.Process.Start("wscript.exe", tempVbs);
         }
 
-        private static (bool Match, FileStream? LockedStream, string computedMD5)
-    ComputeMd5AndLockIfMatch(string filePath, string expectedMd5)
+        private static (bool Match, string ComputedMD5)ComputeMd5AndLockIfMatch(string filePath, string expectedMd5, string relativePath)
         {
-            // Dosya yoksa: match = false, stream = null
+            // Dosya yoksa
             if (!System.IO.File.Exists(filePath))
-                return (false, null, "");
+                return (false, "");
 
-            FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-            string computed;
-            using (var md5 = System.Security.Cryptography.MD5.Create())
+            FileStream fs = null;
+
+            try
             {
-                byte[] hash = md5.ComputeHash(fs);
-                computed = Convert.ToHexString(hash);
+                fs = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
 
-                if (computed.Equals(expectedMd5, StringComparison.OrdinalIgnoreCase))
+                using (var md5 = System.Security.Cryptography.MD5.Create())
                 {
-                    fs.Position = 0;
-                    return (true, fs, computed);
+                    byte[] hash = md5.ComputeHash(fs);
+                    string computed = Convert.ToHexString(hash);
+
+                    if (computed.Equals(expectedMd5, StringComparison.OrdinalIgnoreCase))
+                    {
+                        fs.Position = 0;
+                        LockedFiles[relativePath] = (fs, computed);
+                        return (true, computed);
+                    }
+                    else
+                    {
+                        fs.Dispose();
+                        return (false, computed);
+                    }
                 }
             }
-
-            fs.Dispose();
-            return (false, null, computed);
+            catch
+            {
+                fs?.Dispose();
+                return (false, "");
+            }
         }
 
         private static string GetRelativeFromUrl(string fullUrl)

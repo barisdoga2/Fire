@@ -48,19 +48,6 @@
 #include "EasyPlayground.hpp"
 #endif
 
-#include "Sched.hpp"
-EasyBufferManager bf(50U, 1472U);
-ClientTest client(bf, SERVER_IP, SERVER_PORT);
-
-int ClientWebRequest(lua_State* L) { return client.ClientWebRequest(); }
-int ClientResetSendSequenceCounter(lua_State* L) { return client.ClientResetSendSequenceCounter(); }
-int ClientResetReceiveSequenceCounter(lua_State* L) { return client.ClientResetReceiveSequenceCounter(); }
-int ClientSend(lua_State* L) { return client.ClientSend(); }
-int ClientReceive(lua_State* L) { return client.ClientReceive(); }
-int ClientBoth(lua_State* L) { return client.ClientBoth(); }
-int ClientSR(lua_State* L) { return client.ClientSR(); }
-int BufferManagerStatistics(lua_State* L){std::cout << bf.Stats();return 0;}
-
 bool running = false;
 void LUAListen()
 {
@@ -70,14 +57,6 @@ void LUAListen()
 
     L = luaL_newstate();
     luaL_openlibs(L);
-    lua_register(L, "W", ClientWebRequest);
-    lua_register(L, "S", ClientSend);
-    lua_register(L, "R", ClientReceive);
-    lua_register(L, "B", ClientBoth);
-    lua_register(L, "SR", ClientSR);
-    lua_register(L, "RSC", ClientResetSendSequenceCounter);
-    lua_register(L, "RRC", ClientResetReceiveSequenceCounter);
-    lua_register(L, "BF", BufferManagerStatistics);
 #ifdef SERVER
     lua_register(L, "ServerStats", Server::Stats);
     lua_register(L, "Q", Server::Stats);

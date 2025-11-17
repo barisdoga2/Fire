@@ -58,11 +58,9 @@ private:
 	static EasyShader* chunkShader;
 
 public:
-    static inline bool tri{};
-
 	static void Init();
 
-	static void Render(EasyCamera* camera, std::vector<Chunk*> chunks, HDR* hdr);
+	static void Render(EasyCamera* camera, std::vector<Chunk*> chunks, HDR* hdr, bool fog);
 
 };
 

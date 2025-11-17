@@ -73,3 +73,5 @@ glm::mat4 ConvertMatrixToGLMFormat(const aiMatrix4x4& from);
 GLuint CreateCube3D(float size, GLuint* vbo, float* positions_out);
 
 std::string GetPath(std::string = "");
+
+std::string HashSHA256(const std::string& input);

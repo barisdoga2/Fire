@@ -4,7 +4,6 @@ in vec2 pass_uv;
 in vec3 pass_normal;
 in vec3 pass_worldPos;
 
-uniform vec3 uCameraPos;
 uniform sampler2D diffuse;
 
 out vec4 FragColor;
@@ -13,11 +12,6 @@ $$INC$$:Settings.glsl
 
 void main()
 {
-    float ambientStrength  = 0.20;
-    float diffuseStrength  = 1.00;
-    float specularStrength = 0.20;
-    float shininess        = 32.0;
-
     // --- Vectors ---
     vec3 N = normalize(pass_normal);
     vec3 L = normalize(-lightDir);
@@ -36,7 +30,8 @@ void main()
 
     vec3 color = ambient + diffuse + specular;
 
-    FogCalculation(color, pass_worldPos, uCameraPos);
+    if(uIsFog > 0.0)
+        FogCalculation(color, pass_worldPos, uCameraPos);
 
     FragColor = vec4(color, 1.0);
 }

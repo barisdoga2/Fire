@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Windows.Forms;
 
 namespace FireLauncher
@@ -29,20 +30,31 @@ namespace FireLauncher
 
         public void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (e.CloseReason == CloseReason.UserClosing ||
-                e.CloseReason == CloseReason.TaskManagerClosing ||
-                e.CloseReason == CloseReason.FormOwnerClosing ||
-                e.CloseReason == CloseReason.MdiFormClosing)
-            {
-                e.Cancel = true;
-                return;
-            }
+            //if (e.CloseReason == CloseReason.UserClosing ||
+            //    e.CloseReason == CloseReason.TaskManagerClosing ||
+            //    e.CloseReason == CloseReason.FormOwnerClosing ||
+            //    e.CloseReason == CloseReason.MdiFormClosing)
+            //{
+            //    e.Cancel = true;
+            //    return;
+            //}
         }
 
         private void playB_Click(object sender, EventArgs e)
         {
             try
             {
+                foreach (var kvp in Program.LockedFiles)
+                {
+                    try
+                    {
+                        kvp.Value.Stream?.Dispose();
+                    }
+                    catch { /* ignore */ }
+                }
+
+                Program.LockedFiles.Clear();
+
                 string exePath = Path.Combine(Path.Combine(Config.Game, Config.LocalRunFolder), Config.RunnableName);
                 System.Diagnostics.Process.Start(exePath);
 
@@ -51,11 +63,12 @@ namespace FireLauncher
                     button1.Enabled = false;
                 });
                 Log("Success!");
-                Application.ApplicationExit += (s, e) => {
-                    Environment.FailFast("");
-                };
+                //Application.ApplicationExit += (s, e) => {
+                //    Environment.FailFast("");
+                //};
 
-                FormClosing += Form1_FormClosing;
+                //FormClosing += Form1_FormClosing;
+                Application.Exit();
             }
             catch (Exception ex)
             {

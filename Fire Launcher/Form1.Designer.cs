@@ -104,8 +104,9 @@
             Controls.Add(progressBar1);
             Controls.Add(richTextBox);
             Controls.Add(progressBar);
-            Name = "Form1";
+            Name = Config.LauncherName;
             StartPosition = FormStartPosition.CenterScreen;
+            Text = Config.LauncherName;
             Load += Form1_Load;
             ResumeLayout(false);
         }

@@ -39,6 +39,9 @@
     <Filter Include="Source Files\Core\Render\Core">
       <UniqueIdentifier>{a2bd0f64-e285-4396-b4ec-6c95e99a8f6b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{acdc9bc8-f4bc-4898-945a-c3faca79901b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="imgui_impl_glfw.cpp">
@@ -110,12 +113,6 @@
     <ClCompile Include="EasyCamera.cpp">
       <Filter>Source Files\Core\Render\Core</Filter>
     </ClCompile>
-    <ClCompile Include="EasyDisplay.cpp">
-      <Filter>Source Files\Core\Render\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyShader.cpp">
-      <Filter>Source Files\Core\Render\Core</Filter>
-    </ClCompile>
     <ClCompile Include="ChunkRenderer.cpp">
       <Filter>Source Files\Core\Render</Filter>
     </ClCompile>
@@ -130,6 +127,12 @@
     </ClCompile>
     <ClCompile Include="SkyboxRenderer.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyShader.cpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyDisplay.cpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -215,12 +218,6 @@
     <ClInclude Include="EasyCamera.hpp">
       <Filter>Source Files\Core\Render\Core</Filter>
     </ClInclude>
-    <ClInclude Include="EasyDisplay.hpp">
-      <Filter>Source Files\Core\Render\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyShader.hpp">
-      <Filter>Source Files\Core\Render\Core</Filter>
-    </ClInclude>
     <ClInclude Include="ChunkRenderer.hpp">
       <Filter>Source Files\Core\Render</Filter>
     </ClInclude>
@@ -231,5 +228,20 @@
       <Filter>Source Files\Core\Render\Core</Filter>
     </ClInclude>
     <ClInclude Include="SkyboxRenderer.hpp" />
+    <ClInclude Include="Config.hpp">
+      <Filter>Source Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI_Fun.hpp" />
+    <ClInclude Include="EasyShader.hpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyDisplay.hpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="publish.bat">
+      <Filter>Scripts</Filter>
+    </None>
   </ItemGroup>
 </Project>

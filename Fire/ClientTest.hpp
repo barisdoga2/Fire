@@ -28,7 +28,7 @@ public:
     ClientTest(EasyBufferManager& bf, std::string ip, unsigned short port);
     ~ClientTest();
 
-    int ClientWebRequest();
+    std::string ClientWebRequest(std::string url, std::string username, std::string password);
     int ClientResetSendSequenceCounter();
     int ClientResetReceiveSequenceCounter();
     int ClientSend();

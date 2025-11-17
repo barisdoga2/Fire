@@ -184,6 +184,7 @@
   <ItemGroup>
     <ClInclude Include="ChunkRenderer.hpp" />
     <ClInclude Include="ClientTest.hpp" />
+    <ClInclude Include="Config.hpp" />
     <ClInclude Include="EasyAnimation.hpp" />
     <ClInclude Include="EasyAnimator.hpp" />
     <ClInclude Include="EasyBuffer.hpp" />
@@ -204,6 +205,7 @@
     <ClInclude Include="EasyTexture.hpp" />
     <ClInclude Include="GL_Ext.hpp" />
     <ClInclude Include="HDR.hpp" />
+    <ClInclude Include="ImGUI_Fun.hpp" />
     <ClInclude Include="imgui_impl_glfw.h" />
     <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="imgui_impl_opengl3_loader.h" />
@@ -216,6 +218,9 @@
     <ClInclude Include="SkyboxRenderer.hpp" />
     <ClInclude Include="WinUtils.hpp" />
     <ClInclude Include="World.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="publish.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

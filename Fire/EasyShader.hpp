@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <glad/glad.h> 
 
+#define GENERAL_UNIFORMS {"uCameraPos", "uIsFog"}
 
 
 class EasyShader {

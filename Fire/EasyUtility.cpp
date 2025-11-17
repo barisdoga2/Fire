@@ -216,3 +216,25 @@ std::string GetPath(std::string append)
 
     return root + append;
 }
+
+#include <cryptopp/sha.h>
+#include <cryptopp/hex.h>
+#include <cryptopp/filters.h>
+
+std::string HashSHA256(const std::string& input)
+{
+    using namespace CryptoPP;
+
+    SHA256 hash;
+    std::string digest;
+
+    StringSource ss(input, true,
+        new HashFilter(hash,
+            new HexEncoder(
+                new StringSink(digest), false // uppercase=false -> lowercase hex
+            )
+        )
+    );
+
+    return digest;
+}

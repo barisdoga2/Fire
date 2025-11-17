@@ -28,17 +28,14 @@ ClientTest::~ClientTest()
 
 }
 
-int ClientTest::ClientWebRequest()
+std::string ClientTest::ClientWebRequest(std::string url, std::string username, std::string password)
 {
     CURL* curl = curl_easy_init();
-    if (!curl) {
-        std::cout << "Failed to initialize CURL\n";
-        return 1;
-    }
+    if (!curl)
+        return "Curl error:Curl init failed!";
 
     std::string response;
-    std::string url = "https://barisdoga.com/index.php";
-    std::string postData = "username=barisdoga&password=123&login=1";
+    std::string postData = "username=" + username + "&password=" + password + "&login=1";
     std::string prefix = "<textarea name=\"jwt\" readonly>";
     std::string prefix2 = "<div class=\"msg\">";
     auto writeLambda = [](char* ptr, size_t size, size_t nmemb, void* userdata) -> size_t
@@ -54,47 +51,20 @@ int ClientTest::ClientWebRequest()
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK)
     {
-        std::cout << "Error! Login failed! CURL error: " << curl_easy_strerror(res) << std::endl;
+        std::string err = curl_easy_strerror(res);
+        curl_easy_cleanup(curl);
+        return "Curl error:Server not reachable!";
     }
     else
     {
-        if (size_t index = response.find(prefix); index != std::string::npos)
-        {
-            response = response.substr(index + prefix.length());
-            response = response.substr(0, response.find("</textarea>"));
-            SessionID_t sessionID = static_cast<SessionID_t>(std::stoul(response.substr(0, response.find_first_of(":"))));
-            response = response.substr(response.find_first_of(":") + 1U);
-            uint32_t userID = static_cast<uint32_t>(std::stoul(response.substr(0, response.find_first_of(":"))));
-            response = response.substr(response.find_first_of(":") + 1U);
-            std::string key = response;
-
-            Key_t key_t(KEY_SIZE);
-            memcpy(key_t.data(), key.data(), KEY_SIZE);
-            client.crypt = new PeerCryptInfo(sessionID, 0U, 0U, key_t);
-
-            std::cout << "Login OK! SessionID: " << sessionID << ", UserID: " << userID << ", Key: " << key << std::endl;
-        }
-        else
-        {
-            if (size_t index = response.find(prefix2); index != std::string::npos)
-            {
-                response = response.substr(index + prefix2.length());
-                response = response.substr(0, response.find("</div>"));
-                std::cout << "Error! Login failed! Message: " << response << std::endl;
-            }
-            else
-            {
-                std::cout << "Error! Login response parse failed!" << std::endl;
-            }
-        }
+        curl_easy_cleanup(curl);
+        return response;
     }
-
-    curl_easy_cleanup(curl);
-    return 0;
 }
 
 int ClientTest::ClientResetSendSequenceCounter()
@@ -204,7 +174,7 @@ int ClientTest::ClientReceive()
 
 int ClientTest::ClientBoth()
 {
-    ClientWebRequest();
+    ClientWebRequest("https://barisdoga.com/index.php", "barisdoga", "123");
     ClientSend();
     std::this_thread::sleep_for(std::chrono::milliseconds(1500U));
     ClientReceive();
