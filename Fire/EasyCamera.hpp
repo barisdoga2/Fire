@@ -17,8 +17,10 @@ public:
 	glm::vec3 up{ 0.f, 1.f, 0.f };
 	glm::vec3 right{ 1.f, 0.f, 0.f };
 	glm::vec3 worldUp{ 0.f, 1.f, 0.f };
-	bool mode = true;
+	bool mode = false;
 
+	float aspect = 0.f;
+	float fov = 90.f;
 	float yaw = -89.f;
 	float pitch = -26.f;
 
@@ -45,11 +47,11 @@ public:
 
     EasyCamera(const EasyDisplay& display, glm::vec3 pos, glm::vec3 target, float fov, float nearP, float farP);
     void Update(double dt);
-    void ModeSwap();
+    void ModeSwap(bool mode = false);
 
     void cursor_callback(double xpos, double ypos);
     void scroll_callback(double xoffset, double yoffset);
-    void key_callback(int key, int scancode, int action, int mods);
+    bool key_callback(int key, int scancode, int action, int mods);
     void mouse_callback(GLFWwindow* window, int button, int action, int mods);
 
 private:

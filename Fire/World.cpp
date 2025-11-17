@@ -35,7 +35,7 @@ World::World()
     {
         for (uint32_t x = 0; x < widthChunks; ++x) 
         {
-            Chunk c;
+            WChunk c;
             c.id = y * widthChunks + x;
             c.gridPos = { (int)x, (int)y };
             chunks.push_back(std::move(c));
@@ -48,7 +48,7 @@ void World::Update(double _dt)
     b2World_Step(world, (float)(_dt / 1000.0), 4);
 }
 
-Chunk* World::getChunkAt(const glm::vec2& pos)
+WChunk* World::getChunkAt(const glm::vec2& pos)
 {
     int cx = (int)((pos.x + HALF_WORLD) / CHUNK_SIZE);
     int cy = (int)((pos.y + HALF_WORLD) / CHUNK_SIZE);
@@ -59,9 +59,9 @@ Chunk* World::getChunkAt(const glm::vec2& pos)
     return &chunks[cy * widthChunks + cx];
 }
 
-std::vector<Chunk*> World::getChunksInRadius(const glm::vec2& pos, float radius) 
+std::vector<WChunk*> World::getChunksInRadius(const glm::vec2& pos, float radius) 
 {
-    std::vector<Chunk*> result;
+    std::vector<WChunk*> result;
 
     int minX = std::max(0, (int)((pos.x - radius + HALF_WORLD) / CHUNK_SIZE));
     int maxX = std::min((int)widthChunks - 1, (int)((pos.x + radius + HALF_WORLD) / CHUNK_SIZE));
@@ -112,13 +112,13 @@ void World::updatePeerSubscription(EasyPeer& peer)
     }
 }
 
-void Chunk::broadcast(const std::string& msg)
+void WChunk::broadcast(const std::string& msg)
 {
     //for (auto* peer : subscribers)
     //    peer->receiveMessage(msg);
 }
 
-glm::vec2 Chunk::getWorldCenter()
+glm::vec2 WChunk::getWorldCenter()
 {
     glm::vec2 ret = { 0,0 };
 

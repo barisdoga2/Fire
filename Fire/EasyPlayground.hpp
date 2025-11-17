@@ -6,6 +6,7 @@
 #include "EasyAnimator.hpp"
 #include "EasyDisplay.hpp"
 #include "ChunkRenderer.hpp"
+#include "SkyboxRenderer.hpp"
 
 
 class HDR;
@@ -16,13 +17,24 @@ public:
     int animation = 1;
     bool mb1_pressed = false;
     const EasyDisplay& display_;
-    EasyModel model = EasyModel("../../res/Kachujin G Rosales Skin.fbx", { "../../res/Standing Idle on Kachujin G Rosales wo Skin.fbx", "../../res/Running on Kachujin G Rosales wo Skin.fbx", "../../res/Standing Aim Idle 01 on Kachujin H Rosales wo Skin.fbx" });
+    EasyModel model = EasyModel(GetPath("res/models/Kachujin G Rosales Skin.fbx"), { GetPath("res/models/Standing Idle on Kachujin G Rosales wo Skin.fbx"), GetPath("res/models/Running on Kachujin G Rosales wo Skin.fbx"), GetPath("res/models/Standing Aim Idle 01 on Kachujin H Rosales wo Skin.fbx") });
+    EasyModel cube_1x1x1 = EasyModel(GetPath("res/models/1x1cube.dae"));
+    
     EasyShader shader = EasyShader("model");
+    EasyShader normalDebugShader = EasyShader("NormalDebug");
+    EasyShader normalLinesShader = EasyShader("NormalLines");
     EasyCamera camera = EasyCamera(display_, { 3,194,166 }, { 3 - 0.15,194 - 0.44,166 - 0.895 }, 74.f, 0.01f, 1000.f);
+    bool imgui_en{};
+    bool imgui_showNormals{};
+    bool imgui_showNormalLines{};
+    float imgui_showNormalLength = 2.2f;
     double fps = 0.0, ups = 0.0;
+    int seed = 1337;
 
     HDR* hdr;
     std::vector<Chunk*> chunks;
+
+    std::vector<EasyModel*> mapObjects;
 
     EasyPlayground(const EasyDisplay& display);
     ~EasyPlayground();
@@ -34,6 +46,8 @@ public:
     void StartRender(double _dt);
     void EndRender();
     void ImGUIRender();
+    void ReloadShaders();
+    void ReGenerateMap();
 
     void scroll_callback(GLFWwindow* window, double xpos, double ypos);
     void cursor_callback(GLFWwindow* window, double xpos, double ypos);

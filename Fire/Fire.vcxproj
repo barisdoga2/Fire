@@ -80,7 +80,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -99,7 +99,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -116,7 +116,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;OZZ_USE_DYNAMIC_LINKING;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;OZZ_USE_DYNAMIC_LINKING;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -136,7 +136,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -159,12 +159,14 @@
     <ClCompile Include="EasyDB.cpp" />
     <ClCompile Include="EasyDisplay.cpp" />
     <ClCompile Include="EasyIpAddress.cpp" />
+    <ClCompile Include="EasyMaterial.cpp" />
     <ClCompile Include="EasyModel.cpp" />
     <ClCompile Include="EasyPacket.cpp" />
     <ClCompile Include="EasyPlayground.cpp" />
     <ClCompile Include="EasyShader.cpp" />
     <ClCompile Include="EasySocket.cpp" />
     <ClCompile Include="EasyTexture.cpp" />
+    <ClCompile Include="EasyUtility.cpp" />
     <ClCompile Include="HDR.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui_impl_opengl3.cpp" />
@@ -175,6 +177,7 @@
     <ClCompile Include="EasyServer_Send.cpp" />
     <ClCompile Include="EasyServer_Update.cpp" />
     <ClCompile Include="Server.cpp" />
+    <ClCompile Include="SkyboxRenderer.cpp" />
     <ClCompile Include="WinUtils.cpp" />
     <ClCompile Include="World.cpp" />
   </ItemGroup>
@@ -189,6 +192,7 @@
     <ClInclude Include="EasyDisplay.hpp" />
     <ClInclude Include="EasyIpAddress.hpp" />
     <ClInclude Include="EasyManager.hpp" />
+    <ClInclude Include="EasyMaterial.hpp" />
     <ClInclude Include="EasyModel.hpp" />
     <ClInclude Include="EasyNet.hpp" />
     <ClInclude Include="EasyPacket.hpp" />
@@ -209,6 +213,7 @@
     <ClInclude Include="Serializer.hpp" />
     <ClInclude Include="EasyServer.hpp" />
     <ClInclude Include="Server.hpp" />
+    <ClInclude Include="SkyboxRenderer.hpp" />
     <ClInclude Include="WinUtils.hpp" />
     <ClInclude Include="World.hpp" />
   </ItemGroup>

@@ -177,7 +177,7 @@ int main(int argc, char* argv[])
             std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
     }
 #elif defined(CLIENT)
-    if (EasyDisplay display({ 1024,768 }); display.Init())
+    if (EasyDisplay display({ 1536,864 }); display.Init())
     {
         if (EasyPlayground playground(display); playground.Init())
         {

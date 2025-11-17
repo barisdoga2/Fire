@@ -10,13 +10,17 @@ EasyShader::EasyShader(const std::string& name)
 {
     prog = glCreateProgram();
 
-    std::string vertexShaderSource = LoadFile("../../res/" + name + "V.glsl");
+    std::string vertexShaderSource = LoadFile(GetPath("res/shaders/") + name + "V.glsl");
     if (vertexShaderSource.length() > 0)
         AttachShader(GL_VERTEX_SHADER, vertexShaderSource.c_str());
 
-    std::string fragmentShaderSource = LoadFile("../../res/" + name + "F.glsl");
+    std::string fragmentShaderSource = LoadFile(GetPath("res/shaders/") + name + "F.glsl");
     if (fragmentShaderSource.length() > 0)
         AttachShader(GL_FRAGMENT_SHADER, fragmentShaderSource.c_str());
+
+    std::string geometryShaderSource = LoadFile(GetPath("res/shaders/") + name + "G.glsl");
+    if (geometryShaderSource.length() > 0)
+        AttachShader(GL_GEOMETRY_SHADER, geometryShaderSource.c_str());
 
     glLinkProgram(prog);
     GLint status = GL_FALSE, log[1 << 11] = { 0 };
@@ -29,13 +33,16 @@ EasyShader::EasyShader(const std::string& name)
     glUseProgram(prog);
 }
 
-EasyShader::EasyShader(const char* VS, const char* FS)
+EasyShader::EasyShader(const char* VSs, const char* FSs, const char* GSs)
 {
     prog = glCreateProgram();
 
-    AttachShader(GL_VERTEX_SHADER, VS);
+    AttachShader(GL_VERTEX_SHADER, VSs);
 
-    AttachShader(GL_FRAGMENT_SHADER, FS);
+    AttachShader(GL_FRAGMENT_SHADER, FSs);
+
+    if(GSs)
+        AttachShader(GL_GEOMETRY_SHADER, GSs);
 
     glLinkProgram(prog);
     GLint status = GL_FALSE, log[1 << 11] = { 0 };

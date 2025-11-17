@@ -162,7 +162,7 @@ namespace b2 {
 }
 
 
-struct Chunk {
+struct WChunk {
     uint32_t id;
     glm::ivec2 gridPos;
     std::unordered_set<EasyPeer*> subscribers;
@@ -179,12 +179,12 @@ class World {
 public:
     b2WorldId world;
     World();
-    Chunk* getChunkAt(const glm::vec2& pos);
-    std::vector<Chunk*> getChunksInRadius(const glm::vec2& pos, float radius);
+    WChunk* getChunkAt(const glm::vec2& pos);
+    std::vector<WChunk*> getChunksInRadius(const glm::vec2& pos, float radius);
     void updatePeerSubscription(EasyPeer& peer);
     void Update(double _dt);
 private:
-    std::vector<Chunk> chunks;
+    std::vector<WChunk> chunks;
     uint32_t widthChunks, heightChunks;
 
 };

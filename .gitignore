@@ -1,3 +1,13 @@
+Fire Launcher/bin/*
+Fire Launcher/obj/*
+HashGen/x64/*
+HashGen/Debug/*
+HashGen/Release/*
+publish/Fire Launcher/Fire Launcher.exe
+
+publish/Fire Launcher/*.pdb
+
+
 # Remove VS Code and VS Files
 .vs/*
 .vscode/*

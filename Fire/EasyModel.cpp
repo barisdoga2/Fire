@@ -7,14 +7,18 @@
 #include <cassert>
 
 #include <glm/glm.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+
 #include <assimp/scene.h>
 #include <assimp/cimport.h>
 #include <assimp/postprocess.h>
 
 
-
 void EasyModel::EasyMesh::LoadToGPU()
 {
+    if (vao != 0U)
+        return;
+
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &ebo);
@@ -66,22 +70,26 @@ EasyModel::EasyModel(const std::string& file, const std::vector<std::string> ani
         animations.push_back(new EasyAnimation(animScene, animScene->mAnimations[0], m_BoneInfoMap, m_BoneCounter));
         aiReleaseImport(animScene);
     }
-    animator = new EasyAnimator(animations.at(1));
+    if(animations.size() > 0u)
+        animator = new EasyAnimator(animations.at(1));
 }
 
 bool EasyModel::Update(double _dt, bool mb1_pressed)
 {
-    EasyAnimation* runAnim = animations.at(1);   // running anim
-    EasyAnimation* aimAnim = animations.at(2);   // aiming anim
-    animator->UpdateLayered(runAnim, aimAnim, mb1_pressed, _dt);
+    if (animator)
+    {
+        EasyAnimation* runAnim = animations.at(1);   // running anim
+        EasyAnimation* aimAnim = animations.at(2);   // aiming anim
+        animator->UpdateLayered(runAnim, aimAnim, mb1_pressed, _dt);
+    }
 
     return true;
 }
 
 void EasyModel::LoadToGPU()
 {
-    for (auto mesh : meshes)
-        mesh->LoadToGPU();
+    for (const auto& kv : instances)
+        kv.first->LoadToGPU();
 }
 
 EasyModel::EasyMesh* EasyModel::ProcessMesh(aiMesh* aiMesh, const aiScene* scene)
@@ -105,6 +113,8 @@ EasyModel::EasyMesh* EasyModel::ProcessMesh(aiMesh* aiMesh, const aiScene* scene
             ev.bitangent = { aiMesh->mBitangents[v].x, aiMesh->mBitangents[v].y, aiMesh->mBitangents[v].z };
 
         mesh->vertices.push_back(ev);
+
+        mesh->name = aiMesh->mName.C_Str();
     }
 
     for (size_t f = 0; f < aiMesh->mNumFaces; f++)
@@ -116,7 +126,7 @@ EasyModel::EasyMesh* EasyModel::ProcessMesh(aiMesh* aiMesh, const aiScene* scene
 
     ExtractBoneWeightForVertices(aiMesh, mesh, scene);
 
-    GLuint texture;
+    GLuint texture = 0u;
     std::string texPath = "";
     aiString path;
     aiMaterial* material = scene->mMaterials[aiMesh->mMaterialIndex];
@@ -124,6 +134,8 @@ EasyModel::EasyMesh* EasyModel::ProcessMesh(aiMesh* aiMesh, const aiScene* scene
         texPath = std::string(path.C_Str());
     if (const aiTexture* embedded = scene->GetEmbeddedTexture(texPath.c_str()))
         texture = EasyTexture::Load(embedded);
+    else if (texPath.length() > 0U)
+        texture = EasyTexture::Load(GetPath("res/images/") + texPath);
     mesh->texture = texture;
 
     return mesh;
@@ -134,7 +146,34 @@ void EasyModel::ProcessNode(const aiNode* node, const aiScene* scene)
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        meshes.push_back(ProcessMesh(mesh, scene));
+        EasyMesh* found{};
+        for (const auto& kv : instances)
+        {
+            if (kv.first->name.compare(mesh->mName.C_Str()) == 0)
+            {
+                found = kv.first;
+                break;
+            }
+        }
+
+        glm::quat rotation;
+        glm::vec3 position;
+        glm::vec3 rotationEuler;
+        glm::vec3 skew;
+        glm::vec3 scale;
+        glm::vec4 perspective;
+        glm::decompose(ConvertMatrixToGLMFormat(node->mTransformation), scale, rotation, position, skew, perspective);
+        rotationEuler = glm::degrees(glm::eulerAngles(rotation));
+        if (found)
+        {
+            instances[found].push_back(new EasyModel::EasyTransform(position, scale, rotation));
+            //instances[found].push_back(new EasyModel::EasyTransform(position, scale, rotationEuler));
+        }
+        else
+        {
+            instances.insert({ ProcessMesh(mesh, scene) , { new EasyModel::EasyTransform(position, scale, rotation) } });
+            //instances.insert({ ProcessMesh(mesh, scene) , { new EasyModel::EasyTransform(position, scale, rotationEuler) } });
+        }
     }
     for (unsigned int i = 0; i < node->mNumChildren; i++)
     {

@@ -122,6 +122,15 @@
     <ClCompile Include="HDR.cpp">
       <Filter>Source Files\Core\Render\Core</Filter>
     </ClCompile>
+    <ClCompile Include="EasyMaterial.cpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyUtility.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyboxRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EasyUtility.hpp">
@@ -218,5 +227,9 @@
     <ClInclude Include="HDR.hpp">
       <Filter>Source Files\Core\Render\Core</Filter>
     </ClInclude>
+    <ClInclude Include="EasyMaterial.hpp">
+      <Filter>Source Files\Core\Render\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="SkyboxRenderer.hpp" />
   </ItemGroup>
 </Project>
