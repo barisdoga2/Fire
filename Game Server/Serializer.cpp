@@ -1,8 +1,8 @@
 #include "Serializer.hpp"
 
 #include <vector>
-#include "EasyNet.hpp"
-#include "EasyPacket.hpp"
+#include "../Fire/EasyNet.hpp"
+#include "../Fire/EasyPacket.hpp"
 #include "World.hpp"
 
 
@@ -11,7 +11,7 @@ bool MakeDeserialized(EasyBuffer* buff, std::vector<EasySerializeable*>& peer_ca
     EasySerializer des(buff);
     des.head = EasyPacket::HeaderSize();
     bool status = true;
-    while (des.head < buff->m_payload_size)
+    while (des.head < buff->m_payload_size + EasyPacket::HeaderSize())
     {
         PacketID_t packetID = *(PacketID_t*)(buff->begin() + des.head);
         switch (packetID)

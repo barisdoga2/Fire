@@ -1,13 +1,6 @@
 #include "ClientTest.hpp"
+#include "../Game Server/Net.hpp"
 
-#ifdef REMOTE
-#define SERVER_IP "31.210.43.142"
-#else
-#define SERVER_IP "127.0.0.1"
-#endif
-
-#define SERVER_PORT 54000U
-#define SERVER_URL "https://barisdoga.com/index.php"
 
 EasyBufferManager bf(50U, 1472U);
 ClientTest client(bf, SERVER_IP, SERVER_PORT);
@@ -28,6 +21,7 @@ bool rememberMe = false;
 bool loginInProgress = false;
 bool loginStatusWindow = false;
 bool loginFailed = false;
+bool loggedIn = false;
 std::string loginStatusText;
 std::thread loginThread;
 std::atomic<bool> loginThreadRunning = false;
@@ -70,6 +64,51 @@ inline void Login(std::string username_, std::string password)
 
 			loginStatusText = "Waiting the game server...";
 			std::cout << "Login OK! SessionID: " << sessionID << ", UserID: " << userID << ", Key: " << key << std::endl;
+
+			std::vector<EasySerializeable*> sendObjs = { new pHello("Heeey!") };
+			std::vector<EasySerializeable*> recvObjs = {  };
+			if (client.ClientSend(*crypt, sendObjs) == 1U)
+			{
+				int i = 0;
+				while (i < 3)
+				{
+					i++;
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					uint64_t recv = client.ClientReceive(*crypt, recvObjs);
+					if (recv == 1U)
+						break;
+				}
+				
+				if (recvObjs.size() > 0U)
+				{
+					bool isOK = false;
+
+					isOK = true;
+					if (isOK)
+					{
+						loginStatusText = "Login success!";
+						loginFailed = false;
+						loggedIn = true;
+					}
+					else
+					{
+						loginStatusText = "Game server rejected!";
+						loginFailed = true;
+					}
+				}
+				else
+				{
+					loginStatusText = "Game server not responds!";
+					loginFailed = true;
+				}
+			}
+			else
+			{
+				loginStatusText = "Internal socket error!";
+				loginFailed = true;
+			}
+
+			
 		}
 		else
 		{
@@ -94,7 +133,7 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 	if (!loginInProgress)
 		return;
 
-	ImVec2 winSize(250, 80);   // smaller window
+	ImVec2 winSize(350, 120);   // smaller window
 	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
 
 	// Center on both X and Y precisely
@@ -108,10 +147,23 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoSavedSettings);
 
+	auto CenteredText = [&](const char* txt)
+		{
+			float w = ImGui::CalcTextSize(txt).x;
+			ImGui::SetCursorPosX((winSize.x - w) * 0.5f);
+			ImGui::Text("%s", txt);
+		};
+
 	auto CenterItem = [&](float width)
 		{
 			ImGui::SetCursorPosX((winSize.x - width) * 0.5f);
 		};
+
+	CenteredText("Info");
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Spacing();
+	ImGui::Spacing();
 
 	// Text
 	float textWidth = ImGui::CalcTextSize(loginStatusText.c_str()).x;
@@ -183,7 +235,7 @@ void EasyPlayground::ImGUI_LoginWindow()
 			ImGui::SetCursorPosX(x);
 		};
 
-	CenteredText("Welcome");
+	CenteredText("Login");
 	ImGui::Spacing();
 	ImGui::Separator();
 	ImGui::Spacing();
@@ -234,6 +286,9 @@ void EasyPlayground::ImGUI_LoginWindow()
 
 void EasyPlayground::ImGUIRender()
 {
+	if (loggedIn)
+		isRender = true;
+
 	static bool show_demo_window = true;
 	static bool show_another_window = false;
 	static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -244,62 +299,22 @@ void EasyPlayground::ImGUIRender()
 	ImGui::NewFrame();
 	ImGui::SetNextWindowPos({ 0,0 });
 
-	ImGui::Begin("ImGUI Settings");
-	ImGui::Checkbox("ImGUI Enabled", &imgui_en);
-	ImGui::Checkbox("Fog Enabled", &imgui_isFog);
-	ImGui::Checkbox("Triangles Enabled", &imgui_triangles);
-	ImGui::Checkbox("Normals Enabled", &imgui_showNormalLines);
-	ImGui::InputFloat("Normal Length", &imgui_showNormalLength);
-	ImGui::End();
-
-
-	if (loginStatusWindow)
-		ImGUI_LoginStatusWindow();
-	else
-		ImGUI_LoginWindow();
-
-	if (imgui_en)
+	if (!loggedIn)
 	{
-		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-		if (show_demo_window)
-			ImGui::ShowDemoWindow(&show_demo_window);
-
-		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-		{
-			static float f = 0.0f;
-			static int counter = 0;
-
-			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-			ImGui::Checkbox("Another Window", &show_another_window);
-
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-				counter++;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
-			//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-			ImGui::End();
-		}
-
-		// 3. Show another simple window.
-		if (show_another_window)
-		{
-			ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-			ImGui::Text("hello");
-			if (ImGui::Button("Close Me"))
-				show_another_window = false;
-			ImGui::End();
-		}
+		if (loginStatusWindow)
+			ImGUI_LoginStatusWindow();
+		else
+			ImGUI_LoginWindow();
 	}
 	else
 	{
-		//ImGui::SetWindowFocus(nullptr);
+		ImGui::SetNextWindowPos({ 0,0 });
+		ImGui::Begin("ImGUI Settings");
+		ImGui::Checkbox("Fog Enabled", &imgui_isFog);
+		ImGui::Checkbox("Triangles Enabled", &imgui_triangles);
+		ImGui::Checkbox("Normals Enabled", &imgui_showNormalLines);
+		ImGui::InputFloat("Normal Length", &imgui_showNormalLength);
+		ImGui::End();
 	}
 
 	// Rendering

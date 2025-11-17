@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Net.hpp"
+#include "../Game Server/Net.hpp"
 
 class EasySocket;
 class ClientPeer : public EasyPeer {
@@ -29,11 +29,7 @@ public:
     ~ClientTest();
 
     std::string ClientWebRequest(std::string url, std::string username, std::string password);
-    int ClientResetSendSequenceCounter();
-    int ClientResetReceiveSequenceCounter();
-    int ClientSend();
-    int ClientReceive();
-    int ClientBoth();
-    int ClientSR();
+    uint64_t ClientReceive(PeerCryptInfo& crypt, std::vector<EasySerializeable*>& objs);
+    uint64_t ClientSend(PeerCryptInfo& crypt, std::vector<EasySerializeable*>& objs);
 
 };

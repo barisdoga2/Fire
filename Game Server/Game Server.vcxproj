@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{fb4bfc80-a7ff-4110-9927-780c6f156bbd}</ProjectGuid>
-    <RootNamespace>Fire</RootNamespace>
+    <ProjectGuid>{0ccc6fc7-cee3-478d-a148-8bc2c654a5ff}</ProjectGuid>
+    <RootNamespace>GameServer</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -80,17 +80,17 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>../include/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>../libs/x86/debug/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -99,35 +99,34 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>../include/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>../libs/x86/release/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;OZZ_USE_DYNAMIC_LINKING;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../include/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>../include/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>../libs/x64/debug/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -136,84 +135,39 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>../include/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>../libs/x64/release/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\Game Server\Serializer.cpp" />
-    <ClCompile Include="ChunkRenderer.cpp" />
-    <ClCompile Include="ClientTest.cpp" />
-    <ClCompile Include="EasyAnimation.cpp" />
-    <ClCompile Include="EasyAnimator.cpp" />
-    <ClCompile Include="EasyBuffer.cpp" />
-    <ClCompile Include="EasyCamera.cpp" />
-    <ClCompile Include="EasyDB.cpp" />
-    <ClCompile Include="EasyDisplay.cpp" />
-    <ClCompile Include="EasyIpAddress.cpp" />
-    <ClCompile Include="EasyMaterial.cpp" />
-    <ClCompile Include="EasyModel.cpp" />
-    <ClCompile Include="EasyPacket.cpp" />
-    <ClCompile Include="EasyPlayground.cpp" />
-    <ClCompile Include="EasyShader.cpp" />
-    <ClCompile Include="EasySocket.cpp" />
-    <ClCompile Include="EasyTexture.cpp" />
-    <ClCompile Include="EasyUtility.cpp" />
-    <ClCompile Include="HDR.cpp" />
-    <ClCompile Include="imgui_impl_glfw.cpp" />
-    <ClCompile Include="imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\Fire\EasyBuffer.cpp" />
+    <ClCompile Include="..\Fire\EasyDB.cpp" />
+    <ClCompile Include="..\Fire\EasyIpAddress.cpp" />
+    <ClCompile Include="..\Fire\EasyPacket.cpp" />
+    <ClCompile Include="..\Fire\EasyServer.cpp" />
+    <ClCompile Include="..\Fire\EasyServer_Receive.cpp" />
+    <ClCompile Include="..\Fire\EasyServer_Send.cpp" />
+    <ClCompile Include="..\Fire\EasyServer_Update.cpp" />
+    <ClCompile Include="..\Fire\EasySocket.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="EasyServer.cpp" />
-    <ClCompile Include="EasyServer_Receive.cpp" />
-    <ClCompile Include="EasyServer_Send.cpp" />
-    <ClCompile Include="EasyServer_Update.cpp" />
-    <ClCompile Include="SkyboxRenderer.cpp" />
-    <ClCompile Include="WinUtils.cpp" />
+    <ClCompile Include="Serializer.cpp" />
+    <ClCompile Include="Server.cpp" />
+    <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ChunkRenderer.hpp" />
-    <ClInclude Include="ClientTest.hpp" />
-    <ClInclude Include="Config.hpp" />
-    <ClInclude Include="EasyAnimation.hpp" />
-    <ClInclude Include="EasyAnimator.hpp" />
-    <ClInclude Include="EasyBuffer.hpp" />
-    <ClInclude Include="EasyCamera.hpp" />
-    <ClInclude Include="EasyDB.hpp" />
-    <ClInclude Include="EasyDisplay.hpp" />
-    <ClInclude Include="EasyIpAddress.hpp" />
-    <ClInclude Include="EasyMaterial.hpp" />
-    <ClInclude Include="EasyModel.hpp" />
-    <ClInclude Include="EasyNet.hpp" />
-    <ClInclude Include="EasyPacket.hpp" />
-    <ClInclude Include="EasyPlayground.hpp" />
-    <ClInclude Include="EasyScheduler.hpp" />
-    <ClInclude Include="EasySerializer.hpp" />
-    <ClInclude Include="EasyShader.hpp" />
-    <ClInclude Include="EasySocket.hpp" />
-    <ClInclude Include="EasyTexture.hpp" />
-    <ClInclude Include="GL_Ext.hpp" />
-    <ClInclude Include="HDR.hpp" />
-    <ClInclude Include="ImGUI_Fun.hpp" />
-    <ClInclude Include="imgui_impl_glfw.h" />
-    <ClInclude Include="imgui_impl_opengl3.h" />
-    <ClInclude Include="imgui_impl_opengl3_loader.h" />
-    <ClInclude Include="EasyUtility.hpp" />
-    <ClInclude Include="Sched.hpp" />
-    <ClInclude Include="EasyServer.hpp" />
-    <ClInclude Include="SkyboxRenderer.hpp" />
-    <ClInclude Include="WinUtils.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="publish.bat" />
+    <ClInclude Include="Net.hpp" />
+    <ClInclude Include="Serializer.hpp" />
+    <ClInclude Include="Server.hpp" />
+    <ClInclude Include="World.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

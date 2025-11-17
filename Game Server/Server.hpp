@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EasyServer.hpp"
+#include "../Fire/EasyServer.hpp"
 
 class Server : public EasyServer {
 public:
@@ -15,5 +15,6 @@ public:
 	void OnDestroy() override;
 	void OnSessionCreate(Session* session) override;
 	void OnSessionDestroy(Session* session) override;
+	void DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) override;
 
 };

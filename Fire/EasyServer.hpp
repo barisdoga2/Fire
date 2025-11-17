@@ -5,9 +5,9 @@
 #include <vector>
 #include <array>
 
-#include "Net.hpp"
+#include "EasyNet.hpp"
 #include "EasyScheduler.hpp"
-
+#include "EasySerializer.hpp"
 
 
 
@@ -116,5 +116,5 @@ protected:
     virtual void OnDestroy() = 0U;
     virtual void OnSessionCreate(Session* session) = 0U;
     virtual void OnSessionDestroy(Session* session) = 0U;
-
+    virtual void DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) = 0U;
 };

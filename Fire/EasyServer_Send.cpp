@@ -1,8 +1,9 @@
+#include <sstream>
+
 #include "EasyServer.hpp"
 #include "EasyPacket.hpp"
 #include "EasySocket.hpp"
-#include "Serializer.hpp"
-#include <sstream>
+#include "../Game Server/Serializer.hpp"
 
 #ifdef SERVER_STATISTICS
 #define STATS(x)                            stats_send.x

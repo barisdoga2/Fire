@@ -23,10 +23,10 @@ public:
     EasyShader shader = EasyShader("model");
     EasyShader normalLinesShader = EasyShader("NormalLines");
     EasyCamera camera = EasyCamera(display_, { 3,194,166 }, { 3 - 0.15,194 - 0.44,166 - 0.895 }, 74.f, 0.01f, 1000.f);
-    bool imgui_en{};
     bool imgui_triangles{};
     bool imgui_isFog{};
     bool imgui_showNormalLines{};
+    bool isRender{};
     float imgui_showNormalLength = 2.2f;
     double fps = 0.0, ups = 0.0;
     int seed = 1337;

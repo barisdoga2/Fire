@@ -4,8 +4,9 @@
 #include <unordered_set>
 #include <glm/glm.hpp>
 #include <box2d/box2d.h>
-#include "EasyNet.hpp"
-#include "EasySerializer.hpp"
+
+#include "../Fire/EasyNet.hpp"
+#include "../Fire/EasySerializer.hpp"
 #include "Net.hpp"
 
 #if 0

@@ -152,130 +152,135 @@ bool EasyPlayground::Render(double _dt)
 	bool success = true;
 
 	// Render
+	if (isRender)
 	{
-		std::vector<EasyModel*> objs = { &model, &cube_1x1x1 };
-		objs.insert(objs.end(), mapObjects.begin(), mapObjects.end());
-
-		SkyboxRenderer::Render(camera);
-
-		if (imgui_showNormalLines)
 		{
-			normalLinesShader.Start();
+			std::vector<EasyModel*> objs = { &model, &cube_1x1x1 };
+			objs.insert(objs.end(), mapObjects.begin(), mapObjects.end());
 
-			normalLinesShader.LoadUniform("view", camera.view_);
-			normalLinesShader.LoadUniform("proj", camera.projection_);
-			normalLinesShader.LoadUniform("normalLength", imgui_showNormalLength);
+			SkyboxRenderer::Render(camera);
 
-			for (EasyModel* model : objs)
+			if (imgui_showNormalLines)
 			{
-				for (const auto& kv : model->instances)
+				normalLinesShader.Start();
+
+				normalLinesShader.LoadUniform("view", camera.view_);
+				normalLinesShader.LoadUniform("proj", camera.projection_);
+				normalLinesShader.LoadUniform("normalLength", imgui_showNormalLength);
+
+				for (EasyModel* model : objs)
 				{
-					EasyModel::EasyMesh* mesh = kv.first;
-
-					GL(BindVertexArray(mesh->vao));
-					GL(EnableVertexAttribArray(0));
-					GL(EnableVertexAttribArray(2));
-
-					for (EasyModel::EasyTransform* t : kv.second)
+					for (const auto& kv : model->instances)
 					{
-						normalLinesShader.LoadUniform("model",
-							CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
+						EasyModel::EasyMesh* mesh = kv.first;
 
-						glDrawElements(GL_TRIANGLES,
-							static_cast<unsigned int>(mesh->indices.size()),
-							GL_UNSIGNED_INT, 0);
+						GL(BindVertexArray(mesh->vao));
+						GL(EnableVertexAttribArray(0));
+						GL(EnableVertexAttribArray(2));
+
+						for (EasyModel::EasyTransform* t : kv.second)
+						{
+							normalLinesShader.LoadUniform("model",
+								CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
+
+							glDrawElements(GL_TRIANGLES,
+								static_cast<unsigned int>(mesh->indices.size()),
+								GL_UNSIGNED_INT, 0);
+						}
+
+						GL(DisableVertexAttribArray(2));
+						GL(DisableVertexAttribArray(0));
+						GL(BindVertexArray(0));
 					}
-
-					GL(DisableVertexAttribArray(2));
-					GL(DisableVertexAttribArray(0));
-					GL(BindVertexArray(0));
 				}
+
+				for (Chunk* chunk : chunks)
+				{
+					glBindVertexArray(chunk->VAO);
+					glEnableVertexAttribArray(0);
+					normalLinesShader.LoadUniform("model", glm::translate(glm::mat4x4(1), glm::vec3(chunk->coord.x * Chunk::CHUNK_SIZE, 0, chunk->coord.y * Chunk::CHUNK_SIZE)));
+
+					glDrawElements(GL_TRIANGLES, (GLint)chunk->indices.size(), GL_UNSIGNED_INT, 0);
+
+					glDisableVertexAttribArray(0);
+					glBindVertexArray(0);
+				}
+
+				normalLinesShader.Stop();
+
 			}
 
-			for (Chunk* chunk : chunks)
+			if (imgui_triangles)
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 			{
-				glBindVertexArray(chunk->VAO);
-				glEnableVertexAttribArray(0);
-				normalLinesShader.LoadUniform("model", glm::translate(glm::mat4x4(1), glm::vec3(chunk->coord.x * Chunk::CHUNK_SIZE, 0, chunk->coord.y * Chunk::CHUNK_SIZE)));
+				shader.Start();
 
-				glDrawElements(GL_TRIANGLES, (GLint)chunk->indices.size(), GL_UNSIGNED_INT, 0);
+				shader.LoadUniform("view", camera.view_);
+				shader.LoadUniform("proj", camera.projection_);
+				shader.LoadUniform("uCameraPos", camera.position);
+				shader.LoadUniform("uIsFog", imgui_isFog ? 1.0f : 0.0f);
 
-				glDisableVertexAttribArray(0);
-				glBindVertexArray(0);
+				for (EasyModel* model : objs)
+				{
+					if (model->animator)
+						shader.LoadUniform("boneMatrices", model->animator->GetFinalBoneMatrices());
+
+					for (const auto& kv : model->instances)
+					{
+						EasyModel::EasyMesh* mesh = kv.first;
+
+						GL(BindVertexArray(mesh->vao));
+						GL(EnableVertexAttribArray(0));
+						GL(EnableVertexAttribArray(1));
+						GL(EnableVertexAttribArray(2));
+						GL(EnableVertexAttribArray(3));
+						GL(EnableVertexAttribArray(4));
+						GL(EnableVertexAttribArray(5));
+						GL(EnableVertexAttribArray(6));
+
+						glActiveTexture(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, mesh->texture);
+						shader.LoadUniform("diffuse", 0);
+
+						shader.LoadUniform("animated", mesh->animatable ? 1 : 0);
+
+						for (EasyModel::EasyTransform* t : kv.second)
+						{
+							shader.LoadUniform("model", CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
+							glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
+						}
+
+						GL(DisableVertexAttribArray(6));
+						GL(DisableVertexAttribArray(5));
+						GL(DisableVertexAttribArray(4));
+						GL(DisableVertexAttribArray(3));
+						GL(DisableVertexAttribArray(2));
+						GL(DisableVertexAttribArray(1));
+						GL(DisableVertexAttribArray(0));
+						GL(BindVertexArray(0));
+					}
+				}
+
+				shader.Stop();
 			}
 
-			normalLinesShader.Stop();
-
+			if (imgui_triangles)
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		}
 
-		if (imgui_triangles)
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		
 		{
-			shader.Start();
+			if (imgui_triangles)
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-			shader.LoadUniform("view", camera.view_);
-			shader.LoadUniform("proj", camera.projection_);
-			shader.LoadUniform("uCameraPos", camera.position);
-			shader.LoadUniform("uIsFog", imgui_isFog ? 1.0f : 0.0f);
+			ChunkRenderer::Render(&camera, chunks, hdr, imgui_isFog);
 
-			for (EasyModel* model : objs)
-			{
-				if (model->animator)
-					shader.LoadUniform("boneMatrices", model->animator->GetFinalBoneMatrices());
-
-				for (const auto& kv : model->instances)
-				{
-					EasyModel::EasyMesh* mesh = kv.first;
-
-					GL(BindVertexArray(mesh->vao));
-					GL(EnableVertexAttribArray(0));
-					GL(EnableVertexAttribArray(1));
-					GL(EnableVertexAttribArray(2));
-					GL(EnableVertexAttribArray(3));
-					GL(EnableVertexAttribArray(4));
-					GL(EnableVertexAttribArray(5));
-					GL(EnableVertexAttribArray(6));
-
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, mesh->texture);
-					shader.LoadUniform("diffuse", 0);
-
-					shader.LoadUniform("animated", mesh->animatable ? 1 : 0);
-
-					for (EasyModel::EasyTransform* t : kv.second)
-					{
-						shader.LoadUniform("model", CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
-						glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
-					}
-
-					GL(DisableVertexAttribArray(6));
-					GL(DisableVertexAttribArray(5));
-					GL(DisableVertexAttribArray(4));
-					GL(DisableVertexAttribArray(3));
-					GL(DisableVertexAttribArray(2));
-					GL(DisableVertexAttribArray(1));
-					GL(DisableVertexAttribArray(0));
-					GL(BindVertexArray(0));
-				}
-			}
-
-			shader.Stop();
+			if (imgui_triangles)
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		}
-		
-		if (imgui_triangles)
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		}
-
-	{
-		if (imgui_triangles)
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-		ChunkRenderer::Render(&camera, chunks, hdr, imgui_isFog);
-
-		if (imgui_triangles)
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
+
+	ImGUIRender();
 
 	return success;
 }
@@ -336,7 +341,7 @@ void EasyPlayground::StartRender(double _dt)
 
 	glViewport(0, 0, display_.windowSize.x, display_.windowSize.y);
 	GL(ClearDepth(1.f));
-	GL(ClearColor(0, 0, 0, 1));
+	GL(ClearColor(0.5f, 0.7f, 1.0f, 1));
 	GL(Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
 	// Setup default states

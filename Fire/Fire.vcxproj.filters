@@ -27,9 +27,6 @@
     <Filter Include="Source Files\Game">
       <UniqueIdentifier>{aaeb0528-5d79-4ea1-a24e-6786fd451e3c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Game\Server">
-      <UniqueIdentifier>{76be3999-469b-453f-bd44-8e758319dd92}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Core\Net\Base">
       <UniqueIdentifier>{d3acc21d-f2a2-4339-ac47-967d492dbc44}</UniqueIdentifier>
     </Filter>
@@ -41,6 +38,9 @@
     </Filter>
     <Filter Include="Scripts">
       <UniqueIdentifier>{acdc9bc8-f4bc-4898-945a-c3faca79901b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Ext">
+      <UniqueIdentifier>{ec7cd623-7ec9-423d-8459-cb898259e9f1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -62,9 +62,6 @@
     <ClCompile Include="EasyTexture.cpp">
       <Filter>Source Files\Core\Model</Filter>
     </ClCompile>
-    <ClCompile Include="World.cpp">
-      <Filter>Source Files\Game</Filter>
-    </ClCompile>
     <ClCompile Include="EasyPlayground.cpp">
       <Filter>Source Files\Game</Filter>
     </ClCompile>
@@ -75,9 +72,6 @@
       <Filter>Source Files\Game</Filter>
     </ClCompile>
     <ClCompile Include="WinUtils.cpp">
-      <Filter>Source Files\Game</Filter>
-    </ClCompile>
-    <ClCompile Include="Serializer.cpp">
       <Filter>Source Files\Game</Filter>
     </ClCompile>
     <ClCompile Include="EasyIpAddress.cpp">
@@ -107,9 +101,6 @@
     <ClCompile Include="EasyServer_Send.cpp">
       <Filter>Source Files\Core\Net\Server</Filter>
     </ClCompile>
-    <ClCompile Include="Server.cpp">
-      <Filter>Source Files\Game\Server</Filter>
-    </ClCompile>
     <ClCompile Include="EasyCamera.cpp">
       <Filter>Source Files\Core\Render\Core</Filter>
     </ClCompile>
@@ -133,6 +124,9 @@
     </ClCompile>
     <ClCompile Include="EasyDisplay.cpp">
       <Filter>Source Files\Core\Render\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Game Server\Serializer.cpp">
+      <Filter>Source Files\Ext</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -163,22 +157,10 @@
     <ClInclude Include="EasyTexture.hpp">
       <Filter>Source Files\Core\Model</Filter>
     </ClInclude>
-    <ClInclude Include="World.hpp">
-      <Filter>Source Files\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="Net.hpp">
-      <Filter>Source Files\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="Serializer.hpp">
-      <Filter>Source Files\Game</Filter>
-    </ClInclude>
     <ClInclude Include="EasyPlayground.hpp">
       <Filter>Source Files\Game</Filter>
     </ClInclude>
     <ClInclude Include="ClientTest.hpp">
-      <Filter>Source Files\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyManager.hpp">
       <Filter>Source Files\Game</Filter>
     </ClInclude>
     <ClInclude Include="WinUtils.hpp">
@@ -207,9 +189,6 @@
     </ClInclude>
     <ClInclude Include="EasyServer.hpp">
       <Filter>Source Files\Core\Net\Server</Filter>
-    </ClInclude>
-    <ClInclude Include="Server.hpp">
-      <Filter>Source Files\Game\Server</Filter>
     </ClInclude>
     <ClInclude Include="EasyScheduler.hpp">
       <Filter>Source Files\Core\Net\Base</Filter>

@@ -1,7 +1,8 @@
-#include "EasyServer.hpp"
-#include "World.hpp"
-#include "Net.hpp"
 #include <sstream>
+
+#include "EasyServer.hpp"
+#include "EasyNet.hpp"
+#include "EasySerializer.hpp"
 
 #ifdef SERVER_STATISTICS
 #define STATS(x)                            stats_update.x
@@ -78,39 +79,6 @@ namespace Server_Update_internal {
             }
         }
     }
-
-    void ProcessObjCache()
-    {
-        for (ObjCacheType_t::iterator it = internal_in_cache.begin() ; it != internal_in_cache.end() ; ++it)
-        {
-            for (EasySerializeable* in_obj : it->second)
-            {
-                if (pHello* hello = dynamic_cast<pHello*>(in_obj); hello)
-                {
-                    if (true/*ECHO*/)
-                    {
-                        static int i = 0;
-                        pHello* echo_hello = new pHello("Hi! I'm server." + std::to_string(++i) + ". You said: " + hello->message);
-                        if (auto res = internal_out_cache.find(it->first); res != internal_out_cache.end())
-                        {
-                            res->second.push_back(echo_hello);
-                        }
-                        else
-                        {
-                            internal_out_cache.emplace(it->first, std::vector<EasySerializeable*>{ echo_hello });
-                        }
-                    }
-                    STATS_PROCESSED;
-                }
-                else
-                {
-                    STATS_UNPROCESSED;
-                }
-                delete in_obj;
-            }
-        }
-        internal_in_cache.clear();
-    }
 }
 
 void EasyServer::Update()
@@ -119,7 +87,7 @@ void EasyServer::Update()
     while (running)
     {
         UpdateIncomingObjCache(m);
-        ProcessObjCache();
+        DoProcess(internal_in_cache, internal_out_cache);
         UpdateOutgoingObjCache(m);
     }
 }

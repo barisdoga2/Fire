@@ -6,6 +6,9 @@
 #define IV_SIZE 8U
 #define SERVER_STATISTICS
 
+#define MAX_SESSIONS ((SessionID_t)(0b00000000'00001111'11111111'11111111))
+#define IS_SESSION(x) ((((SessionID_t)x) | ~MAX_SESSIONS) > 0U)
+
 #include <iostream>
 #include <vector>
 #include <chrono>

@@ -1,9 +1,23 @@
 #pragma once
 
 #include <unordered_set>
-#include "EasyNet.hpp"
-#include "EasySerializer.hpp"
+#include "../Fire/EasyNet.hpp"
+#include "../Fire/EasySerializer.hpp"
 
+
+#ifndef _DEBUG
+#define REMOTE
+#endif
+
+#define SERVER_PORT 54000U
+
+#ifdef REMOTE
+#define SERVER_IP "31.210.43.142"
+#else
+#define SERVER_IP "127.0.0.1"
+#endif
+
+#define SERVER_URL "https://barisdoga.com/index.php"
 
 #define CIRCLE_DEF ((PacketID_t)(10U))
 #define POLY_DEF ((PacketID_t)(11U))
@@ -11,8 +25,7 @@
 #define WORLD_DEF ((PacketID_t)(13U))
 #define HELLO ((PacketID_t)(14U))
 
-#define MAX_SESSIONS ((SessionID_t)(0b00000000'00001111'11111111'11111111))
-#define IS_SESSION(x) ((((SessionID_t)x) | ~MAX_SESSIONS) > 0U)
+
 
 class pHello : public EasySerializeable {
 public:
