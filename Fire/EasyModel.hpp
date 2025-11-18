@@ -14,6 +14,7 @@
 struct aiScene;
 struct aiMesh;
 struct aiNode;
+class EasyTexture;
 class EasyAnimation;
 class EasyAnimator;
 class EasyModel {
@@ -36,12 +37,16 @@ public:
         std::vector<GLuint> indices{};
         std::vector<EasyVertex> vertices{};
         GLuint texture{};
+        std::vector<EasyTexture*> textures{};
         GLuint vao{}, vbo{}, ebo{};
         bool animatable{};
         std::string name{};
 
-        void LoadToGPU();
+        bool LoadToGPU();
     };
+
+    std::atomic<bool> isRawDataLoaded{};
+    bool isRawDataLoadedToGPU{};
 
     std::map<std::string, EasyBoneInfo> m_BoneInfoMap;
     std::vector<EasyAnimation*> animations;
@@ -49,13 +54,15 @@ public:
     int m_BoneCounter = 0;
 
     std::unordered_map<EasyMesh*, std::vector<EasyTransform*>> instances;
-
-    EasyModel(const std::string& file, const std::vector<std::string> animations = {});
     bool Update(double dt, bool mb1_pressed = false);
-    void LoadToGPU();
+    bool LoadToGPU();
+
+    static EasyModel* LoadModel(const std::string& file, const std::vector<std::string> animFiles = {});
 
 private:
-    EasyMesh* ProcessMesh(aiMesh* aiMesh, const aiScene* scene);
-    void ProcessNode(const aiNode* node, const aiScene* scene);
-    void ExtractBoneWeightForVertices(aiMesh* aiMesh, EasyMesh* mesh, const aiScene* scene);
+    EasyModel();
+
+    static EasyMesh* ProcessMesh(EasyModel* model, aiMesh* aiMesh, const aiScene* scene);
+    static void ProcessNode(EasyModel* model, const aiNode* node, const aiScene* scene);
+    static void ExtractBoneWeightForVertices(EasyModel* model, aiMesh* aiMesh, EasyMesh* mesh, const aiScene* scene);
 };

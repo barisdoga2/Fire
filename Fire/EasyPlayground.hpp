@@ -17,12 +17,14 @@ public:
     int animation = 1;
     bool mb1_pressed = false;
     const EasyDisplay& display_;
-    EasyModel model = EasyModel(GetPath("res/models/Kachujin G Rosales Skin.fbx"), { GetPath("res/models/Standing Idle on Kachujin G Rosales wo Skin.fbx"), GetPath("res/models/Running on Kachujin G Rosales wo Skin.fbx"), GetPath("res/models/Standing Aim Idle 01 on Kachujin H Rosales wo Skin.fbx") });
-    EasyModel cube_1x1x1 = EasyModel(GetPath("res/models/1x1cube.dae"));
+    EasyModel* model = EasyModel::LoadModel(GetPath("res/models/Kachujin G Rosales Skin.fbx"), { GetPath("res/models/Standing Idle on Kachujin G Rosales wo Skin.fbx"), GetPath("res/models/Running on Kachujin G Rosales wo Skin.fbx"), GetPath("res/models/Standing Aim Idle 01 on Kachujin H Rosales wo Skin.fbx") });
+    EasyModel* cube_1x1x1 = EasyModel::LoadModel(GetPath("res/models/1x1cube.dae"));
+    EasyModel* items = EasyModel::LoadModel(GetPath("res/models/items.dae"));
+    EasyModel* walls = EasyModel::LoadModel(GetPath("res/models/Walls.dae"));
     
     EasyShader shader = EasyShader("model");
     EasyShader normalLinesShader = EasyShader("NormalLines");
-    EasyCamera camera = EasyCamera(display_, { 3,194,166 }, { 3 - 0.15,194 - 0.44,166 - 0.895 }, 74.f, 0.01f, 1000.f);
+    EasyCamera camera = EasyCamera(display_, { 1,4.4,5.8 }, { 1 - 0.15, 4.4 - 0.44,5.8 - 0.895 }, 74.f, 0.01f, 1000.f);
     bool imgui_triangles{};
     bool imgui_isFog{};
     bool imgui_showNormalLines{};

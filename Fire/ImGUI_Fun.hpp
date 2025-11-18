@@ -299,7 +299,7 @@ void EasyPlayground::ImGUIRender()
 	ImGui::NewFrame();
 	ImGui::SetNextWindowPos({ 0,0 });
 
-	if (!loggedIn)
+	if (!loggedIn && !isRender)
 	{
 		if (loginStatusWindow)
 			ImGUI_LoginStatusWindow();

@@ -3,6 +3,7 @@
 #include "EasyAnimation.hpp"
 #include "EasyAnimator.hpp"
 
+#include <thread>
 #include <iostream>
 #include <cassert>
 
@@ -14,64 +15,60 @@
 #include <assimp/postprocess.h>
 
 
-void EasyModel::EasyMesh::LoadToGPU()
+bool EasyModel::EasyMesh::LoadToGPU()
 {
-    if (vao != 0U)
-        return;
+    if (vao == 0U)
+    {
+        std::cout << "Loading mesh '" << name << "'\n";
 
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+        glGenBuffers(1, &ebo);
 
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(EasyVertex), vertices.data(), GL_STATIC_DRAW);
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(EasyVertex), vertices.data(), GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)0);
 
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)offsetof(EasyVertex, uv));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)offsetof(EasyVertex, uv));
 
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)offsetof(EasyVertex, normal));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)offsetof(EasyVertex, normal));
 
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)offsetof(EasyVertex, tangent));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)offsetof(EasyVertex, tangent));
 
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)offsetof(EasyVertex, bitangent));
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)offsetof(EasyVertex, bitangent));
 
-    glEnableVertexAttribArray(5);
-    glVertexAttribIPointer(5, 4, GL_INT, sizeof(EasyVertex), (void*)offsetof(EasyVertex, boneIds));
+        glEnableVertexAttribArray(5);
+        glVertexAttribIPointer(5, 4, GL_INT, sizeof(EasyVertex), (void*)offsetof(EasyVertex, boneIds));
 
-    glEnableVertexAttribArray(6);
-    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)offsetof(EasyVertex, weights));
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(EasyVertex), (void*)offsetof(EasyVertex, weights));
 
-    glBindVertexArray(0);
+        glBindVertexArray(0);
+    }
+
+    bool texes = vao;
+    for (EasyTexture* tex : textures)
+        texes &= tex->LoadToGPU();
+
+    if (texes)
+        texture = textures.at(0)->textureID;
+
+    return texes;
 }
 
-EasyModel::EasyModel(const std::string& file, const std::vector<std::string> animFiles)
+EasyModel::EasyModel()
 {
-    const aiScene* scene = aiImportFile(file.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
-    assert(scene != nullptr);
 
-    ProcessNode(scene->mRootNode, scene);
-
-    aiReleaseImport(scene);
-
-    for (std::string file : animFiles)
-    {
-        const aiScene* animScene = aiImportFile(file.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
-        assert(animScene != nullptr && animScene->mNumAnimations == 1);
-        animations.push_back(new EasyAnimation(animScene, animScene->mAnimations[0], m_BoneInfoMap, m_BoneCounter));
-        aiReleaseImport(animScene);
-    }
-    if(animations.size() > 0u)
-        animator = new EasyAnimator(animations.at(1));
 }
 
 bool EasyModel::Update(double _dt, bool mb1_pressed)
@@ -86,21 +83,92 @@ bool EasyModel::Update(double _dt, bool mb1_pressed)
     return true;
 }
 
-void EasyModel::LoadToGPU()
+bool EasyModel::LoadToGPU()
 {
-    for (const auto& kv : instances)
-        kv.first->LoadToGPU();
+    bool loaded = true;
+    if (isRawDataLoaded.load() && !isRawDataLoadedToGPU)
+    {
+        for (const auto& kv : instances)
+            loaded &= kv.first->LoadToGPU();
+        
+        if(loaded)
+            isRawDataLoadedToGPU = true;
+    }
+    return isRawDataLoadedToGPU;
 }
 
-EasyModel::EasyMesh* EasyModel::ProcessMesh(aiMesh* aiMesh, const aiScene* scene)
+// STATIC
+EasyModel* EasyModel::LoadModel(const std::string& file, const std::vector<std::string> animFiles)
 {
+    EasyModel* model = new EasyModel();
+
+    std::thread([model, file, animFiles]() {
+        std::cout << "Loading file '" << file << "'\n";
+        const aiScene* scene = aiImportFile(file.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
+        assert(scene != nullptr);
+
+        ProcessNode(model, scene->mRootNode, scene);
+
+        aiReleaseImport(scene);
+
+        for (const std::string& anfile : animFiles)
+        {
+            std::cout << "Loading animation '" << anfile << "'\n";
+            const aiScene* animScene = aiImportFile(anfile.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
+            assert(animScene != nullptr && animScene->mNumAnimations == 1);
+            model->animations.push_back(new EasyAnimation(animScene, animScene->mAnimations[0], model->m_BoneInfoMap, model->m_BoneCounter));
+            aiReleaseImport(animScene);
+        }
+        if (model->animations.size() > 0u)
+            model->animator = new EasyAnimator(model->animations.at(1));
+
+        model->isRawDataLoaded.store(true, std::memory_order_release);
+    }).detach();
+
+    return model;
+}
+
+EasyTexture* NewTexture(std::map<std::string, EasyTexture*>& cache, std::string path, const aiTexture* aiTex, std::vector<EasyTexture*>& out)
+{
+    std::string name = path;
+    name = name.substr(path.find_last_of("/") + 1);
+
+    EasyTexture* tt;
+    std::map<std::string, EasyTexture*>::iterator ress = cache.find(name);
+    if (ress != cache.end())
+    {
+        tt = ress->second;
+    }
+    else
+    {
+        if (aiTex)
+            tt = new EasyTexture(path, aiTex);
+        else
+            tt = new EasyTexture(path);
+        cache.insert({ name, tt});
+    }
+
+    auto res = std::find(out.begin(), out.end(), tt);
+    if (res == out.end())
+        out.push_back(tt);
+
+    return tt;
+}
+
+EasyModel::EasyMesh* EasyModel::ProcessMesh(EasyModel* model, aiMesh* aiMesh, const aiScene* scene)
+{
+    EasyVertex ev;;
+    glm::vec3 position;
+
     EasyMesh* mesh = new EasyMesh();
 
+    mesh->name = aiMesh->mName.C_Str();
+    std::cout << "Processing mesh '" << mesh->name << "'\n";
+
+    mesh->vertices.reserve(aiMesh->mNumVertices);
     for (size_t v = 0; v < aiMesh->mNumVertices; v++)
     {
-        glm::vec3 position = glm::vec3(aiMesh->mVertices[v].x, aiMesh->mVertices[v].y, aiMesh->mVertices[v].z);
-
-        EasyVertex ev;
+        position = glm::vec3(aiMesh->mVertices[v].x, aiMesh->mVertices[v].y, aiMesh->mVertices[v].z);
 
         ev.position = position;
         if (aiMesh->HasTextureCoords(0))
@@ -113,10 +181,9 @@ EasyModel::EasyMesh* EasyModel::ProcessMesh(aiMesh* aiMesh, const aiScene* scene
             ev.bitangent = { aiMesh->mBitangents[v].x, aiMesh->mBitangents[v].y, aiMesh->mBitangents[v].z };
 
         mesh->vertices.push_back(ev);
-
-        mesh->name = aiMesh->mName.C_Str();
     }
 
+    mesh->indices.reserve(aiMesh->mNumFaces * 3);
     for (size_t f = 0; f < aiMesh->mNumFaces; f++)
     {
         mesh->indices.push_back((GLuint)aiMesh->mFaces[f].mIndices[0]);
@@ -124,30 +191,33 @@ EasyModel::EasyMesh* EasyModel::ProcessMesh(aiMesh* aiMesh, const aiScene* scene
         mesh->indices.push_back((GLuint)aiMesh->mFaces[f].mIndices[2]);
     }
 
-    ExtractBoneWeightForVertices(aiMesh, mesh, scene);
+    ExtractBoneWeightForVertices(model, aiMesh, mesh, scene);
 
-    GLuint texture = 0u;
-    std::string texPath = "";
     aiString path;
+    static std::map<std::string, EasyTexture*> textureCache;
     aiMaterial* material = scene->mMaterials[aiMesh->mMaterialIndex];
     if (material->GetTexture(aiTextureType_DIFFUSE, 0, &path) == AI_SUCCESS)
-        texPath = std::string(path.C_Str());
-    if (const aiTexture* embedded = scene->GetEmbeddedTexture(texPath.c_str()))
-        texture = EasyTexture::Load(embedded);
-    else if (texPath.length() > 0U)
-        texture = EasyTexture::Load(GetPath("res/images/") + texPath);
-    mesh->texture = texture;
-
+    {
+        if (const aiTexture* embedded = scene->GetEmbeddedTexture(path.C_Str()))
+        {
+            NewTexture(textureCache, path.C_Str(), embedded, mesh->textures);
+        }
+        else
+        {
+            NewTexture(textureCache, std::string(GetPath("res/images/") + path.C_Str()), nullptr, mesh->textures);
+        }
+    }
+    
     return mesh;
 }
 
-void EasyModel::ProcessNode(const aiNode* node, const aiScene* scene)
+void EasyModel::ProcessNode(EasyModel* model, const aiNode* node, const aiScene* scene)
 {
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         EasyMesh* found{};
-        for (const auto& kv : instances)
+        for (const auto& kv : model->instances)
         {
             if (kv.first->name.compare(mesh->mName.C_Str()) == 0)
             {
@@ -166,44 +236,48 @@ void EasyModel::ProcessNode(const aiNode* node, const aiScene* scene)
         rotationEuler = glm::degrees(glm::eulerAngles(rotation));
         if (found)
         {
-            instances[found].push_back(new EasyModel::EasyTransform(position, scale, rotation));
-            //instances[found].push_back(new EasyModel::EasyTransform(position, scale, rotationEuler));
+            model->instances[found].push_back(new EasyModel::EasyTransform(position, scale, rotation));
         }
         else
         {
-            instances.insert({ ProcessMesh(mesh, scene) , { new EasyModel::EasyTransform(position, scale, rotation) } });
-            //instances.insert({ ProcessMesh(mesh, scene) , { new EasyModel::EasyTransform(position, scale, rotationEuler) } });
+            model->instances.insert({ ProcessMesh(model, mesh, scene) , { new EasyModel::EasyTransform(position, scale, rotation) } });
         }
     }
     for (unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        ProcessNode(node->mChildren[i], scene);
+        ProcessNode(model, node->mChildren[i], scene);
     }
 }
 
-void EasyModel::ExtractBoneWeightForVertices(aiMesh* aiMesh, EasyMesh* mesh, const aiScene* scene)
+void EasyModel::ExtractBoneWeightForVertices(EasyModel* model, aiMesh* aiMesh, EasyMesh* mesh, const aiScene* scene)
 {
+    aiVertexWeight* weights;
+    unsigned int numWeights;
+    int vertexId;
+    float weight;
+    std::string boneName;
+    int boneID;
     for (size_t boneIndex = 0; boneIndex < aiMesh->mNumBones; ++boneIndex)
     {
-        int boneID = -1;
-        std::string boneName = aiMesh->mBones[boneIndex]->mName.C_Str();
-        if (m_BoneInfoMap.find(boneName) == m_BoneInfoMap.end())
+        boneID = -1;
+        boneName = aiMesh->mBones[boneIndex]->mName.C_Str();
+        if (model->m_BoneInfoMap.find(boneName) == model->m_BoneInfoMap.end())
         {
-            m_BoneInfoMap[boneName] = { m_BoneCounter, AiToGlm(aiMesh->mBones[boneIndex]->mOffsetMatrix) };
-            boneID = m_BoneCounter;
-            m_BoneCounter++;
+            model->m_BoneInfoMap[boneName] = { model->m_BoneCounter, AiToGlm(aiMesh->mBones[boneIndex]->mOffsetMatrix) };
+            boneID = model->m_BoneCounter;
+            model->m_BoneCounter++;
         }
         else
         {
-            boneID = m_BoneInfoMap[boneName].id;
+            boneID = model->m_BoneInfoMap[boneName].id;
         }
         assert(boneID != -1);
-        auto weights = aiMesh->mBones[boneIndex]->mWeights;
-        int numWeights = aiMesh->mBones[boneIndex]->mNumWeights;
-        for (int weightIndex = 0; weightIndex < numWeights; ++weightIndex)
+        weights = aiMesh->mBones[boneIndex]->mWeights;
+        numWeights = aiMesh->mBones[boneIndex]->mNumWeights;
+        for (unsigned int weightIndex = 0; weightIndex < numWeights; ++weightIndex)
         {
-            int vertexId = weights[weightIndex].mVertexId;
-            float weight = weights[weightIndex].mWeight;
+            vertexId = weights[weightIndex].mVertexId;
+            weight = weights[weightIndex].mWeight;
             assert(vertexId <= static_cast<int>(mesh->vertices.size()));
             for (int i = 0; i < 4; ++i)
             {
@@ -223,7 +297,7 @@ void EasyModel::ExtractBoneWeightForVertices(aiMesh* aiMesh, EasyMesh* mesh, con
         if (total > 0.0f)
             v.weights /= total;      // normalize
         for (int i = 0; i < 4; i++)
-            if (v.boneIds[i] >= m_BoneCounter || v.boneIds[i] < 0)
+            if (v.boneIds[i] >= model->m_BoneCounter || v.boneIds[i] < 0)
                 v.weights[i] = 0.0f;  // safety
     }
 

@@ -67,7 +67,7 @@ void EasyCamera::scroll_callback(double xoffset, double yoffset)
 {
     //if (!mode)
     //    return;
-    scrollDelta = (float)yoffset * moveSpeed * 55;
+    scrollDelta = (float)yoffset * moveSpeed * 15;
 }
 
 bool EasyCamera::key_callback(int key, int scancode, int action, int mods)

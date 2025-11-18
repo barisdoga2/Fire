@@ -153,7 +153,7 @@ inline float SmallHeight(float worldX, float worldZ)
 {
     float freq = 0.0225f;// 0.6f;      // low frequency → geniş dalgalar
     float amp = 7.25f;// 10.0f;       // +/- 1 metre
-    return glm::perlin(glm::vec2(worldX, worldZ) * freq) * amp;
+    return 0;// glm::perlin(glm::vec2(worldX, worldZ) * freq)* amp;
 }
 
 void Chunk::GenerateFlat(const glm::ivec2& inCoord)

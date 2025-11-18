@@ -79,14 +79,6 @@ bool EasyPlayground::Init()
 
 	// Asset
 	{
-		for (const auto& kv : model.instances)
-			for (auto& kv2 : kv.second)
-				kv2->scale = glm::vec3(0.02f);
-		model.LoadToGPU();
-		cube_1x1x1.LoadToGPU();
-
-		auto walls = new EasyModel(GetPath("res/models/Walls.dae"));
-		walls->LoadToGPU();
 		mapObjects.push_back(walls);
 	}
 
@@ -141,21 +133,30 @@ bool EasyPlayground::Init()
 
 bool EasyPlayground::Render(double _dt)
 {
-	//if (model.animator)
-	//	model.animator->BlendTo(model.animations.at(animation ? 1 : 0), 1.0);
+	//if (model->animator)
+	//	model->animator->BlendTo(model->animations.at(animation ? 1 : 0), 1.0);
 
-	model.Update(_dt, mb1_pressed);
-	cube_1x1x1.Update(_dt);
+	model->Update(_dt, mb1_pressed);
+	cube_1x1x1->Update(_dt);
 
 	camera.Update(_dt);
 
 	bool success = true;
 
+	static bool srcReady{};
+	if (!srcReady && model->LoadToGPU())
+	{
+		for (const auto& kv : model->instances)
+			for (auto& kv2 : kv.second)
+				kv2->scale = glm::vec3(0.0082f); // Y = 1.70m
+		srcReady = true;
+	}
+
 	// Render
 	if (isRender)
 	{
 		{
-			std::vector<EasyModel*> objs = { &model, &cube_1x1x1 };
+			std::vector<EasyModel*> objs = { model, cube_1x1x1, items };
 			objs.insert(objs.end(), mapObjects.begin(), mapObjects.end());
 
 			SkyboxRenderer::Render(camera);
@@ -173,6 +174,9 @@ bool EasyPlayground::Render(double _dt)
 					for (const auto& kv : model->instances)
 					{
 						EasyModel::EasyMesh* mesh = kv.first;
+
+						if (!mesh->LoadToGPU())
+							continue;
 
 						GL(BindVertexArray(mesh->vao));
 						GL(EnableVertexAttribArray(0));
@@ -229,6 +233,9 @@ bool EasyPlayground::Render(double _dt)
 					for (const auto& kv : model->instances)
 					{
 						EasyModel::EasyMesh* mesh = kv.first;
+
+						if (!mesh->LoadToGPU())
+							continue;
 
 						GL(BindVertexArray(mesh->vao));
 						GL(EnableVertexAttribArray(0));
@@ -466,6 +473,12 @@ void EasyPlayground::mouse_callback(GLFWwindow* window, int button, int action, 
 
 void EasyPlayground::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	if (key == GLFW_KEY_F1 && action == GLFW_RELEASE)
+	{
+		isRender = true;
+		return;
+	}
+
 	if (key == GLFW_KEY_LEFT_ALT && action == GLFW_RELEASE)
 	{
 		camera.ModeSwap(false);
