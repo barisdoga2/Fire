@@ -21,7 +21,7 @@ void main()
     float diff = max(dot(N, L), 0.0);
     float spec = pow(max(dot(N, H), 0.0), shininess);
 
-    vec3 albedo = texture(diffuseTexture, vUV).rgb;
+    vec3 albedo = texture(diffuseTexture, vUV * 128).rgb;
 
     vec3 ambient  = albedo * ambientStrength;
     vec3 diffuse  = diffuseStrength  * diff * albedo;
