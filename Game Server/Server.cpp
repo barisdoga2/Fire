@@ -16,20 +16,21 @@ void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
         {
             if (pHello* hello = dynamic_cast<pHello*>(in_obj); hello)
             {
-                if (true/*ECHO*/)
-                {
-                    static int i = 0;
-                    pHello* echo_hello = new pHello("Hi! I'm server." + std::to_string(++i) + ". You said: " + hello->message);
-                    if (auto res = out_cache.find(it->first); res != out_cache.end())
-                    {
-                        res->second.push_back(echo_hello);
-                    }
-                    else
-                    {
-                        out_cache.emplace(it->first, std::vector<EasySerializeable*>{ echo_hello });
-                    }
-                }
                 //STATS_PROCESSED;
+                //if (true/*ECHO*/)
+                //{
+                //    static int i = 0;
+                //    pHello* echo_hello = new pHello("Hi! I'm server." + std::to_string(++i) + ". You said: " + hello->message);
+                //    if (auto res = out_cache.find(it->first); res != out_cache.end())
+                //    {
+                //        res->second.push_back(echo_hello);
+                //    }
+                //    else
+                //    {
+                //        out_cache.emplace(it->first, std::vector<EasySerializeable*>{ echo_hello });
+                //    }
+                //}
+                std::cout << "Hello message received: '" << hello->message << "\n";
             }
             else
             {
@@ -68,12 +69,26 @@ void Server::OnInit()
 	}
 }
 
-void Server::OnSessionCreate(Session* session)
+bool Server::OnSessionCreate(Session* session)
 {
-
+    static int i = 0;
+    i++;
+    if (i % 3 == 0)
+    {
+        sLoginResponse rejectResponse = sLoginResponse(false, "Server just wanted to reject.");
+        SendInstantPacket(session, { &rejectResponse });
+        return false;
+    }
+    else
+    {
+        sLoginResponse acceptResponse = sLoginResponse(true, "Server welcomes you!");
+        SendInstantPacket(session, { &acceptResponse });
+        return true;
+    }
 }
 
-void Server::OnSessionDestroy(Session* session)
+void Server::OnSessionDestroy(Session* session, SessionStatus disconnectReason)
 {
-
+    sDisconnectResponse disconnectResponse = sDisconnectResponse("Disconnect reason: '" + SessionStatus_Str(disconnectReason) + "'!");
+    SendInstantPacket(session, { &disconnectResponse });
 }

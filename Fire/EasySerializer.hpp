@@ -94,3 +94,35 @@ public:
 };
 
 
+
+class sLoginResponse : public EasySerializeable {
+public:
+    bool response;
+    std::string message;
+
+    sLoginResponse(bool response, std::string message) : response(response), message(message), EasySerializeable(static_cast<PacketID_t>(LOGIN_RESPONSE))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(response);
+        ser->Put(message);
+    }
+};
+
+class sDisconnectResponse : public EasySerializeable {
+public:
+    std::string message;
+
+    sDisconnectResponse(std::string message) : message(message), EasySerializeable(static_cast<PacketID_t>(DISCONNECT_RESPONSE))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(message);
+    }
+};

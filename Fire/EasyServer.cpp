@@ -4,6 +4,7 @@
 #include "EasyBuffer.hpp"
 #include "EasyPacket.hpp"
 #include "EasyDB.hpp"
+#include "../Game Server/Serializer.hpp"
 
 #include <unordered_map>
 #include <array>
@@ -109,18 +110,17 @@ bool EasyServer::CreateSession_internal(Session* session)
     if(m->sessions[session->sessionID] == nullptr)
     {
         m->sessions[session->sessionID] = session;
-        this->OnSessionCreate(session);
-        ret = true;
+        ret = this->OnSessionCreate(session);
     }
     return ret;
 }
 
-bool EasyServer::DestroySession_internal(SessionID_t sessionID)
+bool EasyServer::DestroySession_internal(SessionID_t sessionID, SessionStatus disconnectReason)
 {
     bool ret = false;
     if (m->sessions[sessionID] != nullptr)
     {
-        this->OnSessionDestroy(m->sessions[sessionID]);
+        this->OnSessionDestroy(m->sessions[sessionID], disconnectReason);
         delete m->sessions[sessionID];
         m->sessions[sessionID] = nullptr;
         ret = true;
@@ -128,25 +128,25 @@ bool EasyServer::DestroySession_internal(SessionID_t sessionID)
     return ret;
 }
 
-bool EasyServer::DestroySession(Session* session)
+bool EasyServer::DestroySession(Session* session, SessionStatus disconnectReason)
 {
     bool ret = false;
     if (session)
     {
         m->sessionsMutex.lock();
-        ret = DestroySession_internal(session->sessionID);
+        ret = DestroySession_internal(session->sessionID, disconnectReason);
         m->sessionsMutex.unlock();
     }
     return ret;
 }
 
-bool EasyServer::DestroySession(SessionID_t sessionID)
+bool EasyServer::DestroySession(SessionID_t sessionID, SessionStatus disconnectReason)
 {
     bool ret = false;
     if (IS_SESSION(sessionID))
     {
         m->sessionsMutex.lock();
-        ret = DestroySession_internal(sessionID);
+        ret = DestroySession_internal(sessionID, disconnectReason);
         m->sessionsMutex.unlock();
     }
     return ret;
@@ -171,4 +171,64 @@ bool EasyServer::SetSessionTimeout(uint32_t ms)
 {
     this->sessionTimeout = ms;
     return true;
+}
+
+bool EasyServer::SendInstantPacket(Session* destination, const std::vector<EasySerializeable*>& objs)
+{
+     EasyBuffer* serializationBuffer = bf->Get();
+     EasyBuffer* sendBuffer = bf->Get();
+
+    bool status = (objs.size() > 0) && (destination) && (sendBuffer) && (serializationBuffer);
+    if (status)
+    {
+        if (MakeSerialized(serializationBuffer, objs))
+        {
+            if (EasyPacket::MakeCompressed(serializationBuffer, sendBuffer))
+            {
+                PeerCryptInfo crypt(destination->sessionID, destination->sequenceID_in, destination->sequenceID_out, destination->key);
+                if (EasyPacket::MakeEncrypted(crypt, sendBuffer))
+                {
+                    //STATS_ENCRYPTED;
+
+                    uint64_t res = sock->send(sendBuffer->begin(), sendBuffer->m_payload_size + EasyPacket::HeaderSize(), destination->addr);
+                    if (res != WSAEISCONN)
+                    {
+                        //STATS_SEND_FAIL;
+                        status = false;
+                    }
+                    else
+                    {
+                        //STATS_SEND;
+                        status = true;
+                    }
+                }
+                else
+                {
+                    //STATS_ENCRYPT_FAIL;
+                    status = false;
+                }
+            }
+            else
+            {
+                //STATS_COMPRESS_FAIL;
+                status = false;
+            }
+        }
+        else
+        {
+            //STATS_SERIALIZE_FAIL;
+            status = false;
+        }
+        ++destination->sequenceID_out;
+    }
+    else if (!sendBuffer || !serializationBuffer)
+    {
+        if(!sendBuffer)
+            sendBuffer = bf->Get();
+        if (!serializationBuffer)
+            serializationBuffer = bf->Get();
+    }
+    bf->Free(serializationBuffer);
+    bf->Free(sendBuffer);
+    return status;
 }

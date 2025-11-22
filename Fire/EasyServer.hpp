@@ -11,6 +11,55 @@
 
 
 
+
+
+
+struct UserStats {
+    unsigned int gametime{};
+    unsigned int golds{};
+    unsigned int diamonds{};
+    bool tutorial_done{};
+    std::string characters_owned{};
+};
+
+enum SessionStatus {
+    UNSET,
+    CONNECTING,
+    CONNECTED,
+
+    ADDR_MISMATCH,
+    CRYPT_ERR,
+    TIMED_OUT,
+    SEQUENCE_MISMATCH,
+    RECONNECTED,
+};
+
+inline static std::string SessionStatus_Str(const SessionStatus& status)
+{
+    std::string str;
+    if (status == UNSET)
+        str = "UNSET";
+    else if (status == CONNECTING)
+        str = "CONNECTING";
+    else if (status == CONNECTED)
+        str = "CONNECTED";
+    else if (status == ADDR_MISMATCH)
+        str = "Connected from another client!";
+    else if (status == CRYPT_ERR)
+        str = "CRYPT_ERR";
+    else if (status == TIMED_OUT)
+        str = "TIMED_OUT";
+    else if (status == SEQUENCE_MISMATCH)
+        str = "SEQUENCE_MISMATCH";
+    else if (status == RECONNECTED)
+        str = "RECONNECTED";
+    else
+        str = "UNKNOWN";
+    return str;
+}
+
+
+
 using ObjCacheType_t = std::unordered_map<SessionID_t, std::vector<EasySerializeable*>>;
 
 template <class T>
@@ -29,9 +78,16 @@ public:
     SequenceID_t sequenceID_out;
     Timestamp_t lastReceive;
 
-    Session(const SessionID_t& sessionID, const Addr_t& addr, const Key_t& key, const SequenceID_t& sequenceID_in, const SequenceID_t& sequenceID_out) : sessionID(sessionID), addr(addr), key(key), sequenceID_in(sequenceID_in), sequenceID_out(sequenceID_out), lastReceive(Clock::now())
+    UserStats stats;
+
+    Session(const SessionID_t& sessionID, const Addr_t& addr, const Key_t& key, const SequenceID_t& sequenceID_in, const SequenceID_t& sequenceID_out, const UserStats& stats) : sessionID(sessionID), addr(addr), key(key), sequenceID_in(sequenceID_in), sequenceID_out(sequenceID_out), lastReceive(Clock::now()), stats(stats)
     {
 
+    }
+
+    ~Session()
+    {
+        
     }
 };
 
@@ -91,8 +147,10 @@ public:
 
     static int Stats(lua_State* L);
 
+    bool SendInstantPacket(Session* destination, const std::vector<EasySerializeable*>& objs);
+
     bool CreateSession_internal(Session* session);
-    bool DestroySession_internal(SessionID_t sessionID);
+    bool DestroySession_internal(SessionID_t sessionID, SessionStatus disconnectReason);
 
 private:
     void Update();
@@ -106,15 +164,15 @@ private:
     std::string StatsUpdate();
 
 protected:
-    bool DestroySession(SessionID_t sessionID);
-    bool DestroySession(Session* session);
+    bool DestroySession(SessionID_t sessionID, SessionStatus disconnectReason);
+    bool DestroySession(Session* session, SessionStatus disconnectReason);
     Session* GetSession(SessionID_t sessionID);
     bool SetSessionTimeout(uint32_t ms);
 
     virtual void Tick(double _dt) = 0U;
     virtual void OnInit() = 0U;
     virtual void OnDestroy() = 0U;
-    virtual void OnSessionCreate(Session* session) = 0U;
-    virtual void OnSessionDestroy(Session* session) = 0U;
+    virtual bool OnSessionCreate(Session* session) = 0U;
+    virtual void OnSessionDestroy(Session* session, SessionStatus disconnectStatus) = 0U;
     virtual void DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) = 0U;
 };

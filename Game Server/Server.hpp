@@ -13,8 +13,8 @@ public:
 	void Tick(double _dt) override;
 	void OnInit() override;
 	void OnDestroy() override;
-	void OnSessionCreate(Session* session) override;
-	void OnSessionDestroy(Session* session) override;
+	bool OnSessionCreate(Session* session) override;
+	void OnSessionDestroy(Session* session, SessionStatus disconnectReason) override;
 	void DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) override;
 
 };

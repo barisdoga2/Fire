@@ -9,6 +9,9 @@
 #define MAX_SESSIONS ((SessionID_t)(0b00000000'00001111'11111111'11111111))
 #define IS_SESSION(x) ((((SessionID_t)x) | ~MAX_SESSIONS) > 0U)
 
+#define LOGIN_RESPONSE ((PacketID_t)(110U))
+#define DISCONNECT_RESPONSE ((PacketID_t)(111U))
+
 #include <iostream>
 #include <vector>
 #include <chrono>
@@ -64,8 +67,8 @@ public:
 
 class PeerCryptInfo {
 public:
-    const SessionID_t session_id;
-    const Key_t key;
+    SessionID_t session_id;
+    Key_t key;
     SequenceID_t sequence_id_in;
     SequenceID_t sequence_id_out;
 

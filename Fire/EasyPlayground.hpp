@@ -20,6 +20,7 @@ public:
     EasyModel* model = EasyModel::LoadModel(GetPath("res/models/Kachujin G Rosales Skin.fbx"), { GetPath("res/models/Standing Idle on Kachujin G Rosales wo Skin.fbx"), GetPath("res/models/Running on Kachujin G Rosales wo Skin.fbx"), GetPath("res/models/Standing Aim Idle 01 on Kachujin H Rosales wo Skin.fbx") });
     EasyModel* cube_1x1x1 = EasyModel::LoadModel(GetPath("res/models/1x1cube.dae"));
     EasyModel* items = EasyModel::LoadModel(GetPath("res/models/items.dae"));
+    EasyModel* buildings = EasyModel::LoadModel(GetPath("res/models/Buildings.dae"));
     EasyModel* walls = EasyModel::LoadModel(GetPath("res/models/Walls.dae"));
     
     EasyShader shader = EasyShader("model");
@@ -28,7 +29,6 @@ public:
     bool imgui_triangles{};
     bool imgui_isFog{};
     bool imgui_showNormalLines{};
-    bool isRender{};
     float imgui_showNormalLength = 2.2f;
     double fps = 0.0, ups = 0.0;
     int seed = 1337;

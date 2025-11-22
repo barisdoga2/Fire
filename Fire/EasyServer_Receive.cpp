@@ -147,17 +147,36 @@ namespace Server_Receive_internal {
     ObjCacheType_t internal_in_cache;
     LockedVec_t<Session*> newSessions;
 
-    bool ReadKeyFromMYSQL(EasyDB* db, const SessionID_t& session_id, Key_t& key)
+    bool ReadKeyFromMYSQL(EasyDB* db, const SessionID_t& session_id, Key_t& key, UserStats& stats)
     {
         bool ret = false;
         sql::PreparedStatement* stmt = db->PrepareStatement("SELECT * FROM sessions WHERE id=? LIMIT 1;");
         stmt->setUInt(1, session_id);
         sql::ResultSet* res = stmt->executeQuery();
-        while (res->next())
+        if (res->next())
         {
             memcpy(key.data(), res->getString(3).c_str(), KEY_SIZE);
-            ret = true; // If valid_until < current_timestamp
-            break;
+
+            sql::PreparedStatement* stmt2 = db->PrepareStatement("SELECT * FROM user_stats WHERE user_id=? LIMIT 1;");
+            unsigned int uid = res->getUInt(2);
+            stmt2->setUInt(1, uid);
+            sql::ResultSet* res2 = stmt2->executeQuery();
+            if (res2->next())
+            {
+                stats.gametime = res2->getUInt(3);
+                stats.golds = res2->getUInt(4);
+                stats.diamonds = res2->getUInt(5);
+                stats.tutorial_done = res2->getBoolean(6);
+                stats.characters_owned = res2->getString(7);
+
+                ret = true;
+            }
+            else
+            {
+                ret = false;
+            }
+            delete res2;
+            delete stmt2;
         }
         delete res;
         delete stmt;
@@ -280,7 +299,8 @@ namespace Server_Receive_internal {
                 Key_t key(KEY_SIZE);
                 if (it->second.cache.size() > 0U && it->second.readKeyFromDBFlag)
                 {
-                    if (ReadKeyFromMYSQL(db, it->first, key))
+                    UserStats stats;
+                    if (ReadKeyFromMYSQL(db, it->first, key, stats))
                     {
                         // Sanity checks, addr, sequence etc.
                         // Crypt data is ready, insert into r2pCache
@@ -288,7 +308,7 @@ namespace Server_Receive_internal {
                         Addr_t addr = it->second.cache.at(0).addr;
                         SequenceID_t sequenceID_in = 0U;
                         SequenceID_t sequenceID_out = 0U;
-                        Session* newSession = new Session(it->first, addr, key, sequenceID_in, sequenceID_out);
+                        Session* newSession = new Session(it->first, addr, key, sequenceID_in, sequenceID_out, stats);
                         newSessions.vec.push_back(newSession);
                         r2pCache.emplace(
                             std::piecewise_construct,
@@ -331,6 +351,7 @@ namespace Server_Receive_internal {
                     if (it->second.readKeyFromSessionFlag && !it->second.readKeyFromDBFlag && session)
                     {
                         bool destroySession = false;
+                        SessionStatus sessionStatus = SessionStatus::UNSET;
                         for (std::vector<RawBuffer>::iterator buffer = it->second.cache.begin(); buffer != it->second.cache.end() ; ++buffer)
                         {
                             // If packet is arrived 'server->sessionTimeout' after last receive, close session because it already should be.
@@ -338,6 +359,7 @@ namespace Server_Receive_internal {
                             if (!alive)
                             {
                                 STATS_SESSION_FAIL_ALIVE;
+                                sessionStatus = SessionStatus::TIMED_OUT;
                                 destroySession = true;
                                 break;
                             }
@@ -351,26 +373,38 @@ namespace Server_Receive_internal {
                             if (!addr)
                             {
                                 STATS_SESSION_FAIL_ADDR;
+                                sessionStatus = SessionStatus::ADDR_MISMATCH;
                                 destroySession = true;
                                 continue;
                             }
 
                             // If sequence id in didnt increase, then free this packet
-                            bool seq_in = *EasyPacket::SequenceID(buffer->buffer) > session->sequenceID_in;
-                            if (!seq_in)
-                            {
-                                STATS_SESSION_FAIL_SEQ_IN;
-                                destroySession = true;
-                                continue;
-                            }
+                            //bool seq_in = *EasyPacket::SequenceID(buffer->buffer) > session->sequenceID_in;
+                            //if (!seq_in)
+                            //{
+                            //    STATS_SESSION_FAIL_SEQ_IN;
+                            //    sessionStatus = SessionStatus::SEQUENCE_MISMATCH;
+                            //    destroySession = true;
+                            //    continue;
+                            //}
                         }
                         if (destroySession)
                         {
+                            Addr_t respAddr;
+                            if (it->second.cache.size() > 0)
+                                respAddr = it->second.cache.at(0).addr;
+                            Session* toDestroy = new Session(session->sessionID, respAddr, session->key, 0, 0, session->stats);
+                            sLoginResponse loginResponse = sLoginResponse(false, "User was already logged in! Try again!");
+                            server->SendInstantPacket(toDestroy, { &loginResponse });
+                            delete toDestroy;
+
+
+
                             for (RawBuffer& b : it->second.cache)
                             {
                                 server->bf->Free(b.buffer);
                             }
-                            server->DestroySession_internal(session->sessionID);
+                            server->DestroySession_internal(session->sessionID, sessionStatus);
                             it = unknownRawCache.erase(it);
                             STATS_SESSION_FAIL;
                         }

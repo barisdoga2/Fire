@@ -13,11 +13,12 @@
 
 #ifdef REMOTE
 #define SERVER_IP "31.210.43.142"
+#define SERVER_URL "https://barisdoga.com/index.php"
 #else
 #define SERVER_IP "127.0.0.1"
+#define SERVER_URL "http://127.0.0.1/index.php"
 #endif
 
-#define SERVER_URL "https://barisdoga.com/index.php"
 
 #define CIRCLE_DEF ((PacketID_t)(10U))
 #define POLY_DEF ((PacketID_t)(11U))

@@ -156,7 +156,7 @@ bool EasyPlayground::Render(double _dt)
 	if (isRender)
 	{
 		{
-			std::vector<EasyModel*> objs = { model, cube_1x1x1, items };
+			std::vector<EasyModel*> objs = { model, cube_1x1x1, items, buildings };
 			objs.insert(objs.end(), mapObjects.begin(), mapObjects.end());
 
 			SkyboxRenderer::Render(camera);

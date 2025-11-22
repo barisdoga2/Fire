@@ -25,11 +25,19 @@ bool loggedIn = false;
 std::string loginStatusText;
 std::thread loginThread;
 std::atomic<bool> loginThreadRunning = false;
+bool isRender{};
 
 inline void Login(std::string username_, std::string password)
 {
 	loginStatusText = "Logging in...";
 
+	if (crypt)
+	{
+		crypt->sequence_id_in = 0U;
+		crypt->sequence_id_out = 0U;
+		crypt->session_id = 0U;
+		crypt->key = {};
+	}
 	std::string response = client.ClientWebRequest(SERVER_URL, username_, password);
 	std::string prefix = "<textarea name=\"jwt\" readonly>";
 	std::string prefix2 = "<div class=\"msg\">";
@@ -79,20 +87,29 @@ inline void Login(std::string username_, std::string password)
 						break;
 				}
 				
+				loginStatusText = "";
 				if (recvObjs.size() > 0U)
 				{
-					bool isOK = false;
+					for (auto& obj : recvObjs)
+					{
+						if (sLoginResponse* loginResponse = dynamic_cast<sLoginResponse*>(obj); loginResponse)
+						{
+							loggedIn = loginResponse->response;
+							loginStatusText = loginResponse->message;
+							loginFailed = loginResponse->response ? false : true;
 
-					isOK = true;
-					if (isOK)
-					{
-						loginStatusText = "Login success!";
-						loginFailed = false;
-						loggedIn = true;
+						}
+						else if (sDisconnectResponse* disconnectResponse = dynamic_cast<sDisconnectResponse*>(obj); disconnectResponse)
+						{
+							loginStatusText = disconnectResponse->message;
+							loggedIn = false;
+							loginFailed = true;
+						}
 					}
-					else
+					if (loginStatusText.length() == 0)
 					{
-						loginStatusText = "Game server rejected!";
+						loginStatusText = "Unknown error!";
+						loggedIn = false;
 						loginFailed = true;
 					}
 				}
@@ -125,6 +142,46 @@ inline void Login(std::string username_, std::string password)
 				loginFailed = true;
 			}
 		}
+
+		if (!loginFailed)
+		{
+			bool isLoggedIn = true;
+			while (isLoggedIn)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
+
+				std::vector<EasySerializeable*> recvObjs = {  };
+				uint64_t recv = client.ClientReceive(*crypt, recvObjs);
+				if (recv == 1U)
+				{
+					for (auto& obj : recvObjs)
+					{
+						if (sDisconnectResponse* disconnectResponse = dynamic_cast<sDisconnectResponse*>(obj); disconnectResponse)
+						{
+							loginStatusText = disconnectResponse->message;
+							loggedIn = false;
+							loginFailed = false;
+							loginInProgress = true;
+							isRender = false;
+							isLoggedIn = false;
+							break;
+						}
+						else if (sLoginResponse* loginResponse = dynamic_cast<sLoginResponse*>(obj); loginResponse)
+						{
+							loginStatusText = loginResponse->message;
+							loggedIn = false;
+							loginFailed = false;
+							loginInProgress = true;
+							isRender = false;
+							isLoggedIn = false;
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		loginThreadRunning = false;
 	}
 }
 
@@ -276,9 +333,12 @@ void EasyPlayground::ImGUI_LoginWindow()
 		std::string u = usernameArr;
 		std::string p = passwordArr;
 
-		loginThreadRunning = true;
-		loginThread = std::thread([u, p](){Login(u, p); loginThreadRunning = false; });
-		loginThread.detach();
+		if (!loginThreadRunning)
+		{
+			loginThreadRunning = true;
+			loginThread = std::thread([u, p]() {Login(u, p); loginThreadRunning = false; });
+			loginThread.detach();
+		}
 	}
 
 	ImGui::End();
@@ -299,7 +359,7 @@ void EasyPlayground::ImGUIRender()
 	ImGui::NewFrame();
 	ImGui::SetNextWindowPos({ 0,0 });
 
-	if (!loggedIn && !isRender)
+	if (!loggedIn)
 	{
 		if (loginStatusWindow)
 			ImGUI_LoginStatusWindow();
