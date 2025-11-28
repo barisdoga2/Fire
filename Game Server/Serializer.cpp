@@ -112,6 +112,14 @@ bool MakeDeserialized(EasyBuffer* buff, std::vector<EasySerializeable*>& peer_ca
                 break;
             }
 
+            case HEARTBEAT:
+            {
+                sHearbeat* v = new sHearbeat();
+                des.Deserialize(*v);
+                peer_cache.push_back(v);
+                break;
+            }
+
             default:
             {
                 status = false;

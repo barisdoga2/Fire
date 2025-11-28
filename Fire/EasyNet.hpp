@@ -16,6 +16,7 @@
 #define CHAMPION_SELECT_RESPONSE ((PacketID_t)(114U))
 #define CHAMPION_BUY_RESPONSE ((PacketID_t)(115U))
 #define PLAYER_BOOT_INFO ((PacketID_t)(116U))
+#define HEARTBEAT ((PacketID_t)(117U))
 
 #include <iostream>
 #include <vector>

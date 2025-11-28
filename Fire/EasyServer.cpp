@@ -111,6 +111,8 @@ bool EasyServer::CreateSession_internal(Session* session)
     {
         m->sessions[session->sessionID] = session;
         ret = this->OnSessionCreate(session);
+        if (ret)
+            m->sessionIDs.push_back(session->sessionID);
     }
     return ret;
 }
@@ -121,6 +123,8 @@ bool EasyServer::DestroySession_internal(SessionID_t sessionID, SessionStatus di
     if (m->sessions[sessionID] != nullptr)
     {
         this->OnSessionDestroy(m->sessions[sessionID], disconnectReason);
+        if(auto res = std::find(m->sessionIDs.begin(), m->sessionIDs.end(), sessionID); res != m->sessionIDs.end())
+            m->sessionIDs.erase(res);
         delete m->sessions[sessionID];
         m->sessions[sessionID] = nullptr;
         ret = true;

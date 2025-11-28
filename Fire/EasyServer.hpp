@@ -73,6 +73,8 @@ public:
 
     UserStats stats;
 
+    Session(const Session& session) = delete;
+
     Session(const SessionID_t& sessionID, const Addr_t& addr, const Key_t& key, const SequenceID_t& sequenceID_in, const SequenceID_t& sequenceID_out, const UserStats& stats) : sessionID(sessionID), addr(addr), key(key), sequenceID_in(sequenceID_in), sequenceID_out(sequenceID_out), lastReceive(Clock::now()), stats(stats)
     {
 
@@ -92,6 +94,7 @@ public:
         std::mutex mutex;
     };
 
+    std::vector<SessionID_t> sessionIDs;
     std::array<Session*, MAX_SESSIONS> sessions{ nullptr };
     std::mutex sessionsMutex;
 

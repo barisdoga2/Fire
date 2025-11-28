@@ -115,7 +115,7 @@ inline void Login(std::string username_, std::string password)
 						}
 						recvObjs_m.unlock();
 					}
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
+					std::this_thread::sleep_for(std::chrono::milliseconds(100U));
 				}
 			}
 		);
@@ -132,7 +132,7 @@ inline void Login(std::string username_, std::string password)
 						}
 						sendObjs_m.unlock();
 					}
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
+					std::this_thread::sleep_for(std::chrono::milliseconds(100U));
 				}
 			}
 		);
@@ -149,10 +149,10 @@ inline void Login(std::string username_, std::string password)
 		if(!loginFailed)
 		{
 			bool loginResponseReceived{};
-			unsigned int timeoutCounter = 3U;
+			unsigned int timeoutCounter = 30U;
 			while (!loginResponseReceived && timeoutCounter != 0U)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
+				std::this_thread::sleep_for(std::chrono::milliseconds(100U));
 
 				recvObjs_m.lock();
 				for (std::vector<EasySerializeable*>::iterator it = recvObjs.begin(); it != recvObjs.end() && !loginResponseReceived; )
@@ -188,10 +188,10 @@ inline void Login(std::string username_, std::string password)
 		if (!loginFailed)
 		{
 			bool playerBootInfoReceived{};
-			unsigned int timeoutCounter = 3U;
+			unsigned int timeoutCounter = 30U;
 			while (!playerBootInfoReceived && timeoutCounter != 0U)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
+				std::this_thread::sleep_for(std::chrono::milliseconds(100U));
 
 				recvObjs_m.lock();
 				for (std::vector<EasySerializeable*>::iterator it = recvObjs.begin(); it != recvObjs.end() && !playerBootInfoReceived ; )
@@ -248,10 +248,10 @@ inline void Login(std::string username_, std::string password)
 		if (!loginFailed)
 		{
 			bool championSelectResponseReceived{};
-			unsigned int  timeoutCounter = 3U;
+			unsigned int  timeoutCounter = 30U;
 			while (!championSelectResponseReceived && timeoutCounter != 0U)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
+				std::this_thread::sleep_for(std::chrono::milliseconds(100U));
 
 				recvObjs_m.lock();
 				for (std::vector<EasySerializeable*>::iterator it = recvObjs.begin(); it != recvObjs.end() && !championSelectResponseReceived ; )
@@ -286,10 +286,10 @@ inline void Login(std::string username_, std::string password)
 		// If champ relect response receive then we logged in
 		loggedIn = !loginFailed;
 
-		// Recv/Send while logged in
+		// Recv/Send while logged in 
 		while (loggedIn)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
+			std::this_thread::sleep_for(std::chrono::milliseconds(100U));
 
 			recvObjs_m.lock();
 			for (std::vector<EasySerializeable*>::iterator it = recvObjs.begin(); it != recvObjs.end() ; )
@@ -312,6 +312,16 @@ inline void Login(std::string username_, std::string password)
 				}
 			}
 			recvObjs_m.unlock();
+
+			static unsigned int ctr = 10U;
+			--ctr;
+			if (ctr == 0U)
+			{
+				sendObjs_m.lock();
+				sendObjs.push_back(new sHearbeat());
+				sendObjs_m.unlock();
+				ctr = 10U;
+			}
 		}
 
 		if(sendTh.joinable())

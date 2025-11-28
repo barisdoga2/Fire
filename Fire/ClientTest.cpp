@@ -69,6 +69,9 @@ std::string ClientTest::ClientWebRequest(std::string url, std::string username, 
 
 uint64_t ClientTest::ClientSend(PeerCryptInfo& crypt, std::vector<EasySerializeable*>& objs)
 {
+    if (objs.size() == 0U)
+        return 0U;
+
     static EasyBuffer* buffer = bf.Get();
     static EasyBuffer* buffer2 = bf.Get();
     uint64_t retVal = 1U;

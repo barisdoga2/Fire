@@ -36,7 +36,7 @@ void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
             {
                 //STATS_UNPROCESSED;
             }
-
+            
             if (sChampionSelectRequest* championSelectRequest = dynamic_cast<sChampionSelectRequest*>(in_obj); championSelectRequest)
             {
                 //STATS_PROCESSED;
@@ -64,10 +64,65 @@ void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
             {
                 //STATS_UNPROCESSED;
             }
+
+            if (sHearbeat* heartbeat = dynamic_cast<sHearbeat*>(in_obj); heartbeat)
+            {
+                //STATS_PROCESSED;
+
+                std::cout << "Heartbeat received\n";
+            }
+            else
+            {
+                //STATS_UNPROCESSED;
+            }
             delete in_obj;
         }
     }
     in_cache.clear();
+
+    using Clock = std::chrono::steady_clock;
+    using TimePoint = Clock::time_point;
+
+    static TimePoint nextTimeoutCheck = Clock::now() + std::chrono::seconds(1);
+
+    const TimePoint now = Clock::now();
+
+    if (now >= nextTimeoutCheck)
+    {
+        nextTimeoutCheck = now + std::chrono::seconds(1);
+
+        for (auto it = m->sessionIDs.begin(); it != m->sessionIDs.end(); )
+        {
+            Session* session = GetSession(*it);
+            if (session)
+            {
+                const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    now - session->lastReceive
+                );
+
+                const bool alive = elapsed < std::chrono::milliseconds(sessionTimeout);
+
+                if (!alive)
+                {
+                    this->OnSessionDestroy(session, TIMED_OUT);
+
+                    delete m->sessions[*it];
+                    m->sessions[*it] = nullptr;
+
+                    it = m->sessionIDs.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
 }
 
 bool Server::Start()

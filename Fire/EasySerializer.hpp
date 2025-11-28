@@ -215,3 +215,18 @@ public:
     }
 };
 
+
+
+class sHearbeat : public EasySerializeable {
+public:
+    sHearbeat() : EasySerializeable(static_cast<PacketID_t>(HEARTBEAT))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+
+    }
+};
+
