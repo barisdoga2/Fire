@@ -26,7 +26,13 @@
 #include "Server.hpp"
 
 bool running{};
-std::thread luaThread;
+bool stop{};
+
+int Stop(lua_State* L)
+{
+    stop = true;
+    return 0;
+}
 
 void LUAListen()
 {
@@ -38,6 +44,7 @@ void LUAListen()
     luaL_openlibs(L);
     lua_register(L, "ServerStats", Server::Stats);
     lua_register(L, "Q", Server::Stats);
+    lua_register(L, "Stop", Stop);
     std::string input = "", input2 = "";
     while (running)
     {
@@ -83,23 +90,23 @@ void LUAListen()
     lua_close(L);
 }
 
+EasyBufferManager bf(50U, 1472U);
+Server* server = new Server(&bf, SERVER_PORT);
+
 int main()
 {
-    EasyBufferManager bf(50U, 1472U);
-    Server* server = new Server(&bf, SERVER_PORT);
     if (server->Start())
     {
-        if (running = server->IsRunning(); running)
+        if (running = true; running)
         {
-            luaThread = std::thread([&]() { LUAListen(); });
+            std::thread luaThread = std::thread([&]() { LUAListen(); });
             while (running)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
-                if (running)
-                    running = server->IsRunning();
+                running &= (true && !stop);
             }
-            if (luaThread.joinable())
-                luaThread.join();
+            server->Stop();
+            luaThread.join();
         }
     }
 	return 0;

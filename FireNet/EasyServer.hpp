@@ -21,6 +21,7 @@ enum SessionStatus {
     ADDR_MISMATCH,
     CRYPT_ERR,
     TIMED_OUT,
+    SERVER_TIMED_OUT,
     SEQUENCE_MISMATCH,
     RECONNECTED,
 };
@@ -40,6 +41,8 @@ inline static std::string SessionStatus_Str(const SessionStatus& status)
         str = "CRYPT_ERR";
     else if (status == TIMED_OUT)
         str = "TIMED_OUT";
+    else if (status == SERVER_TIMED_OUT)
+        str = "SERVER_TIMED_OUT";
     else if (status == SEQUENCE_MISMATCH)
         str = "SEQUENCE_MISMATCH";
     else if (status == RECONNECTED)
@@ -71,12 +74,13 @@ public:
 
     void* userData{};
 
+    Session() = delete;
     Session(const Session& session) = delete;
 
     Session(const SessionID_t& sessionID, const UserID_t& userID, const Addr_t& addr, 
-        const Key_t& key, const SequenceID_t& sequenceID_in, const SequenceID_t& sequenceID_out, 
+        const Key_t& key, const SequenceID_t& sequenceID_in, const SequenceID_t& sequenceID_out, const Timestamp_t& lastReceive,
         void* userData, const std::vector<SessionManager*>& managers = {})
-        : sessionID(sessionID), userID(userID), addr(addr), key(key), sequenceID_in(sequenceID_in), sequenceID_out(sequenceID_out), lastReceive(Clock::now()), userData(userData), managers(managers)
+        : sessionID(sessionID), userID(userID), addr(addr), key(key), sequenceID_in(sequenceID_in), sequenceID_out(sequenceID_out), lastReceive(lastReceive), userData(userData), managers(managers)
     {
 
     }

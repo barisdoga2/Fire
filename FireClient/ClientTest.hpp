@@ -22,9 +22,10 @@ private:
     EasyBufferManager& bf;
     std::string ip;
     unsigned short port;
-    ClientPeer client;
 
 public:
+    ClientPeer client;
+
     ClientTest(EasyBufferManager& bf, std::string ip, unsigned short port);
     ~ClientTest();
 

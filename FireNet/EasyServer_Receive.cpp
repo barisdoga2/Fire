@@ -272,7 +272,7 @@ namespace Server_Receive_internal {
                         Addr_t addr = it->second.cache.at(0).addr;
                         SequenceID_t sequenceID_in = 0U;
                         SequenceID_t sequenceID_out = 0U;
-                        Session* newSession = new Session(it->first, user_id, addr, key, sequenceID_in, sequenceID_out, nullptr);
+                        Session* newSession = new Session(it->first, user_id, addr, key, sequenceID_in, sequenceID_out, Clock::now(), nullptr);
                         newSessions.vec.push_back(newSession);
                         r2pCache.emplace(
                             std::piecewise_construct,
@@ -357,12 +357,11 @@ namespace Server_Receive_internal {
                             Addr_t respAddr;
                             if (it->second.cache.size() > 0)
                                 respAddr = it->second.cache.at(0).addr;
-                            Session* toDestroy = new Session(session->sessionID, session->userID, respAddr, session->key, 0, 0, session->userData);
+
+                            Session* toDestroy = new Session(session->sessionID, session->userID, respAddr, session->key, 0, 0, Clock::now(), session->userData);
                             sLoginResponse loginResponse = sLoginResponse(false, "User was already logged in! Try again!");
                             server->SendInstantPacket(toDestroy, { &loginResponse });
                             delete toDestroy;
-
-
 
                             for (RawBuffer& b : it->second.cache)
                             {

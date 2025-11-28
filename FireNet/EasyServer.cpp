@@ -72,9 +72,9 @@ bool EasyServer::Stop()
 
     running = false;
 
-    EasyServer::instance = nullptr;
-
     this->OnDestroy();
+
+    EasyServer::instance = nullptr;
 
     delete db;
     db = nullptr;

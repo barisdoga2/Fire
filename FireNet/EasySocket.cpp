@@ -190,7 +190,7 @@ struct SocketInitializer
 
 	~SocketInitializer()
 	{
-		WSACleanup();
+		//WSACleanup();
 	}
 };
 

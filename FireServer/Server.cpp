@@ -14,6 +14,22 @@ bool HeartbeatManager::Receive(EasyDB* db, ObjCacheType_t& in_cache, ObjCacheTyp
 {
     bool ret = false;
 
+    for (auto& [session, cache] : in_cache)
+    {
+        for (EasySerializeable* obj : cache)
+        {
+            if (sHearbeat* heartbeat = dynamic_cast<sHearbeat*>(obj); heartbeat)
+            {
+                out_cache[session].push_back(new sHearbeat());
+                std::cout << "Heartbeat received and sent!\n";
+            }
+            else
+            {
+                //STATS_UNPROCESSED;
+            }
+        }
+    }
+
     return ret;
 }
 
@@ -55,6 +71,7 @@ bool LoginManager::Receive(EasyDB* db, ObjCacheType_t& in_cache, ObjCacheType_t&
                                 manIt++;
                             }
                         }
+                        session->managers.push_back(Server::managers[HEARTBEAT_MANAGER]);
                     }
                     out_cache[session].push_back(new sChampionSelectResponse(response, message));
                     std::cout << "Champion select request received\n";
@@ -116,6 +133,11 @@ bool LoginManager::Receive(EasyDB* db, ObjCacheType_t& in_cache, ObjCacheType_t&
 Server::Server(EasyBufferManager* bf, unsigned short port) : EasyServer(bf, port), world(nullptr)
 {
 	
+}
+
+Server::~Server() 
+{
+    EasyServer::~EasyServer();
 }
 
 void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
@@ -198,6 +220,14 @@ void Server::Tick(double _dt)
 
 void Server::OnDestroy()
 {
+    m->sessionsMutex.lock();
+    for (auto& s : m->sessionIDs)
+    {
+        sDisconnectResponse acceptResponse = sDisconnectResponse("Server shutting down!");
+        SendInstantPacket(m->sessions[s], { &acceptResponse });
+    }
+    m->sessionsMutex.unlock();
+
 	if (world)
 	{
 		delete world;

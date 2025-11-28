@@ -59,6 +59,7 @@ public:
 	World* world;
 
 	Server(EasyBufferManager* bf, unsigned short port);
+	~Server();
 	bool Start();
 
 	void Tick(double _dt) override;

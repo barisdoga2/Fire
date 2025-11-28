@@ -1,5 +1,7 @@
 #include "ClientTest.hpp"
 #include "../FireServer/Net.hpp"
+#include <EasyServer.hpp>
+#include <EasySocket.hpp>
 
 
 EasyBufferManager bf(50U, 1472U);
@@ -140,6 +142,8 @@ bool WaitForPacket(std::vector<EasySerializeable*>& recvObjs,
 
 inline void Login(std::string username_, std::string password)
 {
+	client.client.socket = new EasySocket();
+
     // Reset state
     loggedIn   = false;
     loginFailed = false;
@@ -256,6 +260,7 @@ inline void Login(std::string username_, std::string password)
     loggedIn = !loginFailed;
 
     unsigned heartbeatCtr = 10U;
+	std::chrono::steady_clock::time_point lastHeartbeatReceive = Clock::now();
     while (loggedIn)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100U));
@@ -272,6 +277,12 @@ inline void Login(std::string username_, std::string password)
                     delete d;
                     it = recvObjs.erase(it);
                 }
+				else if (auto* h = dynamic_cast<sHearbeat*>(*it); h)
+				{
+					lastHeartbeatReceive = Clock::now();
+					delete h;
+					it = recvObjs.erase(it);
+				}
                 else
                 {
                     ++it;
@@ -279,6 +290,12 @@ inline void Login(std::string username_, std::string password)
             }
         }
 
+		if (lastHeartbeatReceive + std::chrono::seconds(10) < Clock::now())
+		{
+			loggedIn = false;
+			loginFailed = true;
+			loginStatusText = "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!";
+		}
         if (--heartbeatCtr == 0U)
         {
             std::lock_guard<std::mutex> lock(sendMtx);
