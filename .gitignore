@@ -3,10 +3,10 @@
 
 
 
-Fire Launcher/bin/*
-Fire Launcher/obj/*
-publish/Fire Launcher/Fire Launcher.exe
-publish/Fire Launcher/*.pdb
+FireLauncher/bin/*
+FireLauncher/obj/*
+publish/FireLauncher/FireLauncher.exe
+publish/FireLauncher/*.pdb
 
 
 
@@ -17,17 +17,24 @@ x86/Release/*
 
 
 
-Fire/x64/Debug/*
-Fire/x64/Release/*
-Fire/Debug/*
-Fire/Release/*
+FireClient/x64/Debug/*
+FireClient/x64/Release/*
+FireClient/Debug/*
+FireClient/Release/*
 
 
 
-Game Server/x64/Debug/*
-Game Server/x64/Release/*
-Game Server/Debug/*
-Game Server/Release/*
-publish/Game Server/*.pdb
+FireNet/x64/Debug/*
+FireNet/x64/Release/*
+FireNet/Debug/*
+FireNet/Release/*
+
+
+
+FireServer/x64/Debug/*
+FireServer/x64/Release/*
+FireServer/Debug/*
+FireServer/Release/*
+publish/FireServer/*.pdb
 
 

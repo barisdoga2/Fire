@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Server">
+      <UniqueIdentifier>{3b5a1414-d0da-4826-829d-89cf52014115}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\Shared">
+      <UniqueIdentifier>{df3201b9-390a-4842-8716-0e73d9adddb0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\Internal">
+      <UniqueIdentifier>{ceb530fc-87e2-46d1-a7ab-c5820101683e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Server</Filter>
+    </ClCompile>
+    <ClCompile Include="Server.cpp">
+      <Filter>Server\Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="World.cpp">
+      <Filter>Server\Internal</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Net.hpp">
+      <Filter>Server\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Server.hpp">
+      <Filter>Server\Internal</Filter>
+    </ClInclude>
+    <ClInclude Include="World.hpp">
+      <Filter>Server\Internal</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
