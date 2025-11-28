@@ -51,6 +51,7 @@ public:
     void ReloadShaders();
     void ReGenerateMap();
 
+    void ImGUI_PlayerInfoWindow();
     void ImGUI_LoginStatusWindow();
     void ImGUI_LoginWindow();
     void ImGUI_ChampionSelectWindow();

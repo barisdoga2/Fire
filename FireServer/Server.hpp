@@ -30,7 +30,7 @@ public:
 
     bool Update(ObjCacheType_t& out_cache, double dt) override;
 
-    bool Receive(EasyDB* db, ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) override;
+    bool Receive(EasyServer* server, ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) override;
 
 };
 
@@ -44,7 +44,7 @@ public:
 
     bool Update(ObjCacheType_t& out_cache, double dt) override;
 
-    bool Receive(EasyDB* db, ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) override;
+    bool Receive(EasyServer* server, ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) override;
 
 };
 

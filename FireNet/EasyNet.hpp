@@ -17,6 +17,7 @@
 #define PLAYER_BOOT_INFO ((PacketID_t)(116U))
 #define HEARTBEAT ((PacketID_t)(117U))
 #define LOGIN_REQUEST ((PacketID_t)(118U))
+#define LOGOUT_REQUEST ((PacketID_t)(119U))
 
 
 

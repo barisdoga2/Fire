@@ -14,7 +14,11 @@ x64/Debug/*
 x64/Release/*
 x86/Debug/*
 x86/Release/*
-
+!*/*/mysqlcppconn-9-vs14.dll
+!*/*/libcrypto-1_1.dll
+!*/*/libcrypto-1_1-x64.dll
+!*/*/libssl-1_1.dll
+!*/*/libssl-1_1-x64.dll
 
 
 FireClient/x64/Debug/*

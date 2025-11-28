@@ -24,6 +24,7 @@ enum SessionStatus {
     SERVER_TIMED_OUT,
     SEQUENCE_MISMATCH,
     RECONNECTED,
+    CLIENT_LOGGED_OUT
 };
 
 inline static std::string SessionStatus_Str(const SessionStatus& status)
@@ -47,6 +48,8 @@ inline static std::string SessionStatus_Str(const SessionStatus& status)
         str = "SEQUENCE_MISMATCH";
     else if (status == RECONNECTED)
         str = "RECONNECTED";
+    else if (status == CLIENT_LOGGED_OUT)
+        str = "CLIENT_LOGGED_OUT";
     else
         str = "UNKNOWN";
     return str;
@@ -71,6 +74,7 @@ public:
     SequenceID_t sequenceID_out;
     Timestamp_t lastReceive;
     std::vector<SessionManager*> managers;
+    bool logoutRequested{};
 
     void* userData{};
 
@@ -123,6 +127,7 @@ struct SessionPtrEqual {
 
 using ObjCacheType_t = std::unordered_map<Session*, std::vector<EasySerializeable*>, SessionPtrHash, SessionPtrEqual>;
 
+class EasyServer;
 class SessionManager {
 public:
     unsigned int managerID;
@@ -133,7 +138,7 @@ public:
     }
 
     virtual bool Update(ObjCacheType_t& out_cache, double dt) = 0U;
-    virtual bool Receive(EasyDB* db, ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) = 0U;
+    virtual bool Receive(EasyServer* server, ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) = 0U;
 
 };
 
@@ -177,6 +182,9 @@ private:
 
 
 public:
+    // DB
+    EasyDB* db;
+
     // Context
     MainContex* m;
     uint32_t sessionTimeout;
@@ -196,6 +204,9 @@ public:
     bool CreateSession_internal(Session* session);
     bool DestroySession_internal(SessionID_t sessionID, SessionStatus disconnectReason);
 
+    bool DestroySession(SessionID_t sessionID, SessionStatus disconnectReason);
+    bool DestroySession(Session* session, SessionStatus disconnectReason);
+
 private:
     void Update();
     void Receive();
@@ -208,11 +219,7 @@ private:
     std::string StatsUpdate();
 
 protected:
-    // DB
-    EasyDB* db;
 
-    bool DestroySession(SessionID_t sessionID, SessionStatus disconnectReason);
-    bool DestroySession(Session* session, SessionStatus disconnectReason);
     Session* GetSession(SessionID_t sessionID);
     bool SetSessionTimeout(uint32_t ms);
 

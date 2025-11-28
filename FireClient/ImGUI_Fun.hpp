@@ -237,11 +237,34 @@ inline void Login(std::string username_, std::string password)
         champSelect      = true;
 
         while (champSelect && !loginFailed)
+        {
             std::this_thread::sleep_for(std::chrono::milliseconds(50U));
 
-        loginStatusText = "Selecting champion!";
-        std::lock_guard<std::mutex> lock(sendMtx);
-        sendObjs.push_back(new sChampionSelectRequest(championSelected));
+            std::lock_guard<std::mutex> lock(recvMtx);
+            for (auto it = recvObjs.begin(); it != recvObjs.end(); )
+            {
+                if (auto* d = dynamic_cast<sDisconnectResponse*>(*it); d)
+                {
+                    champSelect = false;
+                    loggedIn = false;
+                    loginFailed = true;
+                    loginStatusText = d->message;
+                    delete d;
+                    it = recvObjs.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
+
+        if (!loginFailed)
+        {
+            loginStatusText = "Selecting champion!";
+            std::lock_guard<std::mutex> lock(sendMtx);
+            sendObjs.push_back(new sChampionSelectRequest(championSelected));
+        }
     }
 
     // 7) Champion select response
@@ -337,75 +360,136 @@ inline ImTextureID LoadTextureSTB(const char* filename, int* outW = nullptr, int
 }
 
 int DrawChampionSelectWindow(
-	const std::vector<ImTextureID>& icons,   // images
-	float buttonSize = 64.0f,
-	float padding = 10.0f)
+    const std::vector<ImTextureID>& icons,   // images
+    float buttonSize = 64.0f,
+    float padding = 10.0f)
 {
-	int N = (int)icons.size();
-	if (N == 0)
-		return -1;
+    int N = (int)icons.size();
+    if (N == 0)
+        return -1;
 
-	// ---- Auto grid size ----
-	int cols = (int)std::floor(std::sqrt((float)N));
-	if (cols < 1) cols = 1;
-	int rows = (N + cols - 1) / cols;
+    const int cols = 3;   // <<< FIXED: ALWAYS 3 PER ROW
 
-	// Window size auto-fit
-	ImVec2 winSize(
-		350,
-		400   // header labels height
-	);
-	ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);
+    // Window small placeholder size (auto-resize will override)
+    ImVec2 winSize(300, 200);
+    ImGui::SetNextWindowSize(winSize, ImGuiCond_Once);
 
-	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 
-	ImGui::Begin("Player Info");
+    ImGui::Begin("Champion Select",
+        nullptr,
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoSavedSettings);
 
-	// ---- Header Labels ----
-	ImGui::Text("Username:   %s", username.c_str());
-	ImGui::Text("User ID:    %u", userID);
-	ImGui::Text("Session ID: %u", sessionID);
-	ImGui::Separator();
+    int clicked = -1;
 
-	ImGui::Text("Gold:    %u", stats.golds);
-	ImGui::Text("Diamond: %u", stats.diamonds);
-	ImGui::Text("Game Time: %.1f hours", stats.gametime);
-	ImGui::Text("Champions Owned: %d", stats.champions_owned.size());
+    for (int i = 0; i < N; i++)
+    {
+        bool owned = std::find(
+            stats.champions_owned.begin(),
+            stats.champions_owned.end(),
+            i + 1) != stats.champions_owned.end();
 
-	ImGui::Spacing();
-	ImGui::Separator();
-	ImGui::Spacing();
+        ImGui::PushID(i);
 
-	// ---- GRID ----
-	int clicked = -1;
+        if (!owned)
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.40f);
+            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+        }
 
-	for (int i = 0; i < N; i++)
-	{
-		bool owned = std::find(stats.champions_owned.begin(), stats.champions_owned.end(), i + 1) != stats.champions_owned.end();
+        bool pressed =
+            ImGui::ImageButton(std::to_string(i).c_str(), icons[i], ImVec2(buttonSize, buttonSize));
 
-		ImGui::PushID(i);
-		if (!owned)
-		{
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.40f);
-			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-		}
-		bool pressed = ImGui::ImageButton(std::to_string(i).c_str(), icons[i], ImVec2(buttonSize, buttonSize));
-		if (pressed && owned)
-			clicked = i;
-		if (!owned)
-		{
-			ImGui::PopItemFlag();
-			ImGui::PopStyleVar();
-		}
-		ImGui::PopID();
+        if (pressed && owned)
+            clicked = i;
 
-		if ((i + 1) % cols != 0)
-			ImGui::SameLine(padding);
-	}
+        if (!owned)
+        {
+            ImGui::PopItemFlag();
+            ImGui::PopStyleVar();
+        }
 
-	ImGui::End();
-	return clicked;
+        ImGui::PopID();
+
+        // Put 3 items per row
+        if ((i % cols) != cols - 1)
+            ImGui::SameLine(0, padding);
+    }
+
+    ImGui::End();
+    return clicked;
+}
+
+
+void EasyPlayground::ImGUI_PlayerInfoWindow()
+{
+    if (!loggedIn && !champSelect)
+        return;
+
+    // Position: TOP RIGHT
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImVec2 pos = ImVec2(vp->WorkPos.x + vp->WorkSize.x - 10,  // right - 10px
+        vp->WorkPos.y + 10);                 // top + 10px
+    ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+
+    // Auto-fit size horizontally & vertically
+    ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(400, 400));
+
+    ImGui::Begin("PlayerInfo",
+        nullptr,
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoSavedSettings);
+
+    // ---- Header ----
+    ImGui::Text("Username:   %s", username.c_str());
+    ImGui::Text("User ID:    %u", userID);
+    ImGui::Text("Session ID: %u", sessionID);
+    ImGui::Separator();
+
+    // ---- Stats ----
+    ImGui::Text("Gold:       %u", stats.golds);
+    ImGui::Text("Diamond:    %u", stats.diamonds);
+    ImGui::Text("Game Time:  %.1f hours", stats.gametime);
+    ImGui::Text("Champions Owned: %d", (int)stats.champions_owned.size());
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ---- Logout Button ----
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.85f, 0.2f, 0.2f, 1));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.95f, 0.25f, 0.25f, 1));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.70f, 0.15f, 0.15f, 1));
+
+    if (ImGui::Button("Logout", ImVec2(120, 28)))
+    {
+        std::vector<EasySerializeable*> logout = { new sLogoutRequest() };
+        client.ClientSend(*crypt, logout);
+
+        loggedIn = false;
+        loginFailed = true;
+        loginInProgress = false;
+        loginStatusWindow = false;
+        champSelect = false;
+
+        // reset crypt, username, session, etc.
+        if (crypt) { delete crypt; crypt = nullptr; }
+
+        sessionID = 0;
+        userID = 0;
+        username = "";
+        stats = {}; // reset
+    }
+
+    ImGui::PopStyleColor(3);
+    ImGui::End();
 }
 
 void EasyPlayground::ImGUI_ChampionSelectWindow()
@@ -490,6 +574,7 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 			loginStatusWindow = false;
 			loginInProgress = false;
 			loginFailed = true;
+            champSelect = false;
 
 			if (crypt)
 			{
@@ -508,6 +593,8 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 			loginStatusWindow = false;
 			loginInProgress = false;
 			loginFailed = true;
+            champSelect = false;
+
 		}
 	}
 
@@ -615,6 +702,8 @@ void EasyPlayground::ImGUIRender()
 
 	if (champSelect)
 		ImGUI_ChampionSelectWindow();
+
+    ImGUI_PlayerInfoWindow();
 
 	ImGui::SetNextWindowPos({ 0,0 });
 

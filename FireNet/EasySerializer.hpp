@@ -129,7 +129,20 @@ public:
 
 };
 
+class sLogoutRequest : public EasySerializeable {
+public:
 
+    sLogoutRequest() : EasySerializeable(static_cast<PacketID_t>(LOGOUT_REQUEST))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        
+    }
+};
+REGISTER_PACKET(sLogoutRequest, LOGOUT_REQUEST);
 
 class sLoginRequest : public EasySerializeable {
 public:
