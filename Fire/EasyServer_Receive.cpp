@@ -163,12 +163,26 @@ namespace Server_Receive_internal {
             sql::ResultSet* res2 = stmt2->executeQuery();
             if (res2->next())
             {
+                stats.userID = res2->getUInt(2);
                 stats.gametime = res2->getUInt(3);
                 stats.golds = res2->getUInt(4);
                 stats.diamonds = res2->getUInt(5);
                 stats.tutorial_done = res2->getBoolean(6);
-                stats.characters_owned = res2->getString(7);
-
+                std::string champions = res2->getString(7);
+                while (champions.length() != 0U)
+                {
+                    if (auto pos = champions.find(", "); pos != std::string::npos)
+                    {
+                        std::string champion = champions.substr(0, pos);
+                        stats.champions_owned.push_back(static_cast<unsigned int>(std::stoul(champion)));
+                        champions = champions.substr(pos + 2);
+                    }
+                    else
+                    {
+                        stats.champions_owned.push_back(static_cast<unsigned int>(std::stoul(champions)));
+                        champions = "";
+                    }
+                }
                 ret = true;
             }
             else

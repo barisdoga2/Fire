@@ -11,6 +11,11 @@
 
 #define LOGIN_RESPONSE ((PacketID_t)(110U))
 #define DISCONNECT_RESPONSE ((PacketID_t)(111U))
+#define CHAMPION_SELECT_REQUEST ((PacketID_t)(112U))
+#define CHAMPION_BUY_REQUEST ((PacketID_t)(113U))
+#define CHAMPION_SELECT_RESPONSE ((PacketID_t)(114U))
+#define CHAMPION_BUY_RESPONSE ((PacketID_t)(115U))
+#define PLAYER_BOOT_INFO ((PacketID_t)(116U))
 
 #include <iostream>
 #include <vector>
@@ -33,6 +38,14 @@ using StatisticsCounter_t = std::atomic<size_t>;
 using Clock = std::chrono::high_resolution_clock;
 
 
+struct UserStats {
+    unsigned int userID{};
+    unsigned int gametime{};
+    unsigned int golds{};
+    unsigned int diamonds{};
+    bool tutorial_done{};
+    std::vector<unsigned int> champions_owned{};
+};
 
 class AES_t {
 public:

@@ -36,6 +36,34 @@ void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
             {
                 //STATS_UNPROCESSED;
             }
+
+            if (sChampionSelectRequest* championSelectRequest = dynamic_cast<sChampionSelectRequest*>(in_obj); championSelectRequest)
+            {
+                //STATS_PROCESSED;
+                
+                if (Session* session = GetSession(it->first); session)
+                {
+                    bool response = std::find(session->stats.champions_owned.begin(), session->stats.champions_owned.end(), championSelectRequest->championID) != session->stats.champions_owned.end();
+                    std::string message{};
+                    if (!response)
+                        message = "Buy this champion first!";
+                    sChampionSelectResponse* championSelectResponse = new sChampionSelectResponse(response, message);
+                    if (auto res = out_cache.find(it->first); res != out_cache.end())
+                    {
+                        res->second.push_back(championSelectResponse);
+                    }
+                    else
+                    {
+                        out_cache.emplace(it->first, std::vector<EasySerializeable*>{ championSelectResponse });
+                    }
+                }
+                
+                std::cout << "Champion select request received\n";
+            }
+            else
+            {
+                //STATS_UNPROCESSED;
+            }
             delete in_obj;
         }
     }
@@ -83,6 +111,10 @@ bool Server::OnSessionCreate(Session* session)
     {
         sLoginResponse acceptResponse = sLoginResponse(true, "Server welcomes you!");
         SendInstantPacket(session, { &acceptResponse });
+
+        sPlayerBootInfo playerBootInfo = sPlayerBootInfo(session->stats.userID, session->stats.diamonds, session->stats.golds, session->stats.gametime, session->stats.tutorial_done, session->stats.champions_owned);
+        SendInstantPacket(session, { &playerBootInfo });
+
         return true;
     }
 }

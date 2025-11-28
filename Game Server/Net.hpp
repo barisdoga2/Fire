@@ -28,6 +28,7 @@
 
 
 
+
 class pHello : public EasySerializeable {
 public:
     std::string message;

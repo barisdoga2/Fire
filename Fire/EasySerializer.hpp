@@ -126,3 +126,92 @@ public:
         ser->Put(message);
     }
 };
+
+class sPlayerBootInfo : public EasySerializeable {
+public:
+    unsigned int userID, diamonds, golds, gametime;
+    bool tutorialDone;
+    std::vector<unsigned int> championsOwned;
+
+    sPlayerBootInfo(unsigned int userID, unsigned int diamonds, unsigned int golds, unsigned int gametime, bool tutorialDone, std::vector<unsigned int> championsOwned) : userID(userID), diamonds(diamonds), golds(golds), gametime(gametime), tutorialDone(tutorialDone), championsOwned(championsOwned), EasySerializeable(static_cast<PacketID_t>(PLAYER_BOOT_INFO))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(userID);
+        ser->Put(diamonds);
+        ser->Put(golds);
+        ser->Put(gametime);
+        ser->Put(tutorialDone);
+        ser->Put(championsOwned);
+    }
+};
+
+
+
+class sChampionSelectRequest : public EasySerializeable {
+public:
+    unsigned int championID;
+
+    sChampionSelectRequest(unsigned int championID) : championID(championID), EasySerializeable(static_cast<PacketID_t>(CHAMPION_SELECT_REQUEST))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(championID);
+    }
+};
+
+class sChampionBuyRequest : public EasySerializeable {
+public:
+    unsigned int championID;
+
+    sChampionBuyRequest(unsigned int championID) : championID(championID), EasySerializeable(static_cast<PacketID_t>(CHAMPION_BUY_REQUEST))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(championID);
+    }
+};
+
+class sChampionSelectResponse : public EasySerializeable {
+public:
+    bool response;
+    std::string message;
+
+    sChampionSelectResponse(bool response, std::string message) : response(response), message(message), EasySerializeable(static_cast<PacketID_t>(CHAMPION_SELECT_RESPONSE))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(response);
+        ser->Put(message);
+    }
+};
+
+class sChampionBuyResponse : public EasySerializeable {
+public:
+    bool response;
+    std::string message;
+
+    sChampionBuyResponse(bool response, std::string message) : response(response), message(message), EasySerializeable(static_cast<PacketID_t>(CHAMPION_BUY_RESPONSE))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(response);
+        ser->Put(message);
+    }
+};
+

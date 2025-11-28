@@ -72,6 +72,46 @@ bool MakeDeserialized(EasyBuffer* buff, std::vector<EasySerializeable*>& peer_ca
                 break;
             }
 
+            case CHAMPION_SELECT_REQUEST:
+            {
+                sChampionSelectRequest* v = new sChampionSelectRequest(0U);
+                des.Deserialize(*v);
+                peer_cache.push_back(v);
+                break;
+            }
+
+            case CHAMPION_BUY_REQUEST:
+            {
+                sChampionBuyRequest* v = new sChampionBuyRequest(0U);
+                des.Deserialize(*v);
+                peer_cache.push_back(v);
+                break;
+            }
+
+            case CHAMPION_SELECT_RESPONSE:
+            {
+                sChampionSelectResponse* v = new sChampionSelectResponse(false, "");
+                des.Deserialize(*v);
+                peer_cache.push_back(v);
+                break;
+            }
+
+            case CHAMPION_BUY_RESPONSE:
+            {
+                sChampionBuyResponse* v = new sChampionBuyResponse(false, "");
+                des.Deserialize(*v);
+                peer_cache.push_back(v);
+                break;
+            }
+
+            case PLAYER_BOOT_INFO:
+            {
+                sPlayerBootInfo* v = new sPlayerBootInfo(0U, 0U, 0U, 0U, false, { });
+                des.Deserialize(*v);
+                peer_cache.push_back(v);
+                break;
+            }
+
             default:
             {
                 status = false;

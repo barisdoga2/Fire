@@ -14,13 +14,6 @@
 
 
 
-struct UserStats {
-    unsigned int gametime{};
-    unsigned int golds{};
-    unsigned int diamonds{};
-    bool tutorial_done{};
-    std::string characters_owned{};
-};
 
 enum SessionStatus {
     UNSET,

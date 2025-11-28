@@ -210,12 +210,14 @@
     <ClInclude Include="Config.hpp">
       <Filter>Source Files\Game</Filter>
     </ClInclude>
-    <ClInclude Include="ImGUI_Fun.hpp" />
     <ClInclude Include="EasyShader.hpp">
       <Filter>Source Files\Core\Render\Core</Filter>
     </ClInclude>
     <ClInclude Include="EasyDisplay.hpp">
       <Filter>Source Files\Core\Render\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI_Fun.hpp">
+      <Filter>Source Files\Game</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
