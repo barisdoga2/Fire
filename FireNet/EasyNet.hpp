@@ -18,6 +18,7 @@
 #define HEARTBEAT ((PacketID_t)(117U))
 #define LOGIN_REQUEST ((PacketID_t)(118U))
 #define LOGOUT_REQUEST ((PacketID_t)(119U))
+#define BROADCAST_MESSAGE ((PacketID_t)(120U))
 
 
 

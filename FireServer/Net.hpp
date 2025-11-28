@@ -193,3 +193,24 @@ public:
 };
 REGISTER_PACKET(sHearbeat, HEARTBEAT);
 
+class sBroadcastMessage : public EasySerializeable {
+public:
+    std::string message;
+
+    sBroadcastMessage() : message(), EasySerializeable(static_cast<PacketID_t>(BROADCAST_MESSAGE))
+    {
+
+    }
+
+    sBroadcastMessage(std::string message) : message(message), EasySerializeable(static_cast<PacketID_t>(BROADCAST_MESSAGE))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(message);
+    }
+};
+REGISTER_PACKET(sBroadcastMessage, BROADCAST_MESSAGE);
+

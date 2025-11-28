@@ -25,12 +25,39 @@
 #include "Net.hpp"
 #include "Server.hpp"
 
+EasyBufferManager bf(50U, 1472U);
+Server* server = new Server(&bf, SERVER_PORT);
+
 bool running{};
 bool stop{};
 
 int Stop(lua_State* L)
 {
     stop = true;
+    return 0;
+}
+
+int Broadcast(lua_State* L)
+{
+    std::string text;
+    if (lua_isstring(L, 1)) 
+    {
+        text = lua_tostring(L, 1);
+    }
+    else 
+    {
+        text = "";
+    }
+    if (text.length() > 0U)
+    {
+        server->m->sessionsMutex.lock();
+        for (auto& sid : server->m->sessionIDs)
+        {
+            Session* ses = server->m->sessions[sid];
+            server->SendInstantPacket(ses, {new sBroadcastMessage(text)});
+        }
+        server->m->sessionsMutex.unlock();
+    }
     return 0;
 }
 
@@ -45,6 +72,7 @@ void LUAListen()
     lua_register(L, "ServerStats", Server::Stats);
     lua_register(L, "Q", Server::Stats);
     lua_register(L, "Stop", Stop);
+    lua_register(L, "Broadcast", Broadcast);
     std::string input = "", input2 = "";
     while (running)
     {
@@ -90,8 +118,7 @@ void LUAListen()
     lua_close(L);
 }
 
-EasyBufferManager bf(50U, 1472U);
-Server* server = new Server(&bf, SERVER_PORT);
+
 
 int main()
 {

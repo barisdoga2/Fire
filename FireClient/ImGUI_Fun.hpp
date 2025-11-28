@@ -31,6 +31,8 @@ std::atomic<bool> loginThreadRunning = false;
 bool isRender{};
 UserStats stats;
 unsigned int championSelected{};
+bool isBroadcastMessage{};
+std::string broadcastMessage{};
 
 inline bool ParseWebLoginResponse(const std::string& serverUrl,
                                   const std::string& username_,
@@ -306,6 +308,13 @@ inline void Login(std::string username_, std::string password)
 					delete h;
 					it = recvObjs.erase(it);
 				}
+                else if (auto* b = dynamic_cast<sBroadcastMessage*>(*it); b)
+                {
+                    isBroadcastMessage = true;
+                    broadcastMessage = b->message;
+                    delete b;
+                    it = recvObjs.erase(it);
+                }
                 else
                 {
                     ++it;
@@ -368,20 +377,38 @@ int DrawChampionSelectWindow(
     if (N == 0)
         return -1;
 
-    const int cols = 3;   // <<< FIXED: ALWAYS 3 PER ROW
+    const int cols = 5;   // <<< FIXED: ALWAYS 3 PER ROW
 
     // Window small placeholder size (auto-resize will override)
-    ImVec2 winSize(300, 200);
-    ImGui::SetNextWindowSize(winSize, ImGuiCond_Once);
-
+    ImVec2 winSize(420, 252);   // smaller window
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 
+    // Center on both X and Y precisely
+    ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);;
+
+   
     ImGui::Begin("Champion Select",
         nullptr,
-        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoSavedSettings);
+
+    auto CenteredText = [&](const char* txt)
+        {
+            float w = ImGui::CalcTextSize(txt).x;
+            ImGui::SetCursorPosX((winSize.x - w) * 0.5f);
+            ImGui::Text("%s", txt);
+        };
+
+
+    CenteredText("Champion Select");
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::Spacing();
 
     int clicked = -1;
 
@@ -501,6 +528,9 @@ void EasyPlayground::ImGUI_ChampionSelectWindow()
 	{
 		icons.push_back(LoadTextureSTB(GetPath("res/images/champions/1.png").c_str()));
 		icons.push_back(LoadTextureSTB(GetPath("res/images/champions/2.png").c_str()));
+		icons.push_back(LoadTextureSTB(GetPath("res/images/champions/3.png").c_str()));
+		icons.push_back(LoadTextureSTB(GetPath("res/images/champions/4.png").c_str()));
+		icons.push_back(LoadTextureSTB(GetPath("res/images/champions/5.png").c_str()));
 		loaded = true;
 	}
 
@@ -522,14 +552,14 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 	if (!loginInProgress || champSelect)
 		return;
 
-	ImVec2 winSize(350, 120);   // smaller window
+	ImVec2 winSize(420, 252);   // smaller window
 	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
 
 	// Center on both X and Y precisely
 	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);
 
-	ImGui::Begin("LoginStatus", nullptr,
+	ImGui::Begin("Login Status", nullptr,
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoMove |
@@ -601,9 +631,67 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 	ImGui::End();
 }
 
+void EasyPlayground::ImGUI_BroadcastMessageWindow()
+{
+    if (!isBroadcastMessage || broadcastMessage.length() == 0)
+        return;
+
+    ImVec2 winSize(420, 252);   // smaller window
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+
+    // Center on both X and Y precisely
+    ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);
+
+    ImGui::Begin("Server Announcement", nullptr,
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoSavedSettings);
+
+    auto CenteredText = [&](const char* txt)
+        {
+            float w = ImGui::CalcTextSize(txt).x;
+            ImGui::SetCursorPosX((winSize.x - w) * 0.5f);
+            ImGui::Text("%s", txt);
+        };
+
+    auto CenterItem = [&](float width)
+        {
+            ImGui::SetCursorPosX((winSize.x - width) * 0.5f);
+        };
+
+    CenteredText("Announcement");
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    // Text
+    float textWidth = ImGui::CalcTextSize(broadcastMessage.c_str()).x;
+
+    CenterItem(textWidth);
+    ImGui::Text("%s", broadcastMessage.c_str());
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    // Center button
+    float btnWidth = 100.0f;
+    CenterItem(btnWidth);
+    if (ImGui::Button("OK", ImVec2(btnWidth, 28)))
+    {
+        isBroadcastMessage = false;
+        broadcastMessage = "";
+    }
+
+    ImGui::End();
+}
+
 void EasyPlayground::ImGUI_LoginWindow()
 {
-	ImVec2 winSize = ImVec2(350, 260);
+	ImVec2 winSize = ImVec2(420, 252);
 	ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);
 	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(),
 		ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -685,7 +773,6 @@ void EasyPlayground::ImGUI_LoginWindow()
 
 void EasyPlayground::ImGUIRender()
 {
-
 	if (loggedIn)
 		isRender = true;
 
@@ -723,6 +810,8 @@ void EasyPlayground::ImGUIRender()
 		ImGui::Checkbox("Normals Enabled", &imgui_showNormalLines);
 		ImGui::InputFloat("Normal Length", &imgui_showNormalLength);
 		ImGui::End();
+
+        ImGUI_BroadcastMessageWindow();
 	}
 
 	// Rendering
