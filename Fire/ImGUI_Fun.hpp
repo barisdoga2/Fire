@@ -30,309 +30,270 @@ bool isRender{};
 UserStats stats;
 unsigned int championSelected{};
 
+inline bool ParseWebLoginResponse(const std::string& serverUrl,
+                                  const std::string& username_,
+                                  const std::string& password)
+{
+    loginFailed     = false;
+    loginStatusText = "Logging in...";
+
+    std::string response = client.ClientWebRequest(serverUrl, username_, password);
+    const std::string prefix  = "<textarea name=\"jwt\" readonly>";
+    const std::string prefix2 = "<div class=\"msg\">";
+
+    if (response._Starts_with("Curl error:"))
+    {
+        loginStatusText = response.substr(std::string("Curl error:").length());
+        loginFailed     = true;
+        return false;
+    }
+
+    if (size_t index = response.find(prefix); index != std::string::npos)
+    {
+        // Got jwt-style payload
+        loginStatusText = "Waiting the game server...";
+
+        response = response.substr(index + prefix.length());
+        response = response.substr(0, response.find("</textarea>"));
+
+        // sessionID:userID:key
+        sessionID = static_cast<SessionID_t>(
+            std::stoul(response.substr(0, response.find_first_of(':'))));
+
+        response = response.substr(response.find_first_of(':') + 1U);
+        userID   = static_cast<uint32_t>(
+            std::stoul(response.substr(0, response.find_first_of(':'))));
+
+        response = response.substr(response.find_first_of(':') + 1U);
+        std::string key = response;
+
+        Key_t key_t(KEY_SIZE);
+        std::memcpy(key_t.data(), key.data(), KEY_SIZE);
+
+        if (crypt)
+            delete crypt;
+        crypt   = new PeerCryptInfo(sessionID, 0U, 0U, key_t);
+        username = username_;
+
+        if (rememberMe)
+            SaveConfig(true, usernameArr, passwordArr);
+        else
+            SaveConfig(false, "", "");
+
+        return true;
+    }
+
+    // Error div
+    if (size_t index = response.find(prefix2); index != std::string::npos)
+    {
+        response       = response.substr(index + prefix2.length());
+        response       = response.substr(0, response.find("</div>"));
+        loginStatusText = response;
+    }
+    else
+    {
+        loginStatusText = "Error while parsing response!";
+    }
+
+    loginFailed = true;
+    return false;
+}
+
+template<typename T, typename Handler>
+bool WaitForPacket(std::vector<EasySerializeable*>& recvObjs,
+                   std::mutex&                      recvMtx,
+                   unsigned                         timeoutMs,
+                   const char*                      timeoutMessage,
+                   Handler                           onPacket)
+{
+    constexpr unsigned stepMs = 100U;
+    unsigned remaining        = timeoutMs / stepMs;
+
+    while (!loginFailed && remaining--)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(stepMs));
+
+        std::lock_guard<std::mutex> lock(recvMtx);
+        for (auto it = recvObjs.begin(); it != recvObjs.end(); )
+        {
+            if (auto* pkt = dynamic_cast<T*>(*it); pkt)
+            {
+                onPacket(pkt);
+                delete pkt;
+                recvObjs.erase(it);
+                return true;
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    if (!loginFailed)
+    {
+        loginStatusText = timeoutMessage;
+        loginFailed     = true;
+    }
+    return false;
+}
+
 inline void Login(std::string username_, std::string password)
 {
-	loggedIn = false;
-	loginFailed = false;
-	if (crypt)
-	{
-		crypt->key = {};
-		crypt->sequence_id_in = 0U;
-		crypt->sequence_id_out = 0U;
-		crypt->session_id = 0U;
-	}
+    // Reset state
+    loggedIn   = false;
+    loginFailed = false;
 
-	// Set login status text
-	loginStatusText = "Logging in...";
+    if (crypt)
+    {
+        crypt->key          = {};
+        crypt->sequence_id_in  = 0U;
+        crypt->sequence_id_out = 0U;
+        crypt->session_id      = 0U;
+    }
 
-	// Get key, user id and session id from web api
-	std::string response = client.ClientWebRequest(SERVER_URL, username_, password);
-	std::string prefix = "<textarea name=\"jwt\" readonly>";
-	std::string prefix2 = "<div class=\"msg\">";
-	if (response._Starts_with("Curl error:"))
-	{
-		loginStatusText = response.substr(std::string("Curl error:").length());
-		loginFailed = true;
-	}
-	else
-	{
-		if (size_t index = response.find(prefix); index != std::string::npos)
-		{
-			loginStatusText = "Waiting the game server...";
+    // 1) Web login + crypt setup
+    if (!ParseWebLoginResponse(SERVER_URL, username_, password))
+    {
+        loginThreadRunning = false;
+        isRender           = false;
+        return;
+    }
 
-			// Parse data and 'remember me'
-			response = response.substr(index + prefix.length());
-			response = response.substr(0, response.find("</textarea>"));
-			sessionID = static_cast<SessionID_t>(std::stoul(response.substr(0, response.find_first_of(":"))));
-			response = response.substr(response.find_first_of(":") + 1U);
-			userID = static_cast<uint32_t>(std::stoul(response.substr(0, response.find_first_of(":"))));
-			response = response.substr(response.find_first_of(":") + 1U);
-			std::string key = response;
+    // 2) Prepare shared queues and threads
+    std::vector<EasySerializeable*> sendObjs;
+    std::vector<EasySerializeable*> recvObjs;
+    std::mutex sendMtx, recvMtx;
 
-			Key_t key_t(KEY_SIZE);
-			memcpy(key_t.data(), key.data(), KEY_SIZE);
-			crypt = new PeerCryptInfo(sessionID, 0U, 0U, key_t);
-			username = username_;
+    std::thread recvTh([&]
+    {
+        while (!loginFailed)
+        {
+            if (crypt && recvMtx.try_lock())
+            {
+                client.ClientReceive(*crypt, recvObjs);
+                recvMtx.unlock();
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100U));
+        }
+    });
 
-			if (rememberMe)
-				SaveConfig(true, usernameArr, passwordArr);
-			else
-				SaveConfig(false, "", "");
-		}
-		else
-		{
-			if (size_t index = response.find(prefix2); index != std::string::npos)
-			{
-				response = response.substr(index + prefix2.length());
-				response = response.substr(0, response.find("</div>"));
-				loginStatusText = response;
-				loginFailed = true;
-			}
-			else
-			{
-				loginStatusText = "Error while parsing response!";
-				loginFailed = true;
-			}
-		}
-	}
+    std::thread sendTh([&]
+    {
+        while (!loginFailed)
+        {
+            if (crypt && sendMtx.try_lock())
+            {
+                client.ClientSend(*crypt, sendObjs);
+                sendMtx.unlock();
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100U));
+        }
+    });
 
-	// Start communicating with game server
-	if (!loginFailed)
-	{
-		// Start inline receive and send threads
-		std::vector<EasySerializeable*> sendObjs = {  }, recvObjs = {  };
-		std::mutex sendObjs_m, recvObjs_m;
-		std::thread recvTh = std::thread([&recvObjs, &recvObjs_m]
-			{
-				while (!loginFailed)
-				{
-					if (crypt && recvObjs_m.try_lock())
-					{
-						uint64_t recv = client.ClientReceive(*crypt, recvObjs);
-						if (recv == 1U)
-						{
+    // 3) Send initial hello
+    {
+        std::lock_guard<std::mutex> lock(sendMtx);
+        sendObjs.push_back(new pHello("Heeey!"));
+    }
 
-						}
-						recvObjs_m.unlock();
-					}
-					std::this_thread::sleep_for(std::chrono::milliseconds(100U));
-				}
-			}
-		);
-		std::thread sendTh = std::thread([&sendObjs, &sendObjs_m]
-			{
-				while (!loginFailed)
-				{
-					if (crypt && sendObjs_m.try_lock())
-					{
-						uint64_t send = client.ClientSend(*crypt, sendObjs);
-						if (send == 1U)
-						{
+    // 4) Wait Login Response
+    if (!loginFailed)
+    {
+        WaitForPacket<sLoginResponse>(
+            recvObjs, recvMtx, 3000U, "Login response timeout!",
+            [&](sLoginResponse* res)
+            {
+                loginStatusText = res->message;
+                loginFailed     = !res->response;
+            });
+    }
 
-						}
-						sendObjs_m.unlock();
-					}
-					std::this_thread::sleep_for(std::chrono::milliseconds(100U));
-				}
-			}
-		);
+    // 5) Player boot info
+    if (!loginFailed)
+    {
+        WaitForPacket<sPlayerBootInfo>(
+            recvObjs, recvMtx, 3000U, "Player boot timeout!",
+            [&](sPlayerBootInfo* info)
+            {
+                loginStatusText          = "Player boot received!";
+                stats.userID             = info->userID;
+                stats.gametime           = info->gametime;
+                stats.golds              = info->golds;
+                stats.diamonds           = info->diamonds;
+                stats.tutorial_done      = info->tutorialDone;
+                stats.champions_owned    = info->championsOwned;
+            });
+    }
 
-		// Send initial packet(Login request)
-		if (!loginFailed)
-		{
-			sendObjs_m.lock();
-			sendObjs.push_back(new pHello("Heeey!"));
-			sendObjs_m.unlock();
-		}
+    // 6) Champion select (wait external UI to set championSelected & clear champSelect)
+    if (!loginFailed)
+    {
+        championSelected = 0U;
+        champSelect      = true;
 
-		// Wait Login Response
-		if(!loginFailed)
-		{
-			bool loginResponseReceived{};
-			unsigned int timeoutCounter = 30U;
-			while (!loginResponseReceived && timeoutCounter != 0U)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(100U));
+        while (champSelect && !loginFailed)
+            std::this_thread::sleep_for(std::chrono::milliseconds(50U));
 
-				recvObjs_m.lock();
-				for (std::vector<EasySerializeable*>::iterator it = recvObjs.begin(); it != recvObjs.end() && !loginResponseReceived; )
-				{
-					if (sLoginResponse* loginResponse = dynamic_cast<sLoginResponse*>(*it); loginResponse)
-					{
-						loginResponseReceived = true;
+        loginStatusText = "Selecting champion!";
+        std::lock_guard<std::mutex> lock(sendMtx);
+        sendObjs.push_back(new sChampionSelectRequest(championSelected));
+    }
 
-						// Set Message
-						loginStatusText = loginResponse->message;
-						loginFailed = !loginResponse->response;
+    // 7) Champion select response
+    if (!loginFailed)
+    {
+        WaitForPacket<sChampionSelectResponse>(
+            recvObjs, recvMtx, 3000U, "Champion select response timeout!",
+            [&](sChampionSelectResponse* res)
+            {
+                loginFailed     = !res->response;
+                loginStatusText = res->message;
+            });
+    }
 
-						// Delete Packet
-						delete loginResponse;
-						it = recvObjs.erase(it);
-					}
-					else
-					{
-						it++;
-					}
-				}
-				recvObjs_m.unlock();
-				timeoutCounter--;
-			}
-			if (timeoutCounter == 0U && !loginResponseReceived && !loginFailed)
-			{
-				loginStatusText = "Login response timeout!";
-				loginFailed = true;
-			}
-		}
+    // 8) Main online loop
+    loggedIn = !loginFailed;
 
-		// Wait Player Boot Info
-		if (!loginFailed)
-		{
-			bool playerBootInfoReceived{};
-			unsigned int timeoutCounter = 30U;
-			while (!playerBootInfoReceived && timeoutCounter != 0U)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(100U));
+    unsigned heartbeatCtr = 10U;
+    while (loggedIn)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100U));
 
-				recvObjs_m.lock();
-				for (std::vector<EasySerializeable*>::iterator it = recvObjs.begin(); it != recvObjs.end() && !playerBootInfoReceived ; )
-				{
-					if (sPlayerBootInfo* playerBootInfo = dynamic_cast<sPlayerBootInfo*>(*it); playerBootInfo)
-					{
-						loginStatusText = "Player boot received!";
+        {
+            std::lock_guard<std::mutex> lock(recvMtx);
+            for (auto it = recvObjs.begin(); it != recvObjs.end(); )
+            {
+                if (auto* d = dynamic_cast<sDisconnectResponse*>(*it); d)
+                {
+                    loggedIn       = false;
+                    loginFailed    = true;
+                    loginStatusText = d->message;
+                    delete d;
+                    it = recvObjs.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
 
-						playerBootInfoReceived = true;
+        if (--heartbeatCtr == 0U)
+        {
+            std::lock_guard<std::mutex> lock(sendMtx);
+            sendObjs.push_back(new sHearbeat());
+            heartbeatCtr = 10U;
+        }
+    }
 
-						// Set Message
-						stats.userID = playerBootInfo->userID;
-						stats.gametime = playerBootInfo->gametime;
-						stats.golds = playerBootInfo->golds;
-						stats.diamonds = playerBootInfo->diamonds;
-						stats.tutorial_done = playerBootInfo->tutorialDone;
-						stats.champions_owned = playerBootInfo->championsOwned;
+    if (sendTh.joinable()) sendTh.join();
+    if (recvTh.joinable()) recvTh.join();
 
-						// Delete Packet
-						delete playerBootInfo;
-						it = recvObjs.erase(it);
-					}
-					else
-					{
-						it++;
-					}
-				}
-				recvObjs_m.unlock();
-				timeoutCounter--;
-			}
-			if (timeoutCounter == 0U && !playerBootInfoReceived && !loginFailed)
-			{
-				loginStatusText = "Player boot timeout!";
-				loginFailed = true;
-			}
-		}
-
-		// Send champion select request
-		if (!loginFailed)
-		{
-			championSelected = 0U;
-			champSelect = true;
-			while (champSelect)
-			{
-
-			}
-			loginStatusText = "Selecting champion!";
-			sendObjs_m.lock();
-			sendObjs.push_back(new sChampionSelectRequest(championSelected));
-			sendObjs_m.unlock();
-		}
-
-		// Wait champion select response
-		if (!loginFailed)
-		{
-			bool championSelectResponseReceived{};
-			unsigned int  timeoutCounter = 30U;
-			while (!championSelectResponseReceived && timeoutCounter != 0U)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(100U));
-
-				recvObjs_m.lock();
-				for (std::vector<EasySerializeable*>::iterator it = recvObjs.begin(); it != recvObjs.end() && !championSelectResponseReceived ; )
-				{
-					if (sChampionSelectResponse* championSelectResponse = dynamic_cast<sChampionSelectResponse*>(*it); championSelectResponse)
-					{
-						championSelectResponseReceived = true;
-
-						// Set Message
-						loginFailed = !championSelectResponse->response;
-						loginStatusText = championSelectResponse->message;
-
-						// Delete Packet
-						delete championSelectResponse;
-						it = recvObjs.erase(it);
-					}
-					else
-					{
-						it++;
-					}
-				}
-				recvObjs_m.unlock();
-				timeoutCounter--;
-			}
-			if (timeoutCounter == 0U && !championSelectResponseReceived && !loginFailed)
-			{
-				loginStatusText = "Champion select response timeout!";
-				loginFailed = true;
-			}
-		}
-
-		// If champ relect response receive then we logged in
-		loggedIn = !loginFailed;
-
-		// Recv/Send while logged in 
-		while (loggedIn)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(100U));
-
-			recvObjs_m.lock();
-			for (std::vector<EasySerializeable*>::iterator it = recvObjs.begin(); it != recvObjs.end() ; )
-			{
-				if (sDisconnectResponse* disconnectResponse = dynamic_cast<sDisconnectResponse*>(*it); disconnectResponse)
-				{
-					loggedIn = false;
-					loginFailed = true;
-
-					// Set Message
-					loginStatusText = disconnectResponse->message;
-
-					// Delete Packet
-					delete disconnectResponse;
-					it = recvObjs.erase(it);
-				}
-				else
-				{
-					it++;
-				}
-			}
-			recvObjs_m.unlock();
-
-			static unsigned int ctr = 10U;
-			--ctr;
-			if (ctr == 0U)
-			{
-				sendObjs_m.lock();
-				sendObjs.push_back(new sHearbeat());
-				sendObjs_m.unlock();
-				ctr = 10U;
-			}
-		}
-
-		if(sendTh.joinable())
-			sendTh.join();
-		if (recvTh.joinable())
-			recvTh.join();
-	}
-
-	loginThreadRunning = false;
-	isRender = false;
+    loginThreadRunning = false;
+    isRender           = false;
 }
+
 
 inline ImTextureID LoadTextureSTB(const char* filename, int* outW = nullptr, int* outH = nullptr)
 {
