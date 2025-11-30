@@ -26,10 +26,11 @@ bool EasyPacket::MakeEncrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
 {
     bool ret = false;
     EasyPacket source(buffer);
-#ifndef ENCRYPTION
+#ifndef FIRE_ENCRYPTION
     memcpy(source.SessionID(), &crypt.session_id, sizeof(SessionID_t));
     memset(source.SequenceID(), 0U, sizeof(SequenceID_t));
     memset(source.IV(), 0U, IV_SIZE);
+    memset(source.Payload() + buffer->m_payload_size, 0U, TAG_SIZE);
     buffer->m_payload_size += TAG_SIZE;
     ret = true;
 #else
@@ -84,11 +85,12 @@ bool EasyPacket::MakeDecrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
 {
     bool ret = false;
     EasyPacket source(buffer);
-#ifndef ENCRYPTION
+#ifndef FIRE_ENCRYPTION
     memcpy(source.SessionID(), &crypt.session_id, sizeof(SessionID_t));
     memset(source.SequenceID(), 0U, sizeof(SequenceID_t));
     memset(source.IV(), 0U, IV_SIZE);
-    buffer->m_payload_size = buffer->m_payload_size - (sizeof(SessionID_t) + sizeof(SequenceID_t) + TAG_SIZE);
+    memset(source.Payload() + buffer->m_payload_size, 0U, TAG_SIZE);
+    buffer->m_payload_size = buffer->m_payload_size - (sizeof(SessionID_t) + sizeof(SequenceID_t) + TAG_SIZE + IV_SIZE);
     ret = true;
 #else
     try
@@ -140,7 +142,7 @@ bool EasyPacket::MakeDecrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
 bool EasyPacket::MakeCompressed(EasyBuffer* in, EasyBuffer* out)
 {
     bool ret = false;
-#ifndef COMPRESSION
+#ifndef FIRE_COMPRESSION
     // Passthrough: No compression
     memcpy(out->begin(), in->begin(), in->m_payload_size + HeaderSize());
     out->m_payload_size = in->m_payload_size;
@@ -173,7 +175,7 @@ bool EasyPacket::MakeCompressed(EasyBuffer* in, EasyBuffer* out)
 bool EasyPacket::MakeDecompressed(EasyBuffer* in, EasyBuffer* out)
 {
     bool ret = false;
-#ifndef COMPRESSION
+#ifndef FIRE_COMPRESSION
     // Passthrough: No compression
     memcpy(out->begin(), in->begin(), in->m_payload_size + HeaderSize());
     out->m_payload_size = in->m_payload_size;

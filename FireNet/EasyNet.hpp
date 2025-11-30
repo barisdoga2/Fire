@@ -24,7 +24,8 @@
 #define PLAYER_MOVEMENT_PACK ((PacketID_t)(123U))
 
 //#define INCLUDE_KEY
-
+//#define FIRE_ENCRYPTION
+//#define FIRE_COMPRESSION
 
 
 
