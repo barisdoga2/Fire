@@ -24,8 +24,16 @@ EasyPacket::EasyPacket(EasyBuffer* buffer) : m_buffer(buffer)
 
 bool EasyPacket::MakeEncrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
 {
+    bool ret = false;
     EasyPacket source(buffer);
-    try 
+#ifndef ENCRYPTION
+    memcpy(source.SessionID(), &crypt.session_id, sizeof(SessionID_t));
+    memset(source.SequenceID(), 0U, sizeof(SequenceID_t));
+    memset(source.IV(), 0U, IV_SIZE);
+    buffer->m_payload_size += TAG_SIZE;
+    ret = true;
+#else
+    try
     {
         if (buffer->m_payload_size > 0U)
         {
@@ -55,25 +63,35 @@ bool EasyPacket::MakeEncrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
 
             buffer->m_payload_size += TAG_SIZE;
 
-            return true;
+            ret = true;
         }
         else
         {
             std::cout << "Error MakeDecrypted SizeCheck: " << (buffer->m_payload_size > 0U) << "\n";
-            return false;
+            ret = false;
         }
     }
-    catch (...) 
+    catch (...)
     {
         std::cout << "Error MakeEncrypted Exception!\n";
-        return false;
+        ret = false;
     }
+#endif
+    return ret;
 }
 
 bool EasyPacket::MakeDecrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
 {
+    bool ret = false;
     EasyPacket source(buffer);
-    try 
+#ifndef ENCRYPTION
+    memcpy(source.SessionID(), &crypt.session_id, sizeof(SessionID_t));
+    memset(source.SequenceID(), 0U, sizeof(SequenceID_t));
+    memset(source.IV(), 0U, IV_SIZE);
+    buffer->m_payload_size = buffer->m_payload_size - (sizeof(SessionID_t) + sizeof(SequenceID_t) + TAG_SIZE);
+    ret = true;
+#else
+    try
     {
         if ((*source.SessionID() == crypt.session_id) && (buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE))
         {
@@ -96,42 +114,48 @@ bool EasyPacket::MakeDecrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
             if (adf.GetLastResult()/* && crypt.sequence_id_in < *(SequenceID())*/)
             {
                 buffer->m_payload_size = buffer->m_payload_size - (sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE);
-                return true;
+                ret = true;
             }
             else
             {
                 std::cout << "Error MakeDecrypted SequenceInCheck: " /*<< (crypt.sequence_id_in <= *(SequenceID()))*/ << "\n";
-                return false;
+                ret = false;
             }
         }
         else
         {
             std::cout << "Error MakeDecrypted SessionCheck: " << ((*source.SessionID() == crypt.session_id)) << ", SizeCheck: " << (buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE) << "\n";
-            return false;
+            ret = false;
         }
     }
-    catch (Exception e) 
+    catch (Exception e)
     {
         std::cout << "Error MakeDecrypted Exception!\n";
-        return false;
+        ret = false;
     }
+#endif
+    return ret;
 }
 
 bool EasyPacket::MakeCompressed(EasyBuffer* in, EasyBuffer* out)
 {
     bool ret = false;
-
+#ifndef COMPRESSION
+    // Passthrough: No compression
+    memcpy(out->begin(), in->begin(), in->m_payload_size + HeaderSize());
+    out->m_payload_size = in->m_payload_size;
+    ret = true;
+#else
+    // BZ2 compression enabled
     EasyPacket rawPacket(in);
     EasyPacket compressedPacket(out);
-
     unsigned int compressedSize = static_cast<unsigned int>(in->capacity());
     int result = BZ2_bzBuffToBuffCompress(
         reinterpret_cast<char*>(compressedPacket.Payload()), &compressedSize,
         reinterpret_cast<char*>(rawPacket.Payload()), static_cast<unsigned int>(in->m_payload_size),
         9, 0, 30
     );
-
-    if (result == BZ_OK) 
+    if (result == BZ_OK)
     {
         memcpy(out->begin(), in->begin(), HeaderSize());
         out->m_payload_size = compressedSize;
@@ -141,25 +165,30 @@ bool EasyPacket::MakeCompressed(EasyBuffer* in, EasyBuffer* out)
     {
         std::cerr << "Error BZ2Compress | Compression failed: " << result << "\n";
     }
-
+#endif
     return ret;
 }
+
 
 bool EasyPacket::MakeDecompressed(EasyBuffer* in, EasyBuffer* out)
 {
     bool ret = false;
-
+#ifndef COMPRESSION
+    // Passthrough: No compression
+    memcpy(out->begin(), in->begin(), in->m_payload_size + HeaderSize());
+    out->m_payload_size = in->m_payload_size;
+    ret = true;
+#else
+    // BZ2 compression enabled
     EasyPacket decompressedPacket(out);
     EasyPacket compressedPacket(in);
-
     unsigned int decompressedSize = static_cast<unsigned int>(in->capacity());
     int result = BZ2_bzBuffToBuffDecompress(
         reinterpret_cast<char*>(decompressedPacket.Payload()), &decompressedSize,
         reinterpret_cast<char*>(compressedPacket.Payload()), static_cast<unsigned int>(in->m_payload_size),
         0, 0
     );
-
-    if (result == BZ_OK) 
+    if (result == BZ_OK)
     {
         memcpy(out->begin(), in->begin(), HeaderSize());
         out->m_payload_size = decompressedSize;
@@ -169,6 +198,6 @@ bool EasyPacket::MakeDecompressed(EasyBuffer* in, EasyBuffer* out)
     {
         std::cerr << "Error BZ2Decompress | Decompression failed: " << result << "\n";
     }
-
+#endif
     return ret;
 }

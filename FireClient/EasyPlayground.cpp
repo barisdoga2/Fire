@@ -26,6 +26,8 @@ EasyPlayground::EasyPlayground(const EasyDisplay& display) : display_(display)
 
 EasyPlayground::~EasyPlayground()
 {
+	Logout();
+
 	// ImGUI
 	{
 		ImGui_ImplOpenGL3_Shutdown();
@@ -156,7 +158,7 @@ bool EasyPlayground::Render(double _dt)
 	if (isRender)
 	{
 		{
-			std::vector<EasyModel*> objs = { model, cube_1x1x1, items, buildings };
+			std::vector<EasyModel*> objs = { model };
 			objs.insert(objs.end(), mapObjects.begin(), mapObjects.end());
 
 			SkyboxRenderer::Render(camera);
@@ -224,6 +226,50 @@ bool EasyPlayground::Render(double _dt)
 				shader.LoadUniform("proj", camera.projection_);
 				shader.LoadUniform("uCameraPos", camera.position);
 				shader.LoadUniform("uIsFog", imgui_isFog ? 1.0f : 0.0f);
+
+				if (model->animator)
+					shader.LoadUniform("boneMatrices", model->animator->GetFinalBoneMatrices());
+
+				for (EasyModel::EasyTransform& inst : playerInstances)
+				{
+					for (const auto& kv : model->instances)
+					{
+						EasyModel::EasyMesh* mesh = kv.first;
+
+						if (!mesh->LoadToGPU())
+							continue;
+
+						GL(BindVertexArray(mesh->vao));
+						GL(EnableVertexAttribArray(0));
+						GL(EnableVertexAttribArray(1));
+						GL(EnableVertexAttribArray(2));
+						GL(EnableVertexAttribArray(3));
+						GL(EnableVertexAttribArray(4));
+						GL(EnableVertexAttribArray(5));
+						GL(EnableVertexAttribArray(6));
+
+						glActiveTexture(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, mesh->texture);
+						shader.LoadUniform("diffuse", 0);
+
+						shader.LoadUniform("animated", mesh->animatable ? 1 : 0);
+
+						for (EasyModel::EasyTransform* t : kv.second)
+						{
+							shader.LoadUniform("model", CreateTransformMatrix(t->position + inst.position, t->rotationQuat, t->scale));
+							glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
+						}
+
+						GL(DisableVertexAttribArray(6));
+						GL(DisableVertexAttribArray(5));
+						GL(DisableVertexAttribArray(4));
+						GL(DisableVertexAttribArray(3));
+						GL(DisableVertexAttribArray(2));
+						GL(DisableVertexAttribArray(1));
+						GL(DisableVertexAttribArray(0));
+						GL(BindVertexArray(0));
+					}
+				}
 
 				for (EasyModel* model : objs)
 				{

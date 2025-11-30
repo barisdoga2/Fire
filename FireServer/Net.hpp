@@ -57,7 +57,7 @@ public:
     }
 
 };
-extern int lastDel;
+
 class sPlayerBootInfo : public EasySerializeable {
 public:
     unsigned int userID, diamonds, golds, gametime;
@@ -71,7 +71,7 @@ public:
 
     ~sPlayerBootInfo()
     {
-        lastDel = 5;
+        
     }
 
     sPlayerBootInfo(unsigned int userID, unsigned int diamonds, unsigned int golds, unsigned int gametime, bool tutorialDone, std::vector<unsigned int> championsOwned) : userID(userID), diamonds(diamonds), golds(golds), gametime(gametime), tutorialDone(tutorialDone), championsOwned(championsOwned), EasySerializeable(static_cast<PacketID_t>(PLAYER_BOOT_INFO))
@@ -107,7 +107,7 @@ public:
 
     ~sChampionSelectRequest()
     {
-        lastDel = 6;
+        
     }
 
     void Serialize(EasySerializer* ser) override
@@ -133,7 +133,7 @@ public:
 
     ~sChampionBuyRequest()
     {
-        lastDel = 7;
+        
     }
 
     void Serialize(EasySerializer* ser) override
@@ -160,7 +160,7 @@ public:
 
     ~sChampionSelectResponse()
     {
-        lastDel = 8;
+        
     }
 
     void Serialize(EasySerializer* ser) override
@@ -188,7 +188,7 @@ public:
 
     ~sChampionBuyResponse()
     {
-        lastDel = 9;
+        
     }
 
     void Serialize(EasySerializer* ser) override
@@ -208,7 +208,7 @@ public:
 
     ~sHearbeat()
     {
-        lastDel = 10;
+        
     }
 
     void Serialize(EasySerializer* ser) override
@@ -234,7 +234,7 @@ public:
 
     ~sBroadcastMessage()
     {
-        lastDel = 11;
+        
     }
 
     void Serialize(EasySerializer* ser) override
@@ -262,7 +262,7 @@ public:
 
     ~sChatMessage()
     {
-        lastDel = 12;
+        
     }
 
     void Serialize(EasySerializer* ser) override
@@ -283,6 +283,11 @@ public:
     unsigned long long timestamp;
 
     sPlayerMovement() : userID(), position(), rotation(), direction(), timestamp(), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT))
+    {
+
+    }
+
+    sPlayerMovement(const sPlayerMovement& playerMovement) : userID(playerMovement.userID), position(playerMovement.position), rotation(playerMovement.rotation), direction(playerMovement.direction), timestamp(playerMovement.timestamp), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT))
     {
 
     }
@@ -317,6 +322,11 @@ public:
 
     }
 
+    sPlayerMovementPack(const sPlayerMovementPack& playerMovementPack) : movements(playerMovementPack.movements), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT_PACK))
+    {
+
+    }
+
     sPlayerMovementPack(const std::vector<sPlayerMovement>& movements) : movements(movements), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT_PACK))
     {
 
@@ -329,7 +339,7 @@ public:
 
     void Serialize(EasySerializer* ser) override
     {
-        
+        //ser->Put(movements);
     }
 };
 REGISTER_PACKET(sPlayerMovementPack, PLAYER_MOVEMENT_PACK);

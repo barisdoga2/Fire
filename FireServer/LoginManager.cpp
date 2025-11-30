@@ -24,6 +24,8 @@ bool LoginManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
         TickSession* session = server->sessions[sid];
         if (session->stats.userID == 0U)
         {
+            std::cout << "[LoginMng] Login request received\n";
+
             sql::PreparedStatement* stmt = server->db->PrepareStatement("SELECT * FROM users WHERE id=? LIMIT 1;");
             stmt->setUInt(1, session->userID);
             sql::ResultSet* res = stmt->executeQuery();
@@ -64,6 +66,8 @@ bool LoginManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
                     }
                 }
 
+                std::cout << "[LoginMng] Player boot info sent!\n";
+
                 out_cache[sid].push_back(new sPlayerBootInfo(session->stats.userID, session->stats.diamonds, session->stats.golds, session->stats.gametime, session->stats.tutorial_done, session->stats.champions_owned));
 
             }
@@ -80,6 +84,7 @@ bool LoginManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
             {
                 if (sChampionSelectRequest* championSelectRequest = dynamic_cast<sChampionSelectRequest*>(*it); championSelectRequest)
                 {
+                    std::cout << "[LoginMng] Champion select request received\n";
                     bool response = std::find(session->stats.champions_owned.begin(), session->stats.champions_owned.end(), championSelectRequest->championID) != session->stats.champions_owned.end();
                     std::string message{};
                     if (!response)
@@ -91,13 +96,12 @@ bool LoginManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
                         session->RegisterToManager(out_cache, PLAYER_MANAGER);
                     }
                     out_cache[sid].push_back(new sChampionSelectResponse(response, message));
-                    std::cout << "[LoginMng] Champion select request received\n";
+                    std::cout << "[LoginMng] Champion select response sent!\n";
                     delete* it;
                     it = cache.erase(it);
                 }
                 else if (sLogoutRequest* logoutRequest = dynamic_cast<sLogoutRequest*>(*it); logoutRequest)
                 {
-                    out_cache[sid].push_back(new sLogoutRequest());
                     std::cout << "[LoginMng] Logout request received!\n";
                     session->logoutRequested = true;
                     delete* it;

@@ -23,6 +23,8 @@
 #define PLAYER_MOVEMENT ((PacketID_t)(122U))
 #define PLAYER_MOVEMENT_PACK ((PacketID_t)(123U))
 
+//#define INCLUDE_KEY
+
 
 
 
@@ -31,6 +33,9 @@
 #include <unordered_map>
 #include <chrono>
 #include <atomic>
+
+typedef uint64_t FireSignature_t;
+#define FIRE_SIGNATURE ((FireSignature_t)0x01234567ULL)
 
 typedef uint64_t Addr_t;
 typedef uint32_t SessionID_t;

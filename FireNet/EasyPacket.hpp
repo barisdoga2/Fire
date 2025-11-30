@@ -42,7 +42,7 @@ public:
     }
 
     static inline size_t MinimumSize() {
-        return sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + 1U + TAG_SIZE;
+        return sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + 1U;
     }
 
     // Static Accesssers

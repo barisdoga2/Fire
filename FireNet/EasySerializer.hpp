@@ -55,30 +55,27 @@ private:
 
 class EasySerializer {
 public:
-    uint8_t state = 0U;
-    size_t head = 0U;
+    enum Mode { Write, Read } mode;
+    size_t head = 0;
     EasyBuffer* bf;
 
-    EasySerializer(EasyBuffer* bf) : bf(bf)
-    {
+    EasySerializer(EasyBuffer* bf, Mode m) : bf(bf), mode(m) {}
 
+    template<class T>
+    void PutWrite(const T& v)
+    {
+        memcpy(bf->begin() + head, &v, sizeof(T));
+        head += sizeof(T);
     }
 
-    void Serialize(EasySerializeable& serializeable)
+    template<class T>
+    void PutRead(T& v)
     {
-        state = 1U;
-        Put(serializeable.packetID);
-        serializeable.Serialize(this);
+        memcpy(&v, bf->begin() + head, sizeof(T));
+        head += sizeof(T);
     }
 
-    void Deserialize(EasySerializeable& serializeable)
-    {
-        state = 2U;
-        Put(serializeable.packetID);
-        serializeable.Serialize(this);
-    }
-
-    template <class T>
+    template<class T>
     void Put(T& v)
     {
         if constexpr (std::is_base_of_v<EasySerializeable, T>)
@@ -87,47 +84,48 @@ public:
         }
         else
         {
-            if (state == 1U)
-            {
-                memcpy(bf->begin() + head, &v, sizeof(T));
-            }
-            else if (state == 2U)
-            {
-                memcpy((uint8_t*)&v, bf->begin() + head, sizeof(T));
-            }
+            (mode == Write) ? PutWrite(v) : PutRead(v);
         }
-        head += sizeof(T);
     }
 
-    template <class T>
-    void Put(std::vector<T>& v)
+    // string
+    void Put(std::string& s)
     {
-        //static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
-
-        size_t size = v.size();
-        Put(size);
-        v.resize(size);
-        for (T& c : v)
-            Put(c);
+        size_t size = s.length();
+        if (mode == Write)
+        {
+            PutWrite(size);
+            memcpy(bf->begin() + head, s.data(), size);
+            head += size;
+        }
+        else
+        {
+            PutRead(size);
+            s.resize(size);
+            memcpy(s.data(), bf->begin() + head, size);
+            head += size;
+        }
     }
 
-    void Put(glm::vec2& v)
+    // vector
+    template<class T>
+    void Put(std::vector<T>& vec)
     {
-        Put(v.x);
-        Put(v.y);
+        size_t size = vec.size();
+        if (mode == Write)
+        {
+            PutWrite(size);
+            for (auto& x : vec) Put(x);
+        }
+        else
+        {
+            PutRead(size);
+            vec.resize(size);
+            for (auto& x : vec) Put(x);
+        }
     }
-
-    void Put(std::string& v)
-    {
-        size_t size = v.length();
-        Put(size);
-        v.resize(size);
-        for (const char& c : v)
-            Put(c);
-    }
-
 };
-static int lastDel = 0;
+
 class sLogoutRequest : public EasySerializeable {
 public:
 
@@ -138,7 +136,7 @@ public:
 
     ~sLogoutRequest()
     {
-        lastDel = 1;
+        
     }
 
     void Serialize(EasySerializer* ser) override
@@ -157,7 +155,7 @@ public:
 
     ~sLoginRequest()
     {
-        lastDel = 2;
+        
     }
 
     void Serialize(EasySerializer* ser) override
@@ -179,7 +177,7 @@ public:
 
     ~sLoginResponse()
     {
-        lastDel = 3;
+        
     }
 
     sLoginResponse(bool response, std::string message) : response(response), message(message), EasySerializeable(static_cast<PacketID_t>(LOGIN_RESPONSE))
@@ -206,7 +204,7 @@ public:
 
     ~sDisconnectResponse()
     {
-        lastDel = 4;
+        
     }
 
     sDisconnectResponse(std::string message) : message(message), EasySerializeable(static_cast<PacketID_t>(DISCONNECT_RESPONSE))
@@ -223,21 +221,23 @@ REGISTER_PACKET(sDisconnectResponse, DISCONNECT_RESPONSE);
 
 static inline bool MakeDeserialized(EasyBuffer* buff, std::vector<EasySerializeable*>& peer_cache)
 {
-    EasySerializer des(buff);
+    EasySerializer des(buff, EasySerializer::Mode::Read);
     des.head = EasyPacket::HeaderSize();
     bool status = true;
     while (des.head < buff->m_payload_size + EasyPacket::HeaderSize() && status)
     {
-        PacketID_t id = *(PacketID_t*)(buff->begin() + des.head);
-        EasySerializeable* packet = PacketFactory::Instance().Create(id);
-        if (!packet)
+        PacketID_t id;
+        des.PutRead(id);
+
+        EasySerializeable* obj = PacketFactory::Instance().Create(id);
+        if (!obj)
         {
             status = false;
         }
         else
         {
-            des.Deserialize(*packet);
-            peer_cache.push_back(packet);
+            obj->Serialize(&des);
+            peer_cache.push_back(obj);
         }
     }
 
@@ -246,12 +246,13 @@ static inline bool MakeDeserialized(EasyBuffer* buff, std::vector<EasySerializea
 
 static inline bool MakeSerialized(EasyBuffer* buff, const std::vector<EasySerializeable*>& peer_cache)
 {
-    EasySerializer ser(buff);
-    bool status = true;
+    EasySerializer ser(buff, EasySerializer::Mode::Write);
     ser.head = EasyPacket::HeaderSize();
-    for (EasySerializeable* o : peer_cache)
+    bool status = true;
+    for (EasySerializeable* obj : peer_cache)
     {
-        ser.Serialize(*o);
+        ser.PutWrite(obj->packetID);
+        obj->Serialize(&ser);
     }
     buff->m_payload_size = ser.head - EasyPacket::HeaderSize();
     return status;

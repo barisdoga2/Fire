@@ -61,7 +61,6 @@ ClientTest client(bf, SERVER_IP, SERVER_PORT);
 // Session
 std::string username;
 SessionID_t sessionID;
-uint32_t userID;
 PeerCryptInfo* crypt;
 
 // Login
@@ -82,6 +81,10 @@ unsigned int championSelected{};
 bool isBroadcastMessage{};
 std::string broadcastMessage{};
 
+unsigned long long moveTimestamp{};
+glm::vec3 position{}, rotation{}, direction{};
+
+std::vector<EasyModel::EasyTransform> playerInstances;
 inline bool ParseWebLoginResponse(const std::string& serverUrl,const std::string& username_,const std::string& password)
 {
     loginFailed     = false;
@@ -111,8 +114,8 @@ inline bool ParseWebLoginResponse(const std::string& serverUrl,const std::string
             std::stoul(response.substr(0, response.find_first_of(':'))));
 
         response = response.substr(response.find_first_of(':') + 1U);
-        userID   = static_cast<uint32_t>(
-            std::stoul(response.substr(0, response.find_first_of(':'))));
+        //userID   = static_cast<uint32_t>(
+        //    std::stoul(response.substr(0, response.find_first_of(':'))));
 
         response = response.substr(response.find_first_of(':') + 1U);
         std::string key = response;
@@ -188,7 +191,10 @@ inline void Logout()
 {
     std::vector<EasySerializeable*> logout = { new sLogoutRequest() };
     if (loggedIn || !loginFailed || champSelect || loginInProgress)
+    {
         client.ClientSend(*crypt, logout);
+        std::cout << "Logout request sent!\n";
+    }
 
     loggedIn = false;
     loginFailed = true;
@@ -200,7 +206,6 @@ inline void Logout()
     if (crypt) { delete crypt; crypt = nullptr; }
 
     sessionID = 0;
-    userID = 0;
     username = "";
     stats = {}; // reset
 }
@@ -208,6 +213,7 @@ inline void Logout()
 inline void LoggedIn(std::vector<EasySerializeable*>& recvObjs, std::mutex& recvMtx, std::vector<EasySerializeable*>& sendObjs, std::mutex& sendMtx)
 {
     unsigned heartbeatCtr = 10U;
+    unsigned playerMovementCtr = 10U;
     std::chrono::steady_clock::time_point lastHeartbeatReceive = Clock::now();
     while (loggedIn)
     {
@@ -218,6 +224,8 @@ inline void LoggedIn(std::vector<EasySerializeable*>& recvObjs, std::mutex& recv
             {
                 if (auto* d = dynamic_cast<sDisconnectResponse*>(*it); d)
                 {
+                    std::cout << "Disconnect response received!\n";
+
                     loggedIn = false;
                     loginFailed = true;
                     loginStatusText = d->message;
@@ -226,12 +234,16 @@ inline void LoggedIn(std::vector<EasySerializeable*>& recvObjs, std::mutex& recv
                 }
                 else if (auto* h = dynamic_cast<sHearbeat*>(*it); h)
                 {
+                    std::cout << "Heartbeat received!\n";
+
                     lastHeartbeatReceive = Clock::now();
                     delete h;
                     it = recvObjs.erase(it);
                 }
                 else if (auto* b = dynamic_cast<sBroadcastMessage*>(*it); b)
                 {
+                    std::cout << "Broadcast message received!\n";
+
                     isBroadcastMessage = true;
                     broadcastMessage = b->message;
                     delete b;
@@ -239,13 +251,16 @@ inline void LoggedIn(std::vector<EasySerializeable*>& recvObjs, std::mutex& recv
                 }
                 else if (auto* c = dynamic_cast<sChatMessage*>(*it); c)
                 {
+                    std::cout << "Chat message received!\n";
+
                     OnChatMessageReceived(c->username, c->message, c->timestamp);
                     delete b;
                     it = recvObjs.erase(it);
                 }
                 else if (auto* m = dynamic_cast<sPlayerMovementPack*>(*it); m)
                 {
-                    std::cout << "Movement pack received!\n";
+                    std::cout << "Player movement pack received!\n";
+
                     delete m;
                     it = recvObjs.erase(it);
                 }
@@ -258,6 +273,8 @@ inline void LoggedIn(std::vector<EasySerializeable*>& recvObjs, std::mutex& recv
 
         if (lastHeartbeatReceive + std::chrono::seconds(10) < Clock::now())
         {
+            std::cout << "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!" + "\n";
+
             loggedIn = false;
             loginFailed = true;
             loginStatusText = "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!";
@@ -267,6 +284,18 @@ inline void LoggedIn(std::vector<EasySerializeable*>& recvObjs, std::mutex& recv
             std::lock_guard<std::mutex> lock(sendMtx);
             sendObjs.push_back(new sHearbeat());
             heartbeatCtr = 10U;
+            std::cout << "Heartbeat sent!\n";
+        }
+        if (--playerMovementCtr == 0U)
+        {
+            std::lock_guard<std::mutex> lock(sendMtx);
+            position.x += 0.01f;
+            rotation.x += 0.02f;
+            direction.x += 0.04f;
+            moveTimestamp += 1000;
+            sendObjs.push_back(new sPlayerMovement(stats.userID, position, rotation, direction, moveTimestamp));
+            playerMovementCtr = 10U;
+            std::cout << "Player movement sent!\n";
         }
 
         UpdateMessageBox(Clock::now().time_since_epoch().count());
@@ -335,6 +364,7 @@ inline void Login(std::string username_, std::string password)
     {
         std::lock_guard<std::mutex> lock(sendMtx);
         sendObjs.push_back(new sLoginRequest());
+        std::cout << "Login request sent!\n";
     }
 
     // 4) Wait Login Response
@@ -344,6 +374,7 @@ inline void Login(std::string username_, std::string password)
             recvObjs, recvMtx, 3000U, "Login response timeout!",
             [&](sLoginResponse* res)
             {
+                std::cout << "Login response received!\n";
                 loginStatusText = res->message;
                 loginFailed     = !res->response;
             });
@@ -356,7 +387,8 @@ inline void Login(std::string username_, std::string password)
             recvObjs, recvMtx, 3000U, "Player boot timeout!",
             [&](sPlayerBootInfo* info)
             {
-                loginStatusText          = "Player boot received!";
+                std::cout << "Player boot info received!\n";
+                loginStatusText          = "Player boot info received!";
                 stats.userID             = info->userID;
                 stats.gametime           = info->gametime;
                 stats.golds              = info->golds;
@@ -380,6 +412,8 @@ inline void Login(std::string username_, std::string password)
             {
                 if (auto* d = dynamic_cast<sDisconnectResponse*>(*it); d)
                 {
+                    std::cout << "Disconnect response received!\n";
+
                     champSelect = false;
                     loggedIn = false;
                     loginFailed = true;
@@ -400,6 +434,7 @@ inline void Login(std::string username_, std::string password)
             loginStatusText = "Selecting champion!";
             std::lock_guard<std::mutex> lock(sendMtx);
             sendObjs.push_back(new sChampionSelectRequest(championSelected));
+            std::cout << "Champion select request sent!\n";
         }
     }
 
@@ -410,6 +445,7 @@ inline void Login(std::string username_, std::string password)
             recvObjs, recvMtx, 3000U, "Champion select response timeout!",
             [&](sChampionSelectResponse* res)
             {
+                std::cout << "Champion select response received!\n";
                 loginFailed     = !res->response;
                 loginStatusText = res->message;
             });
@@ -635,7 +671,7 @@ void EasyPlayground::ImGUI_PlayerInfoWindow()
 
     // ---- Header ----
     ImGui::Text("Username:   %s", username.c_str());
-    ImGui::Text("User ID:    %u", userID);
+    ImGui::Text("User ID:    %u", stats.userID);
     ImGui::Text("Session ID: %u", sessionID);
     ImGui::Separator();
 

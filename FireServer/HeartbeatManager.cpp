@@ -33,7 +33,6 @@ bool HeartbeatManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cac
             }
             else if (sLogoutRequest* logoutRequest = dynamic_cast<sLogoutRequest*>(*it); logoutRequest)
             {
-                out_cache[sid].push_back(new sLogoutRequest());
                 std::cout << "[HeartbeatMng] Logout request received!\n";
                 session->logoutRequested = true;
                 delete* it;
