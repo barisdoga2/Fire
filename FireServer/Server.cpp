@@ -8,6 +8,9 @@
 #include "ChatManager.hpp"
 #include "PlayerManager.hpp"
 
+std::vector<TickSession*> lateCreate{};
+std::vector<std::pair<SessionID_t, SessionStatus>> lateDestroy{};
+
 std::unordered_map<SessionManagers, SessionManager*> all_managers{};
 
 TickSession::TickSession(Session* session) : sessionID(session->sessionID), userID(session->userID), addr(session->addr), lastReceive(session->lastReceive), logoutRequested(false)
@@ -45,6 +48,21 @@ void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
     // Iterate receive cache
     {
         sessionsMutex.lock();
+        for(TickSession* session : lateCreate)
+        {
+            session->RegisterToManager(out_cache, LOGIN_MANAGER);
+            sessions[session->sessionID] = session;
+        }
+        lateCreate.clear();
+        for(auto& [sid, disconnectReason] : lateDestroy)
+        {
+            auto res = sessions.find(sid);
+            res->second->Destroy(out_cache, disconnectReason);
+            delete res->second;
+            sessions.erase(res);
+        }
+        lateDestroy.clear();
+        
         for (auto& [sid, session] : in_cache)
         {
             sessions[sid]->lastReceive = Clock::now();
@@ -155,10 +173,8 @@ bool Server::OnSessionCreate(Session* session)
     
     if (status)
     {
-        ObjCacheType_t dummy{};
         TickSession* tSession = new TickSession(session);
-        tSession->RegisterToManager(dummy, LOGIN_MANAGER);
-        sessions[session->sessionID] = tSession;
+        lateCreate.push_back(tSession);
         
         sLoginResponse acceptResponse = sLoginResponse(true, "Server welcomes you!");
         SendInstantPacket(session, { &acceptResponse });
@@ -174,14 +190,11 @@ void Server::OnSessionDestroy(Session* session, SessionStatus disconnectReason)
 {
     sessionsMutex.lock();
 
+    lateDestroy.push_back({session->sessionID, disconnectReason});
+
     sDisconnectResponse disconnectResponse = sDisconnectResponse("Disconnect reason: '" + SessionStatus_Str(disconnectReason) + "'!");
     SendInstantPacket(session, { &disconnectResponse });
 
-    ObjCacheType_t dummy{};
-    auto res = sessions.find(session->sessionID);
-    res->second->Destroy(dummy, disconnectReason);
-    delete res->second;
-    sessions.erase(res);
 
     sessionsMutex.unlock();
 }

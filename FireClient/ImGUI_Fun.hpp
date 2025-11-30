@@ -245,7 +245,7 @@ inline void LoggedIn(std::vector<EasySerializeable*>& recvObjs, std::mutex& recv
                 }
                 else if (auto* m = dynamic_cast<sPlayerMovementPack*>(*it); m)
                 {
-                    std::cout << "Movement pack received!\m";
+                    std::cout << "Movement pack received!\n";
                     delete m;
                     it = recvObjs.erase(it);
                 }

@@ -16,7 +16,6 @@ bool PlayerManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, 
     //        if (sPlayerMovement* playerMovement = dynamic_cast<sPlayerMovement*>(*it); playerMovement)
     //        {
     //            std::cout << "[ChampionMng] Player movement message received!\n";
-
     //            if (server->sessions[sid]->userID == playerMovement->userID)
     //            {
     //                server->sessions[sid]->position = playerMovement->position;
@@ -36,7 +35,6 @@ bool PlayerManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, 
     //        }
     //    }
     //}
-
     //std::vector<sPlayerMovement> movements;
     //for (auto& [sid, session] : server->sessions)
     //    movements.emplace_back(session->userID, session->position, session->rotation, session->direction, session->moveTimestamp);

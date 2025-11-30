@@ -119,7 +119,6 @@ public:
 
     void Put(std::string& v)
     {
-
         size_t size = v.length();
         Put(size);
         v.resize(size);

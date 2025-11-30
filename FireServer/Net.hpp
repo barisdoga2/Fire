@@ -329,7 +329,7 @@ public:
 
     void Serialize(EasySerializer* ser) override
     {
-        ser->Put(movements);
+        
     }
 };
 REGISTER_PACKET(sPlayerMovementPack, PLAYER_MOVEMENT_PACK);
