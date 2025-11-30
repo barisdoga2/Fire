@@ -128,13 +128,18 @@ public:
     }
 
 };
-
+static int lastDel = 0;
 class sLogoutRequest : public EasySerializeable {
 public:
 
     sLogoutRequest() : EasySerializeable(static_cast<PacketID_t>(LOGOUT_REQUEST))
     {
+        
+    }
 
+    ~sLogoutRequest()
+    {
+        lastDel = 1;
     }
 
     void Serialize(EasySerializer* ser) override
@@ -146,21 +151,19 @@ REGISTER_PACKET(sLogoutRequest, LOGOUT_REQUEST);
 
 class sLoginRequest : public EasySerializeable {
 public:
-    std::string message;
-
-    sLoginRequest() : message(), EasySerializeable(static_cast<PacketID_t>(LOGIN_REQUEST))
+    sLoginRequest() : EasySerializeable(static_cast<PacketID_t>(LOGIN_REQUEST))
     {
 
     }
 
-    sLoginRequest(std::string message) : message(message), EasySerializeable(static_cast<PacketID_t>(LOGIN_REQUEST))
+    ~sLoginRequest()
     {
-
+        lastDel = 2;
     }
 
     void Serialize(EasySerializer* ser) override
     {
-        ser->Put(message);
+
     }
 };
 REGISTER_PACKET(sLoginRequest, LOGIN_REQUEST);
@@ -173,6 +176,11 @@ public:
     sLoginResponse() : response(), message(), EasySerializeable(static_cast<PacketID_t>(LOGIN_RESPONSE))
     {
 
+    }
+
+    ~sLoginResponse()
+    {
+        lastDel = 3;
     }
 
     sLoginResponse(bool response, std::string message) : response(response), message(message), EasySerializeable(static_cast<PacketID_t>(LOGIN_RESPONSE))
@@ -195,6 +203,11 @@ public:
     sDisconnectResponse() : message(), EasySerializeable(static_cast<PacketID_t>(DISCONNECT_RESPONSE))
     {
 
+    }
+
+    ~sDisconnectResponse()
+    {
+        lastDel = 4;
     }
 
     sDisconnectResponse(std::string message) : message(message), EasySerializeable(static_cast<PacketID_t>(DISCONNECT_RESPONSE))

@@ -42,6 +42,9 @@
     <ClCompile Include="imgui_impl_glfw.cpp">
       <Filter>Etc</Filter>
     </ClCompile>
+    <ClCompile Include="ChatManager.cpp">
+      <Filter>Server\Internal\Manager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Net.hpp">
@@ -59,9 +62,6 @@
     <ClInclude Include="LoginManager.hpp">
       <Filter>Server\Internal\Manager</Filter>
     </ClInclude>
-    <ClInclude Include="Managers.hpp">
-      <Filter>Server\Internal\Manager</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Etc</Filter>
     </ClInclude>
@@ -76,6 +76,12 @@
     </ClInclude>
     <ClInclude Include="ServerUI.hpp">
       <Filter>Server\Internal</Filter>
+    </ClInclude>
+    <ClInclude Include="ChatManager.hpp">
+      <Filter>Server\Internal\Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="SessionManager.hpp">
+      <Filter>Server\Internal\Manager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

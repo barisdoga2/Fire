@@ -31,6 +31,6 @@ public:
 
     std::string ClientWebRequest(std::string url, std::string username, std::string password);
     uint64_t ClientReceive(PeerCryptInfo& crypt, std::vector<EasySerializeable*>& objs);
-    uint64_t ClientSend(PeerCryptInfo& crypt, std::vector<EasySerializeable*>& objs);
+    uint64_t ClientSend(PeerCryptInfo& crypt, const std::vector<EasySerializeable*>& objs);
 
 };

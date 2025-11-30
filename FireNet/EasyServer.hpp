@@ -2,10 +2,10 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <mutex>
 #include <array>
 
 #include "EasyNet.hpp"
-#include "EasySerializer.hpp"
 
 
 
@@ -13,19 +13,7 @@
 
 
 
-enum SessionStatus {
-    UNSET,
-    CONNECTING,
-    CONNECTED,
 
-    ADDR_MISMATCH,
-    CRYPT_ERR,
-    TIMED_OUT,
-    SERVER_TIMED_OUT,
-    SEQUENCE_MISMATCH,
-    RECONNECTED,
-    CLIENT_LOGGED_OUT
-};
 
 inline static std::string SessionStatus_Str(const SessionStatus& status)
 {
@@ -62,8 +50,6 @@ public:
     std::mutex mutex;
 };
 
-class EasyDB;
-class SessionManager;
 class Session {
 public:
     const SessionID_t sessionID;
@@ -73,18 +59,13 @@ public:
     SequenceID_t sequenceID_in;
     SequenceID_t sequenceID_out;
     Timestamp_t lastReceive;
-    std::vector<SessionManager*> managers;
-    bool logoutRequested{};
-
-    void* userData{};
 
     Session() = delete;
     Session(const Session& session) = delete;
 
     Session(const SessionID_t& sessionID, const UserID_t& userID, const Addr_t& addr, 
-        const Key_t& key, const SequenceID_t& sequenceID_in, const SequenceID_t& sequenceID_out, const Timestamp_t& lastReceive,
-        void* userData, const std::vector<SessionManager*>& managers = {})
-        : sessionID(sessionID), userID(userID), addr(addr), key(key), sequenceID_in(sequenceID_in), sequenceID_out(sequenceID_out), lastReceive(lastReceive), userData(userData), managers(managers)
+        const Key_t& key, const SequenceID_t& sequenceID_in, const SequenceID_t& sequenceID_out, const Timestamp_t& lastReceive)
+        : sessionID(sessionID), userID(userID), addr(addr), key(key), sequenceID_in(sequenceID_in), sequenceID_out(sequenceID_out), lastReceive(lastReceive)
     {
 
     }
@@ -97,52 +78,7 @@ public:
 
 
 
-struct SessionPtrHash {
-    using is_transparent = void;
 
-    size_t operator()(const Session* s) const noexcept {
-        return std::hash<SessionID_t>()(s->sessionID);
-    }
-
-    size_t operator()(SessionID_t id) const noexcept {
-        return std::hash<SessionID_t>()(id);
-    }
-};
-
-struct SessionPtrEqual {
-    using is_transparent = void;
-
-    bool operator()(const Session* a, const Session* b) const noexcept {
-        return a->sessionID == b->sessionID;
-    }
-
-    bool operator()(const Session* a, SessionID_t b) const noexcept {
-        return a->sessionID == b;
-    }
-
-    bool operator()(SessionID_t a, const Session* b) const noexcept {
-        return a == b->sessionID;
-    }
-};
-
-using ObjCacheType_t = std::unordered_map<Session*, std::vector<EasySerializeable*>, SessionPtrHash, SessionPtrEqual>;
-
-class EasyServer;
-class SessionManager {
-public:
-    unsigned int managerID;
-
-    SessionManager(unsigned int managerID) : managerID(managerID)
-    {
-
-    }
-
-    virtual bool Update(ObjCacheType_t& out_cache, double dt) = 0U;
-    virtual bool Receive(EasyServer* server, ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) = 0U;
-    virtual void OnSessionCreate(Session* session) {}
-    virtual void OnSessionDestroy(Session* session, SessionStatus destroyReason) {}
-
-};
 
 class MainContex {
 public:
@@ -182,15 +118,13 @@ private:
     std::thread update;
 
 
+    // Context
+    EasyBufferManager* bf;
 
 public:
     // DB
     EasyDB* db;
 
-    // Context
-    MainContex* m;
-    uint32_t sessionTimeout;
-    EasyBufferManager* bf;
 
     EasyServer(EasyBufferManager* bf, unsigned short port);
     ~EasyServer();
@@ -200,30 +134,24 @@ public:
     bool IsRunning();
 
     static int Stats(lua_State* L);
-
+    void Broadcast(const std::vector<EasySerializeable*>& cache);
     bool SendInstantPacket(Session* destination, const std::vector<EasySerializeable*>& objs);
-
-    bool CreateSession_internal(Session* session);
-    bool DestroySession_internal(SessionID_t sessionID, SessionStatus disconnectReason);
-
-    bool DestroySession(SessionID_t sessionID, SessionStatus disconnectReason);
-    bool DestroySession(Session* session, SessionStatus disconnectReason);
+    bool DestroySession_external(SessionID_t session, SessionStatus disconnectReason);
+    bool DestroySession_internal(Session* session, SessionStatus disconnectReason);
 
 private:
     void Update();
     void Receive();
     void Send();
 
-
+    bool CreateSession_internal(Session* session);
 
     std::string StatsReceive();
     std::string StatsSend();
     std::string StatsUpdate();
 
 protected:
-
-    Session* GetSession(SessionID_t sessionID);
-    bool SetSessionTimeout(uint32_t ms);
+    MainContex* m;
 
     virtual void Tick(double _dt) = 0U;
     virtual void OnInit() = 0U;
@@ -231,4 +159,8 @@ protected:
     virtual bool OnSessionCreate(Session* session) = 0U;
     virtual void OnSessionDestroy(Session* session, SessionStatus disconnectStatus) = 0U;
     virtual void DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) = 0U;
+
+    friend class EasyServer_ReceviveHelper;
+    friend class EasyServer_SendHelper;
+    friend class EasyServer_UpdateHelper;
 };

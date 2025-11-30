@@ -3,13 +3,35 @@
 #include "World.hpp"
 
 
+#include "HeartbeatManager.hpp"
+#include "LoginManager.hpp"
+#include "ChatManager.hpp"
+
+std::unordered_map<SessionManagers, SessionManager*> all_managers{};
+
+TickSession::TickSession(Session* session) : sessionID(session->sessionID), userID(session->userID), addr(session->addr), lastReceive(session->lastReceive), logoutRequested(false)
+{
+    
+}
+
+TickSession::~TickSession()
+{
+    for (auto& [mid, manager] : this->managers)
+        manager->OnSessionDestroy(this, status);
+}
+
+void TickSession::RegisterToManager(SessionManagers sessionManager)
+{
+    this->managers.emplace(sessionManager, all_managers[sessionManager]);
+    all_managers[sessionManager]->OnSessionCreate(this);
+}
 
 Server::Server(EasyBufferManager* bf, unsigned short port) : EasyServer(bf, port), world(nullptr)
 {
-	
+
 }
 
-Server::~Server() 
+Server::~Server()
 {
     EasyServer::~EasyServer();
 }
@@ -21,61 +43,59 @@ void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
 
     // Iterate receive cache
     {
-        using BaseManagerCache = ObjCacheType_t;
-        using ManagersCache = std::unordered_map<unsigned int, BaseManagerCache>;
-        ManagersCache managersCache{};
-        for (auto& [uid, pMng] : Server::managers)
-            managersCache[uid];
-        for (auto& [session, cache] : in_cache)
+        sessionsMutex.lock();
+        for (auto& [sid, session] : in_cache)
         {
-            for (SessionManager* manager : session->managers)
-            {
-                managersCache[manager->managerID][session].insert(managersCache[manager->managerID][session].end(), cache.begin(), cache.end());
-            }
+            sessions[sid]->lastReceive = Clock::now();
         }
+        for (auto& [mid, manager] : all_managers)
+        {
+            manager->Receive(in_cache, out_cache);
+        }
+
         in_cache.clear();
-        for (auto& manager : managersCache)
-        {
-            managers[manager.first]->Receive(this, manager.second, out_cache);
-        }
+        sessionsMutex.unlock();
     }
 
     // Iterate for timeouts
     {
         static TimePoint nextTimeoutCheck = Clock::now() + std::chrono::seconds(1);
         const TimePoint now = Clock::now();
+
+        static std::vector<TickSession*> destroyCache{};
         if (now >= nextTimeoutCheck)
         {
-            nextTimeoutCheck = now + std::chrono::seconds(1);
-
-            for (auto it = m->sessionIDs.begin(); it != m->sessionIDs.end(); )
+            if (sessionsMutex.try_lock())
             {
-                Session* session = GetSession(*it);
-                if (session)
+                nextTimeoutCheck = now + std::chrono::seconds(1);
+                for (auto& [sid, session] : sessions)
                 {
-                    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        now - session->lastReceive
-                    );
-
-                    const bool alive = elapsed < std::chrono::milliseconds(sessionTimeout);
-
-                    if (!alive || session->logoutRequested)
+                    const bool timeout = std::chrono::duration_cast<std::chrono::milliseconds>(now - session->lastReceive) < std::chrono::milliseconds(TickSession::sessionTimeout);
+                    if (!timeout || session->logoutRequested)
                     {
-                        this->OnSessionDestroy(session, !alive ? TIMED_OUT : CLIENT_LOGGED_OUT);
-
-                        delete m->sessions[*it];
-                        m->sessions[*it] = nullptr;
-
-                        it = m->sessionIDs.erase(it);
-                    }
-                    else
-                    {
-                        ++it;
+                        if (std::find(destroyCache.begin(), destroyCache.end(), session) == destroyCache.end())
+                            destroyCache.push_back(session);
                     }
                 }
-                else
+
+                sessionsMutex.unlock();
+            }
+            if (destroyCache.size() > 0U)
+            {
+                if (m->sessionsMutex.try_lock())
                 {
-                    ++it;
+                    for (auto it = destroyCache.begin(); it != destroyCache.end(); )
+                    {
+                        if (DestroySession_external((*it)->sessionID, (*it)->logoutRequested ? CLIENT_LOGGED_OUT : TIMED_OUT))
+                        {
+                            it = destroyCache.erase(it);
+                        }
+                        else
+                        {
+                            it++;
+                        }
+                    }
+                    m->sessionsMutex.unlock();
                 }
             }
         }
@@ -84,7 +104,14 @@ void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
 
 bool Server::Start()
 {
-	return EasyServer::Start();
+    bool ret = EasyServer::Start();
+    if (ret)
+    {
+        all_managers[LOGIN_MANAGER] = new LoginManager(this);
+        all_managers[HEARTBEAT_MANAGER] = new HeartbeatManager(this);
+        all_managers[CHAT_MANAGER] = new ChatManager(this);
+    }
+    return ret;
 }
 
 void Server::Tick(double _dt)
@@ -94,14 +121,10 @@ void Server::Tick(double _dt)
 
 void Server::OnDestroy()
 {
-    m->sessionsMutex.lock();
-    for (auto& s : m->sessionIDs)
-    {
-        sDisconnectResponse acceptResponse = sDisconnectResponse("Server shutting down!");
-        SendInstantPacket(m->sessions[s], { &acceptResponse });
-    }
-    m->sessionsMutex.unlock();
-
+    sessionsMutex.lock();
+    for (auto& [sid, session] : sessions)
+        Broadcast({ new sDisconnectResponse("Server shutting down!") });
+    sessionsMutex.unlock();
 	if (world)
 	{
 		delete world;
@@ -119,23 +142,36 @@ void Server::OnInit()
 
 bool Server::OnSessionCreate(Session* session)
 {
+    sessionsMutex.lock();
+
     bool status = true;
     
     if (status)
     {
-        session->userData = new UD(session);
-
-        session->managers.push_back(managers[LOGIN_MANAGER]);
-
+        TickSession* tSession = new TickSession(session);
+        tSession->RegisterToManager(LOGIN_MANAGER);
+        sessions[session->sessionID] = tSession;
+        
         sLoginResponse acceptResponse = sLoginResponse(true, "Server welcomes you!");
         SendInstantPacket(session, { &acceptResponse });
+
     }
+
+    sessionsMutex.unlock();
 
     return status;
 }
 
 void Server::OnSessionDestroy(Session* session, SessionStatus disconnectReason)
 {
+    sessionsMutex.lock();
+
     sDisconnectResponse disconnectResponse = sDisconnectResponse("Disconnect reason: '" + SessionStatus_Str(disconnectReason) + "'!");
     SendInstantPacket(session, { &disconnectResponse });
+
+    auto res = sessions.find(session->sessionID);
+    delete res->second;
+    sessions.erase(res);
+
+    sessionsMutex.unlock();
 }

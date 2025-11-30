@@ -3,6 +3,54 @@
 #include <EasyServer.hpp>
 #include <EasySocket.hpp>
 
+class ChatMessage
+{
+public:
+    std::string username;
+    std::string message;
+    unsigned long long timeSent = 0;
+    unsigned long long timeout = 10000000000;
+
+    ChatMessage(const std::string& m,
+        const std::string& u,
+        unsigned long long ts)
+        : username(u), message(m), timeSent(ts)
+    {
+
+    }
+
+    std::string toString() const
+    {
+        return username + ": " + message;
+    }
+
+    bool expired(unsigned long long now) const
+    {
+        return (now - timeSent) >= timeout;
+    }
+};
+
+std::vector<ChatMessage> messages;
+bool scrollToBottom = false;
+char inputBuf[256] = { 0 };
+
+void OnChatMessageReceived(const std::string& msg,const std::string& user,unsigned long long timeSent)
+{
+    messages.emplace_back(user, msg, timeSent);
+    scrollToBottom = true;
+}
+
+void UpdateMessageBox(unsigned long long now)
+{
+    for (auto it = messages.begin(); it != messages.end(); )
+    {
+        if (it->expired(now))
+            it = messages.erase(it);
+        else
+            ++it;
+    }
+}
+
 
 EasyBufferManager bf(50U, 1472U);
 ClientTest client(bf, SERVER_IP, SERVER_PORT);
@@ -34,9 +82,7 @@ unsigned int championSelected{};
 bool isBroadcastMessage{};
 std::string broadcastMessage{};
 
-inline bool ParseWebLoginResponse(const std::string& serverUrl,
-                                  const std::string& username_,
-                                  const std::string& password)
+inline bool ParseWebLoginResponse(const std::string& serverUrl,const std::string& username_,const std::string& password)
 {
     loginFailed     = false;
     loginStatusText = "Logging in...";
@@ -104,11 +150,7 @@ inline bool ParseWebLoginResponse(const std::string& serverUrl,
 }
 
 template<typename T, typename Handler>
-bool WaitForPacket(std::vector<EasySerializeable*>& recvObjs,
-                   std::mutex&                      recvMtx,
-                   unsigned                         timeoutMs,
-                   const char*                      timeoutMessage,
-                   Handler                           onPacket)
+bool WaitForPacket(std::vector<EasySerializeable*>& recvObjs,std::mutex& recvMtx,unsigned timeoutMs, const char* timeoutMessage,Handler  onPacket)
 {
     constexpr unsigned stepMs = 100U;
     unsigned remaining        = timeoutMs / stepMs;
@@ -140,6 +182,89 @@ bool WaitForPacket(std::vector<EasySerializeable*>& recvObjs,
         loginFailed     = true;
     }
     return false;
+}
+
+inline void Logout()
+{
+    std::vector<EasySerializeable*> logout = { new sLogoutRequest() };
+    if (loggedIn || !loginFailed || champSelect || loginInProgress)
+        client.ClientSend(*crypt, logout);
+
+    loggedIn = false;
+    loginFailed = true;
+    loginInProgress = false;
+    loginStatusWindow = false;
+    champSelect = false;
+
+    // reset crypt, username, session, etc.
+    if (crypt) { delete crypt; crypt = nullptr; }
+
+    sessionID = 0;
+    userID = 0;
+    username = "";
+    stats = {}; // reset
+}
+
+inline void LoggedIn(std::vector<EasySerializeable*>& recvObjs, std::mutex& recvMtx, std::vector<EasySerializeable*>& sendObjs, std::mutex& sendMtx)
+{
+    unsigned heartbeatCtr = 10U;
+    std::chrono::steady_clock::time_point lastHeartbeatReceive = Clock::now();
+    while (loggedIn)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100U));
+        {
+            std::lock_guard<std::mutex> lock(recvMtx);
+            for (auto it = recvObjs.begin(); it != recvObjs.end(); )
+            {
+                if (auto* d = dynamic_cast<sDisconnectResponse*>(*it); d)
+                {
+                    loggedIn = false;
+                    loginFailed = true;
+                    loginStatusText = d->message;
+                    delete d;
+                    it = recvObjs.erase(it);
+                }
+                else if (auto* h = dynamic_cast<sHearbeat*>(*it); h)
+                {
+                    lastHeartbeatReceive = Clock::now();
+                    delete h;
+                    it = recvObjs.erase(it);
+                }
+                else if (auto* b = dynamic_cast<sBroadcastMessage*>(*it); b)
+                {
+                    isBroadcastMessage = true;
+                    broadcastMessage = b->message;
+                    delete b;
+                    it = recvObjs.erase(it);
+                }
+                else if (auto* c = dynamic_cast<sChatMessage*>(*it); c)
+                {
+                    OnChatMessageReceived(c->username, c->message, c->timestamp);
+                    delete b;
+                    it = recvObjs.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
+
+        if (lastHeartbeatReceive + std::chrono::seconds(10) < Clock::now())
+        {
+            loggedIn = false;
+            loginFailed = true;
+            loginStatusText = "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!";
+        }
+        if (--heartbeatCtr == 0U)
+        {
+            std::lock_guard<std::mutex> lock(sendMtx);
+            sendObjs.push_back(new sHearbeat());
+            heartbeatCtr = 10U;
+        }
+
+        UpdateMessageBox(Clock::now().time_since_epoch().count());
+    }
 }
 
 inline void Login(std::string username_, std::string password)
@@ -191,6 +316,9 @@ inline void Login(std::string username_, std::string password)
             if (crypt && sendMtx.try_lock())
             {
                 client.ClientSend(*crypt, sendObjs);
+                for (EasySerializeable* s : sendObjs)
+                    delete s;
+                sendObjs.clear();
                 sendMtx.unlock();
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(100U));
@@ -200,7 +328,7 @@ inline void Login(std::string username_, std::string password)
     // 3) Send initial hello
     {
         std::lock_guard<std::mutex> lock(sendMtx);
-        sendObjs.push_back(new sLoginRequest("Heeey!"));
+        sendObjs.push_back(new sLoginRequest());
     }
 
     // 4) Wait Login Response
@@ -240,8 +368,7 @@ inline void Login(std::string username_, std::string password)
 
         while (champSelect && !loginFailed)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50U));
-
+            std::this_thread::sleep_for(std::chrono::milliseconds(100U));
             std::lock_guard<std::mutex> lock(recvMtx);
             for (auto it = recvObjs.begin(); it != recvObjs.end(); )
             {
@@ -251,6 +378,7 @@ inline void Login(std::string username_, std::string password)
                     loggedIn = false;
                     loginFailed = true;
                     loginStatusText = d->message;
+
                     delete d;
                     it = recvObjs.erase(it);
                 }
@@ -284,56 +412,9 @@ inline void Login(std::string username_, std::string password)
     // 8) Main online loop
     loggedIn = !loginFailed;
 
-    unsigned heartbeatCtr = 10U;
-	std::chrono::steady_clock::time_point lastHeartbeatReceive = Clock::now();
-    while (loggedIn)
+    if (loggedIn)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100U));
-
-        {
-            std::lock_guard<std::mutex> lock(recvMtx);
-            for (auto it = recvObjs.begin(); it != recvObjs.end(); )
-            {
-                if (auto* d = dynamic_cast<sDisconnectResponse*>(*it); d)
-                {
-                    loggedIn       = false;
-                    loginFailed    = true;
-                    loginStatusText = d->message;
-                    delete d;
-                    it = recvObjs.erase(it);
-                }
-				else if (auto* h = dynamic_cast<sHearbeat*>(*it); h)
-				{
-					lastHeartbeatReceive = Clock::now();
-					delete h;
-					it = recvObjs.erase(it);
-				}
-                else if (auto* b = dynamic_cast<sBroadcastMessage*>(*it); b)
-                {
-                    isBroadcastMessage = true;
-                    broadcastMessage = b->message;
-                    delete b;
-                    it = recvObjs.erase(it);
-                }
-                else
-                {
-                    ++it;
-                }
-            }
-        }
-
-		if (lastHeartbeatReceive + std::chrono::seconds(10) < Clock::now())
-		{
-			loggedIn = false;
-			loginFailed = true;
-			loginStatusText = "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!";
-		}
-        if (--heartbeatCtr == 0U)
-        {
-            std::lock_guard<std::mutex> lock(sendMtx);
-            sendObjs.push_back(new sHearbeat());
-            heartbeatCtr = 10U;
-        }
+        LoggedIn(recvObjs, recvMtx, sendObjs, sendMtx);
     }
 
     if (sendTh.joinable()) sendTh.join();
@@ -342,7 +423,6 @@ inline void Login(std::string username_, std::string password)
     loginThreadRunning = false;
     isRender           = false;
 }
-
 
 inline ImTextureID LoadTextureSTB(const char* filename, int* outW = nullptr, int* outH = nullptr)
 {
@@ -368,10 +448,7 @@ inline ImTextureID LoadTextureSTB(const char* filename, int* outW = nullptr, int
 	return (ImTextureID)(intptr_t)texID;
 }
 
-int DrawChampionSelectWindow(
-    const std::vector<ImTextureID>& icons,   // images
-    float buttonSize = 64.0f,
-    float padding = 10.0f)
+int DrawChampionSelectWindow(const std::vector<ImTextureID>& icons, float buttonSize = 64.0f, float padding = 10.0f)
 {
     int N = (int)icons.size();
     if (N == 0)
@@ -450,6 +527,82 @@ int DrawChampionSelectWindow(
     return clicked;
 }
 
+void EasyPlayground::ImGUI_DrawChatWindow()
+{
+    const ImVec2 winSize(400, 160);
+
+    ImVec2 vp = ImGui::GetMainViewport()->Pos;
+    ImVec2 pos(
+        vp.x + 10,
+        vp.y + ImGui::GetMainViewport()->Size.y - winSize.y - 10
+    );
+
+    ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);
+
+    if (!ImGui::Begin("ChatWindow", nullptr,
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar))
+    {
+        ImGui::End();
+        return;
+    }
+
+    float inputHeight = 26.0f;
+    float chatHeight = winSize.y - inputHeight - 22.0f;
+
+    ImGui::BeginChild("ChatScrollRegion",
+        ImVec2(0, chatHeight),
+        false,
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_AlwaysVerticalScrollbar);
+
+    for (const auto& msg : messages)
+        ImGui::TextWrapped("%s", msg.toString().c_str());
+
+    if (scrollToBottom)
+    {
+        ImGui::SetScrollHereY(1.0f);
+        scrollToBottom = false;
+    }
+
+    ImGui::EndChild();
+
+    ImGui::PushItemWidth(winSize.x - 90.0f);
+
+    bool send = false;
+
+    if (ImGui::InputText("##ChatInput",
+        inputBuf,
+        IM_ARRAYSIZE(inputBuf),
+        ImGuiInputTextFlags_EnterReturnsTrue))
+    {
+        send = true;
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Send", ImVec2(63, inputHeight)))
+        send = true;
+
+    if (send)
+    {
+        std::string text(inputBuf);
+
+        if (!text.empty())
+        {
+            // Send
+            std::vector<EasySerializeable*> chatMsg = { new sChatMessage(text, "", 0)};
+            client.ClientSend(*crypt, chatMsg);
+            inputBuf[0] = '\0';
+        }
+    }
+
+    ImGui::End();
+}
 
 void EasyPlayground::ImGUI_PlayerInfoWindow()
 {
@@ -497,22 +650,7 @@ void EasyPlayground::ImGUI_PlayerInfoWindow()
 
     if (ImGui::Button("Logout", ImVec2(120, 28)))
     {
-        std::vector<EasySerializeable*> logout = { new sLogoutRequest() };
-        client.ClientSend(*crypt, logout);
-
-        loggedIn = false;
-        loginFailed = true;
-        loginInProgress = false;
-        loginStatusWindow = false;
-        champSelect = false;
-
-        // reset crypt, username, session, etc.
-        if (crypt) { delete crypt; crypt = nullptr; }
-
-        sessionID = 0;
-        userID = 0;
-        username = "";
-        stats = {}; // reset
+        Logout();
     }
 
     ImGui::PopStyleColor(3);
@@ -601,30 +739,14 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 	{
 		if (ImGui::Button("Cancel", ImVec2(btnWidth, 28)))
 		{
-			loginStatusWindow = false;
-			loginInProgress = false;
-			loginFailed = true;
-            champSelect = false;
-
-			if (crypt)
-			{
-				delete crypt;
-				crypt = nullptr;
-			}
-
-			username = "";
-
+            Logout();
 		}
 	}
 	else
 	{
 		if (ImGui::Button("OK", ImVec2(btnWidth, 28)))
 		{
-			loginStatusWindow = false;
-			loginInProgress = false;
-			loginFailed = true;
-            champSelect = false;
-
+			Logout();
 		}
 	}
 
@@ -812,6 +934,8 @@ void EasyPlayground::ImGUIRender()
 		ImGui::End();
 
         ImGUI_BroadcastMessageWindow();
+
+        ImGUI_DrawChatWindow();
 	}
 
 	// Rendering

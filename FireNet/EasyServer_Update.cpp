@@ -31,65 +31,76 @@ StatisticsCounter_t stats_update{};
 ObjCacheType_t internal_in_cache;
 ObjCacheType_t internal_out_cache;
 
-namespace Server_Update_internal {
+class EasyServer_UpdateHelper {
+public:
+    EasyServer* server;
 
-    void UpdateIncomingObjCache(MainContex* m)
+    EasyServer_UpdateHelper(EasyServer* server) : server(server)
+    {
+
+    }
+
+    void UpdateIncomingObjCache()
     {
         static Timestamp_t nextUpdate = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (nextUpdate < currentTime)
         {
-            if (m->in_cache.mutex.try_lock())
+            if (server->m->in_cache.mutex.try_lock())
             {
                 nextUpdate = currentTime + Millis_t(4U);
-                
-                for (auto& [sessionID, cache] : m->in_cache.cache)
+
+                for (auto& [sessionID, cache] : server->m->in_cache.cache)
                 {
                     auto& dstVec = internal_in_cache[sessionID];
                     dstVec.insert(dstVec.end(), std::make_move_iterator(cache.begin()), std::make_move_iterator(cache.end()));
                 }
 
-                size_t size = m->in_cache.cache.size();
-                m->in_cache.cache.clear();
-                m->in_cache.mutex.unlock();
+                size_t size = server->m->in_cache.cache.size();
+                server->m->in_cache.cache.clear();
+                server->m->in_cache.mutex.unlock();
                 STATS_IN(size);
             }
         }
     }
 
-    void UpdateOutgoingObjCache(MainContex* m)
+    void UpdateOutgoingObjCache()
     {
         static Timestamp_t nextUpdate = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (nextUpdate < currentTime)
         {
-            if (m->out_cache.mutex.try_lock())
+            if (server->m->out_cache.mutex.try_lock())
             {
                 nextUpdate = currentTime + Millis_t(4U);
 
                 for (auto& [sessionID, cache] : internal_out_cache)
                 {
-                    auto& dstVec = m->out_cache.cache[sessionID];
+                    auto& dstVec = server->m->out_cache.cache[sessionID];
                     dstVec.insert(dstVec.end(), std::make_move_iterator(cache.begin()), std::make_move_iterator(cache.end()));
                 }
 
-                m->out_cache.mutex.unlock();
+                server->m->out_cache.mutex.unlock();
                 size_t size = internal_out_cache.size();
                 internal_out_cache.clear();
                 STATS_OUT(size);
             }
         }
     }
-}
+};
 
 void EasyServer::Update()
 {
-    using namespace Server_Update_internal;
+    EasyServer_UpdateHelper helper(this);
     while (running)
     {
-        UpdateIncomingObjCache(m);
+        helper.UpdateIncomingObjCache();
+
         DoProcess(internal_in_cache, internal_out_cache);
-        UpdateOutgoingObjCache(m);
+
+        helper.UpdateOutgoingObjCache();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10U));
     }
 }
 

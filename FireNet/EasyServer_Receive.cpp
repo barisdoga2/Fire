@@ -5,6 +5,7 @@
 #include "EasyBuffer.hpp"
 #include "EasyPacket.hpp"
 #include "EasyDB.hpp"
+#include "EasySerializer.hpp"
 
 #include <unordered_map>
 #include <array>
@@ -56,9 +57,8 @@ StatisticsCounter_t stats_receive{};
 #define STATS_SESSION_FAIL_SEQ_IN           STATS_INCREASE(sessionFailSequenceIDIn)
 #define STATS_SESSION_FAIL_ALIVE            STATS_INCREASE(sessionFailAlive)
 
-
-
-namespace Server_Receive_internal {
+class EasyServer_ReceviveHelper {
+public:
     class RawBuffer {
     public:
         const SessionID_t sessionID;
@@ -95,7 +95,7 @@ namespace Server_Receive_internal {
             const Addr_t addr;
             const Timestamp_t receive;
             EasyBuffer* buffer;
-            
+
             R2PRawBuffer(const RawBuffer& raw) : addr(raw.addr), receive(raw.receive), buffer(raw.buffer)
             {
 
@@ -128,11 +128,18 @@ namespace Server_Receive_internal {
     R2PCacheType_t r2pCache;
     ObjCacheType_t internal_in_cache;
     LockedVec_t<Session*> newSessions;
+    
+    EasyServer* server;
 
-    bool ReadKeyFromMYSQL(EasyDB* db, const SessionID_t& session_id, Key_t& key, UserID_t& user_id)
+    EasyServer_ReceviveHelper(EasyServer* server) : server(server)
+    {
+
+    }
+
+    bool ReadKeyFromMYSQL(const SessionID_t& session_id, Key_t& key, UserID_t& user_id)
     {
         bool ret = false;
-        sql::PreparedStatement* stmt = db->PrepareStatement("SELECT * FROM sessions WHERE id=? LIMIT 1;");
+        sql::PreparedStatement* stmt = server->db->PrepareStatement("SELECT * FROM sessions WHERE id=? LIMIT 1;");
         stmt->setUInt(1, session_id);
         sql::ResultSet* res = stmt->executeQuery();
         while (res->next())
@@ -147,9 +154,9 @@ namespace Server_Receive_internal {
         return ret;
     }
 
-    void BaseReceive(EasySocket* sock, EasyBufferManager* bf)
+    void BaseReceive()
     {
-        static EasyBuffer* receiveBuff = bf->Get();
+        static EasyBuffer* receiveBuff = server->bf->Get();
         static Timestamp_t nextListen = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (nextListen < currentTime)
@@ -163,7 +170,7 @@ namespace Server_Receive_internal {
                 if (receiveBuff != nullptr)
                 {
                     receiveBuff->reset();
-                    uint64_t ret = sock->receive(receiveBuff->begin(), receiveBuff->capacity(), receiveBuff->m_payload_size, inSockInfo);
+                    uint64_t ret = server->sock->receive(receiveBuff->begin(), receiveBuff->capacity(), receiveBuff->m_payload_size, inSockInfo);
                     if (ret == WSAEISCONN)
                     {
                         if (receiveBuff->m_payload_size >= EasyPacket::MinimumSize())
@@ -173,7 +180,7 @@ namespace Server_Receive_internal {
                             if (IS_SESSION(sessionID))
                             {
                                 rawCache[sessionID].cache.emplace_back(sessionID, inSockInfo.addr, receiveBuff);
-                                receiveBuff = bf->Get();
+                                receiveBuff = server->bf->Get();
                                 STATS_RECEIVED;
                             }
                             else
@@ -197,7 +204,7 @@ namespace Server_Receive_internal {
                 }
                 else
                 {
-                    receiveBuff = bf->Get();
+                    receiveBuff = server->bf->Get();
                     STATS_BM_FAIL;
                 }
                 currentTime = Clock::now();
@@ -251,7 +258,7 @@ namespace Server_Receive_internal {
         }
     }
 
-    void ReadKeysFromDB(EasyDB* db, EasyBufferManager* bf)
+    void ReadKeysFromDB()
     {
         static Timestamp_t nextRead = Clock::now();
         Timestamp_t currentTime = Clock::now();
@@ -264,7 +271,7 @@ namespace Server_Receive_internal {
                 if (it->second.cache.size() > 0U && it->second.readKeyFromDBFlag)
                 {
                     UserID_t user_id;
-                    if (ReadKeyFromMYSQL(db, it->first, key, user_id))
+                    if (ReadKeyFromMYSQL(it->first, key, user_id))
                     {
                         // Sanity checks, addr, sequence etc.
                         // Crypt data is ready, insert into r2pCache
@@ -272,7 +279,7 @@ namespace Server_Receive_internal {
                         Addr_t addr = it->second.cache.at(0).addr;
                         SequenceID_t sequenceID_in = 0U;
                         SequenceID_t sequenceID_out = 0U;
-                        Session* newSession = new Session(it->first, user_id, addr, key, sequenceID_in, sequenceID_out, Clock::now(), nullptr);
+                        Session* newSession = new Session(it->first, user_id, addr, key, sequenceID_in, sequenceID_out, Clock::now());
                         newSessions.vec.push_back(newSession);
                         r2pCache.emplace(
                             std::piecewise_construct,
@@ -285,7 +292,7 @@ namespace Server_Receive_internal {
                     {
                         // Not found in database, free the buffers
                         for (auto& b : it->second.cache)
-                            bf->Free(b.buffer);
+                            server->bf->Free(b.buffer);
                         STATS_DB_FAIL;
                     }
                     it = unknownRawCache.erase(it);
@@ -298,7 +305,7 @@ namespace Server_Receive_internal {
         }
     }
 
-    void ReadKeysFromSessions(EasyServer* server)
+    void ReadKeysFromSessions()
     {
         static Timestamp_t nextRead = Clock::now();
         Timestamp_t currentTime = Clock::now();
@@ -316,18 +323,18 @@ namespace Server_Receive_internal {
                     {
                         bool destroySession = false;
                         SessionStatus sessionStatus = SessionStatus::UNSET;
-                        for (std::vector<RawBuffer>::iterator buffer = it->second.cache.begin(); buffer != it->second.cache.end() ; ++buffer)
+                        for (std::vector<RawBuffer>::iterator buffer = it->second.cache.begin(); buffer != it->second.cache.end(); ++buffer)
                         {
                             // If packet is arrived 'server->sessionTimeout' after last receive, close session because it already should be.
-                            bool alive = std::chrono::duration_cast<std::chrono::milliseconds>(buffer->receive - session->lastReceive) < std::chrono::milliseconds(server->sessionTimeout);
-                            if (!alive)
-                            {
-                                STATS_SESSION_FAIL_ALIVE;
-                                sessionStatus = SessionStatus::TIMED_OUT;
-                                destroySession = true;
-                                break;
-                            }
-                            else
+                            //bool alive = std::chrono::duration_cast<std::chrono::milliseconds>(buffer->receive - session->lastReceive) < std::chrono::milliseconds(server->sessionTimeout);
+                            //if (!alive)
+                            //{
+                            //    STATS_SESSION_FAIL_ALIVE;
+                            //    sessionStatus = SessionStatus::TIMED_OUT;
+                            //    destroySession = true;
+                            //    break;
+                            //}
+                            //else
                             {
                                 session->lastReceive = buffer->receive;
                             }
@@ -358,7 +365,7 @@ namespace Server_Receive_internal {
                             if (it->second.cache.size() > 0)
                                 respAddr = it->second.cache.at(0).addr;
 
-                            Session* toDestroy = new Session(session->sessionID, session->userID, respAddr, session->key, 0, 0, Clock::now(), session->userData);
+                            Session* toDestroy = new Session(session->sessionID, session->userID, respAddr, session->key, 0, 0, Clock::now());
                             sLoginResponse loginResponse = sLoginResponse(false, "User was already logged in! Try again!");
                             server->SendInstantPacket(toDestroy, { &loginResponse });
                             delete toDestroy;
@@ -367,7 +374,7 @@ namespace Server_Receive_internal {
                             {
                                 server->bf->Free(b.buffer);
                             }
-                            server->DestroySession_internal(session->sessionID, sessionStatus);
+                            server->DestroySession_internal(session, sessionStatus);
                             it = unknownRawCache.erase(it);
                             STATS_SESSION_FAIL;
                         }
@@ -390,9 +397,9 @@ namespace Server_Receive_internal {
         }
     }
 
-    void Process(EasyBufferManager* bf)
+    void Process()
     {
-        static EasyBuffer* decompressionBuff = bf->Get(true);
+        static EasyBuffer* decompressionBuff = server->bf->Get(true);
         static Timestamp_t nextProcess = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (r2pCache.size() > 0U && nextProcess < currentTime)
@@ -408,7 +415,7 @@ namespace Server_Receive_internal {
                     {
                         if (EasyPacket::MakeDecompressed(it2->buffer, decompressionBuff))
                         {
-                            if (MakeDeserialized(decompressionBuff, internal_in_cache[it->second.session]))
+                            if (MakeDeserialized(decompressionBuff, internal_in_cache[it->second.session->sessionID]))
                             {
                                 STATS_DESERIALIZE;
                             }
@@ -426,7 +433,7 @@ namespace Server_Receive_internal {
                     {
                         STATS_DECRYPT_FAIL;
                     }
-                    bf->Free(it2->buffer);
+                    server->bf->Free(it2->buffer);
                     ++cryptInfo.sequence_id_in;
                 }
             }
@@ -434,27 +441,27 @@ namespace Server_Receive_internal {
         }
     }
 
-    void Flush(MainContex* m)
+    void Flush()
     {
         static Timestamp_t nextFlush = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (internal_in_cache.size() > 0U && nextFlush < currentTime)
         {
-            if (m->in_cache.mutex.try_lock())
+            if (server->m->in_cache.mutex.try_lock())
             {
                 nextFlush = currentTime + Millis_t(5U);
                 for (auto& [key, vec] : internal_in_cache)
                 {
-                    auto& targetVec = m->in_cache.cache[key];
+                    auto& targetVec = server->m->in_cache.cache[key];
                     targetVec.insert(targetVec.end(), vec.begin(), vec.end());
                 }
-                m->in_cache.mutex.unlock();
+                server->m->in_cache.mutex.unlock();
                 internal_in_cache.clear();
             }
         }
     }
 
-    void CreateSessions(EasyServer* server)
+    void CreateSessions()
     {
         static Timestamp_t nextCreate = Clock::now();
         Timestamp_t currentTime = Clock::now();
@@ -470,34 +477,40 @@ namespace Server_Receive_internal {
             }
         }
     }
-}
 
-void EasyServer::Receive()
-{
-    using namespace Server_Receive_internal;
-
-    while (running)
+    void Update()
     {
         // Receive into 'rawCache'. run every 9ms for 4ms
-        BaseReceive(sock, bf);
+        BaseReceive();
 
         // Prepare, move 'rawCache' into 'r2pCache', run every 5ms
         Prepare();
 
         // 'unknownRawCache' to 'r2pCache' using Sessions, run every 10ms
-        ReadKeysFromSessions(this);
+        ReadKeysFromSessions();
 
         // 'unknownRawCache' to 'r2pCache' using database, run every 100ms
-        ReadKeysFromDB(db, bf);
+        ReadKeysFromDB();
 
         // Process 'r2pCache' into 'readObjCache', run every 5ms
-        Process(bf);
+        Process();
 
         // Create new Sessions, run every 100ms
-        CreateSessions(this);
+        CreateSessions();
 
         // Flush, move 'internal_in_cache' into main context's 'in_cache', run every 5ms
-        Flush(m);
+        Flush();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10U));
+    }
+};
+
+void EasyServer::Receive()
+{
+    EasyServer_ReceviveHelper helper(this);
+    while (running)
+    {
+        helper.Update();
     }
 }
 

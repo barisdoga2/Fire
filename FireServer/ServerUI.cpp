@@ -50,7 +50,7 @@ public:
 			SessionDebugInfo info{};
 			info.id = s->sessionID;
 			info.userId = s->userID;
-			info.ip = s->addr;
+			//info.ip = s->addr;
 			info.lastReceiveMS = s->lastReceive.time_since_epoch().count(); // Example
 
 			sessions[info.id] = info;

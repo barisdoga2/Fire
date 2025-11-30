@@ -4,6 +4,7 @@
 #include "EasyServer.hpp"
 #include "EasyPacket.hpp"
 #include "EasySocket.hpp"
+#include "EasySerializer.hpp"
 
 #ifdef SERVER_STATISTICS
 #define STATS(x)                            stats_send.x
@@ -36,7 +37,8 @@ StatisticsCounter_t stats_send{};
 #define STATS_SERIALIZE_FAIL                STATS_INCREASE(serializeFail)
 #define STATS_BM_FAIL                       STATS_INCREASE(bmFail)
 
-namespace Server_Send_internal {
+class EasyServer_SendHelper {
+public:
     class R2PBuffer {
     public:
         Session* session;
@@ -63,45 +65,52 @@ namespace Server_Send_internal {
     R2PCacheType_t r2pCache;
     ReadyCache_t internal_ready_cache;
 
-    void BaseMove(MainContex* m)
+    EasyServer* server;
+
+    EasyServer_SendHelper(EasyServer* server) : server(server)
+    {
+
+    }
+
+    void BaseMove()
     {
         static Timestamp_t nextMove = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (nextMove < currentTime)
         {
-            if (m->out_cache.mutex.try_lock())
+            if (server->m->out_cache.mutex.try_lock())
             {
-                if (m->out_cache.cache.size() > 0U)
+                if (server->m->out_cache.cache.size() > 0U)
                 {
                     nextMove = currentTime + Millis_t(3U);
-                    for (auto& [key, vec] : m->out_cache.cache)
+                    for (auto& [key, vec] : server->m->out_cache.cache)
                     {
                         auto& targetVec = internal_out_cache[key];
                         targetVec.insert(targetVec.end(), vec.begin(), vec.end());
                     }
-                    m->out_cache.cache.clear();
+                    server->m->out_cache.cache.clear();
                 }
-                m->out_cache.mutex.unlock();
+                server->m->out_cache.mutex.unlock();
             }
         }
     }
 
-    void Prepare(MainContex* m)
+    void Prepare()
     {
         static Timestamp_t nextRead = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (internal_out_cache.size() > 0U && nextRead < currentTime)
         {
             // Try read Crypt data from sessions
-            if (m->sessionsMutex.try_lock())
+            if (server->m->sessionsMutex.try_lock())
             {
                 nextRead = currentTime + Millis_t(4U);
                 for (auto it = internal_out_cache.begin(); it != internal_out_cache.end(); ++it)
                 {
-                    Session* session = m->sessions[it->first->sessionID];
+                    Session* session = server->m->sessions[it->first];
                     if (session)
                     {
-                        r2pCache.emplace(it->first->sessionID, R2PBuffer(session, it->second));
+                        r2pCache.emplace(it->first, R2PBuffer(session, it->second));
                     }
                     else
                     {
@@ -109,16 +118,16 @@ namespace Server_Send_internal {
                             delete s;
                     }
                 }
-                m->sessionsMutex.unlock();
+                server->m->sessionsMutex.unlock();
                 internal_out_cache.clear();
             }
         }
     }
 
-    void Process(EasyBufferManager* bf)
+    void Process()
     {
-        static EasyBuffer* serializationBuff = bf->Get(true);
-        static EasyBuffer* sendBuff = bf->Get(true);
+        static EasyBuffer* serializationBuff = server->bf->Get(true);
+        static EasyBuffer* sendBuff = server->bf->Get(true);
         static Timestamp_t nextProcess = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (r2pCache.size() > 0U && nextProcess < currentTime)
@@ -146,7 +155,7 @@ namespace Server_Send_internal {
                                 {
                                     internal_ready_cache.emplace(it->second.session->addr, std::vector<EasyBuffer*>{ sendBuff });
                                 }
-                                sendBuff = bf->Get();
+                                sendBuff = server->bf->Get();
                                 STATS_ENCRYPTED;
                             }
                             else
@@ -168,7 +177,7 @@ namespace Server_Send_internal {
                 else
                 {
                     STATS_BM_FAIL;
-                    sendBuff = bf->Get();
+                    sendBuff = server->bf->Get();
                 }
                 
             }
@@ -176,7 +185,7 @@ namespace Server_Send_internal {
         }
     }
 
-    void Flush(EasySocket* sock, EasyBufferManager* bf)
+    void Flush()
     {
         static Timestamp_t nextFlush = Clock::now();
         Timestamp_t currentTime = Clock::now();
@@ -187,7 +196,7 @@ namespace Server_Send_internal {
             {
                 for (EasyBuffer* buf : vec)
                 {
-                    uint64_t res = sock->send(buf->begin(), buf->m_payload_size + EasyPacket::HeaderSize(), addr);
+                    uint64_t res = server->sock->send(buf->begin(), buf->m_payload_size + EasyPacket::HeaderSize(), addr);
                     if (res != WSAEISCONN)
                     {
                         STATS_SEND_FAIL;
@@ -196,31 +205,38 @@ namespace Server_Send_internal {
                     {
                         STATS_SEND;
                     }
-                    bf->Free(buf);
+                    server->bf->Free(buf);
                 }
             }
             internal_ready_cache.clear();
         }
     }
-}
+
+    void Update()
+    {
+        // Move main context's 'out_cache' into 'internal_out_cache', run every 4ms
+        BaseMove();
+
+        // Prepare, move 'internal_out_cache' into 'r2pCache', get crypt data from sessions, run every 4ms
+        Prepare();
+
+        // Process 'r2pCache' into 'internal_ready_cache', run every 5ms
+        Process();
+
+        // Flush, send 'internal_ready_cache' to clients, run every 6ms for 3ms
+        Flush();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10U));
+    }
+};
 
 void EasyServer::Send()
 {
-    using namespace Server_Send_internal;
+    EasyServer_SendHelper helper(this);
 
     while (running)
     {
-        // Move main context's 'out_cache' into 'internal_out_cache', run every 4ms
-        BaseMove(m);
-
-        // Prepare, move 'internal_out_cache' into 'r2pCache', get crypt data from sessions, run every 4ms
-        Prepare(m);
-
-        // Process 'r2pCache' into 'internal_ready_cache', run every 5ms
-        Process(bf);
-
-        // Flush, send 'internal_ready_cache' to clients, run every 6ms for 3ms
-        Flush(sock, bf);
+        helper.Update();
     }
 }
 

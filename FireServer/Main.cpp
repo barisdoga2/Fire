@@ -53,13 +53,7 @@ int Broadcast(lua_State* L)
     }
     if (text.length() > 0U)
     {
-        server->m->sessionsMutex.lock();
-        for (auto& sid : server->m->sessionIDs)
-        {
-            Session* ses = server->m->sessions[sid];
-            server->SendInstantPacket(ses, {new sBroadcastMessage(text)});
-        }
-        server->m->sessionsMutex.unlock();
+        server->Broadcast({ new sBroadcastMessage(text) });
     }
     return 0;
 }
@@ -136,8 +130,8 @@ int main(int argc, char* argv[])
                     std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
                     std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
 
-                    const double fps_constant = 1000.0 / 144.0;
-                    const double ups_constant = 1000.0 / 24.0;
+                    const double fps_constant = 1000.0 / 24.0;
+                    const double ups_constant = 1000.0 / 1.0;
                     const double debug_constant = 1000.0 / 1.0;
 
                     double debug_timer = 0.0;
@@ -171,13 +165,13 @@ int main(int argc, char* argv[])
 
                         if (debug_timer >= debug_constant)
                         {
-                            if(server->m->sessionsMutex.try_lock())
+                            //if(server->m->sessionsMutex.try_lock())
                             {
-                                std::vector<Session*> sessions;
-                                for (auto& sid : server->m->sessionIDs)
-                                    sessions.push_back(server->m->sessions[sid]);
-                                serverUI.OnSessionListUpdated(sessions);
-                                server->m->sessionsMutex.unlock();
+                                //std::vector<Session*> sessions;
+                                //for (auto& sid : server->m->sessionIDs)
+                                //    sessions.push_back(server->m->sessions[sid]);
+                                //serverUI.OnSessionListUpdated(sessions);
+                                //server->m->sessionsMutex.unlock();
 
                                 debug_timer = 0.0;
                             }

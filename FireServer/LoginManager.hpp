@@ -1,14 +1,15 @@
 #pragma once
 
-#include <EasyServer.hpp>
-#include "Managers.hpp"
+#include "Server.hpp"
+#include "SessionManager.hpp"
+
 
 class LoginManager : public SessionManager {
 public:
-    LoginManager();
+    LoginManager(Server* server);
 
     bool Update(ObjCacheType_t& out_cache, double dt) override;
 
-    bool Receive(EasyServer* server, ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) override;
+    bool Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) override;
 
 };

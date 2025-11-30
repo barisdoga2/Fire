@@ -1,9 +1,8 @@
 #include "HeartbeatManager.hpp"
-#include "Net.hpp"
 
 
 
-HeartbeatManager::HeartbeatManager() : SessionManager(HEARTBEAT_MANAGER)
+HeartbeatManager::HeartbeatManager(Server* server) : SessionManager(server, HEARTBEAT_MANAGER)
 {
 
 }
@@ -15,28 +14,36 @@ bool HeartbeatManager::Update(ObjCacheType_t& out_cache, double dt)
     return ret;
 }
 
-bool HeartbeatManager::Receive(EasyServer* server, ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
+bool HeartbeatManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
 {
     bool ret = false;
 
-    for (auto& [session, cache] : in_cache)
+    for (auto& [sid, cache] : in_cache)
     {
-        for (EasySerializeable* obj : cache)
+        TickSession* session = server->sessions[sid];
+        for (auto it = cache.begin(); it != cache.end(); )
         {
-            if (sHearbeat* heartbeat = dynamic_cast<sHearbeat*>(obj); heartbeat)
+            if (sHearbeat* heartbeat = dynamic_cast<sHearbeat*>(*it); heartbeat)
             {
-                out_cache[session].push_back(new sHearbeat());
+                out_cache[sid].push_back(new sHearbeat());
                 std::cout << "[HeartbeatMng] Heartbeat received and sent!\n";
+                delete* it;
+                it = cache.erase(it);
+                ret = true;
             }
-            else if (sLogoutRequest* logoutRequest = dynamic_cast<sLogoutRequest*>(obj); logoutRequest)
+            else if (sLogoutRequest* logoutRequest = dynamic_cast<sLogoutRequest*>(*it); logoutRequest)
             {
-                out_cache[session].push_back(new sLogoutRequest());
+                out_cache[sid].push_back(new sLogoutRequest());
                 std::cout << "[HeartbeatMng] Logout request received!\n";
                 session->logoutRequested = true;
+                delete* it;
+                it = cache.erase(it);
+                ret = true;
             }
             else
             {
                 //STATS_UNPROCESSED;
+                it++;
             }
         }
     }
@@ -44,12 +51,12 @@ bool HeartbeatManager::Receive(EasyServer* server, ObjCacheType_t& in_cache, Obj
     return ret;
 }
 
-void HeartbeatManager::OnSessionCreate(Session* session)
+void HeartbeatManager::OnSessionCreate(TickSession* session)
 {
     
 }
 
-void HeartbeatManager::OnSessionDestroy(Session* session, SessionStatus destroyReason)
+void HeartbeatManager::OnSessionDestroy(TickSession* session, SessionStatus destroyReason)
 {
 
 }

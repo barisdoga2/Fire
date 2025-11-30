@@ -19,12 +19,14 @@
 #define LOGIN_REQUEST ((PacketID_t)(118U))
 #define LOGOUT_REQUEST ((PacketID_t)(119U))
 #define BROADCAST_MESSAGE ((PacketID_t)(120U))
+#define CHAT_MESSAGE ((PacketID_t)(121U))
 
 
 
 
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 #include <chrono>
 #include <atomic>
 
@@ -44,8 +46,22 @@ using StatisticsCounter_t = std::atomic<size_t>;
 
 using Clock = std::chrono::high_resolution_clock;
 
+class EasySerializeable;
+using ObjCacheType_t = std::unordered_map<SessionID_t, std::vector<EasySerializeable*>>;
 
+enum SessionStatus {
+    UNSET,
+    CONNECTING,
+    CONNECTED,
 
+    ADDR_MISMATCH,
+    CRYPT_ERR,
+    TIMED_OUT,
+    SERVER_TIMED_OUT,
+    SEQUENCE_MISMATCH,
+    RECONNECTED,
+    CLIENT_LOGGED_OUT
+};
 
 class PeerSocketInfo {
 public:

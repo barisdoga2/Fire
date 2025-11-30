@@ -3,10 +3,9 @@
 #include "Server.hpp"
 #include "SessionManager.hpp"
 
-
-class HeartbeatManager : public SessionManager {
+class ChatManager : public SessionManager {
 public:
-    HeartbeatManager(Server* server);
+    ChatManager(Server* server);
 
     bool Update(ObjCacheType_t& out_cache, double dt) override;
 

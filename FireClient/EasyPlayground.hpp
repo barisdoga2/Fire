@@ -56,6 +56,7 @@ public:
     void ImGUI_LoginStatusWindow();
     void ImGUI_LoginWindow();
     void ImGUI_ChampionSelectWindow();
+    void ImGUI_DrawChatWindow();
 
     void scroll_callback(GLFWwindow* window, double xpos, double ypos);
     void cursor_callback(GLFWwindow* window, double xpos, double ypos);

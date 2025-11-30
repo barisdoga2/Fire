@@ -149,6 +149,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ChatManager.cpp" />
     <ClCompile Include="HeartbeatManager.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui_impl_opengl3.cpp" />
@@ -159,16 +160,17 @@
     <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ChatManager.hpp" />
     <ClInclude Include="HeartbeatManager.hpp" />
     <ClInclude Include="imgui_impl_glfw.h" />
     <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="imgui_impl_opengl3_loader.h" />
     <ClInclude Include="LoginManager.hpp" />
-    <ClInclude Include="Managers.hpp" />
     <ClInclude Include="Net.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Server.hpp" />
     <ClInclude Include="ServerUI.hpp" />
+    <ClInclude Include="SessionManager.hpp" />
     <ClInclude Include="World.hpp" />
   </ItemGroup>
   <ItemGroup>

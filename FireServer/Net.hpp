@@ -26,7 +26,6 @@
 #define MATERIAL_DEF ((PacketID_t)(12U))
 #define WORLD_DEF ((PacketID_t)(13U))
 
-
 class UserStats {
 public:
     unsigned int userID{};
@@ -35,25 +34,6 @@ public:
     unsigned int diamonds{};
     bool tutorial_done{};
     std::vector<unsigned int> champions_owned{};
-};
-
-class Session;
-class SessionManager;
-class UD {
-public:
-    Session* session{};
-    UserStats* stats{};
-    std::vector<SessionManager*> managers{};
-
-    UD(const UD& ud) : session(ud.session), stats(ud.stats), managers(ud.managers)
-    {
-
-    }
-
-    UD(Session* session = nullptr, UserStats* stats = nullptr, const std::vector<SessionManager*>& managers = {}) : session(session), stats(stats), managers(managers)
-    {
-
-    }
 };
 
 struct NetPlayer {
@@ -77,7 +57,7 @@ public:
     }
 
 };
-
+extern int lastDel;
 class sPlayerBootInfo : public EasySerializeable {
 public:
     unsigned int userID, diamonds, golds, gametime;
@@ -87,6 +67,11 @@ public:
     sPlayerBootInfo() : userID(), diamonds(), golds(), gametime(), tutorialDone(), championsOwned(), EasySerializeable(static_cast<PacketID_t>(PLAYER_BOOT_INFO))
     {
 
+    }
+
+    ~sPlayerBootInfo()
+    {
+        lastDel = 5;
     }
 
     sPlayerBootInfo(unsigned int userID, unsigned int diamonds, unsigned int golds, unsigned int gametime, bool tutorialDone, std::vector<unsigned int> championsOwned) : userID(userID), diamonds(diamonds), golds(golds), gametime(gametime), tutorialDone(tutorialDone), championsOwned(championsOwned), EasySerializeable(static_cast<PacketID_t>(PLAYER_BOOT_INFO))
@@ -120,6 +105,11 @@ public:
 
     }
 
+    ~sChampionSelectRequest()
+    {
+        lastDel = 6;
+    }
+
     void Serialize(EasySerializer* ser) override
     {
         ser->Put(championID);
@@ -139,6 +129,11 @@ public:
     sChampionBuyRequest(unsigned int championID) : championID(championID), EasySerializeable(static_cast<PacketID_t>(CHAMPION_BUY_REQUEST))
     {
 
+    }
+
+    ~sChampionBuyRequest()
+    {
+        lastDel = 7;
     }
 
     void Serialize(EasySerializer* ser) override
@@ -161,6 +156,11 @@ public:
     sChampionSelectResponse(bool response, std::string message) : response(response), message(message), EasySerializeable(static_cast<PacketID_t>(CHAMPION_SELECT_RESPONSE))
     {
 
+    }
+
+    ~sChampionSelectResponse()
+    {
+        lastDel = 8;
     }
 
     void Serialize(EasySerializer* ser) override
@@ -186,6 +186,11 @@ public:
 
     }
 
+    ~sChampionBuyResponse()
+    {
+        lastDel = 9;
+    }
+
     void Serialize(EasySerializer* ser) override
     {
         ser->Put(response);
@@ -199,6 +204,11 @@ public:
     sHearbeat() : EasySerializeable(static_cast<PacketID_t>(HEARTBEAT))
     {
 
+    }
+
+    ~sHearbeat()
+    {
+        lastDel = 10;
     }
 
     void Serialize(EasySerializer* ser) override
@@ -222,6 +232,11 @@ public:
 
     }
 
+    ~sBroadcastMessage()
+    {
+        lastDel = 11;
+    }
+
     void Serialize(EasySerializer* ser) override
     {
         ser->Put(message);
@@ -229,3 +244,32 @@ public:
 };
 REGISTER_PACKET(sBroadcastMessage, BROADCAST_MESSAGE);
 
+class sChatMessage : public EasySerializeable {
+public:
+    std::string message;
+    std::string username;
+    unsigned long long timestamp;
+
+    sChatMessage() : message(), username(), timestamp(), EasySerializeable(static_cast<PacketID_t>(CHAT_MESSAGE))
+    {
+
+    }
+
+    sChatMessage(std::string message, std::string username, unsigned long long timestamp) : message(message), username(username), timestamp(timestamp), EasySerializeable(static_cast<PacketID_t>(CHAT_MESSAGE))
+    {
+
+    }
+
+    ~sChatMessage()
+    {
+        lastDel = 12;
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(message);
+        ser->Put(username);
+        ser->Put(timestamp);
+    }
+};
+REGISTER_PACKET(sChatMessage, CHAT_MESSAGE);

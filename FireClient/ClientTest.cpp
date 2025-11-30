@@ -66,7 +66,7 @@ std::string ClientTest::ClientWebRequest(std::string url, std::string username, 
     }
 }
 
-uint64_t ClientTest::ClientSend(PeerCryptInfo& crypt, std::vector<EasySerializeable*>& objs)
+uint64_t ClientTest::ClientSend(PeerCryptInfo& crypt, const std::vector<EasySerializeable*>& objs)
 {
     if (objs.size() == 0U)
         return 0U;
@@ -97,9 +97,6 @@ uint64_t ClientTest::ClientSend(PeerCryptInfo& crypt, std::vector<EasySerializea
         {
             auto res = client.socket->send(buffer2->begin(), sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + buffer2->m_payload_size, EasyIpAddress::resolve(ip), port);
             retVal = 1U;
-            for (EasySerializeable* obj : objs)
-                delete obj;
-            objs.clear();
         }
         else
         {

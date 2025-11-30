@@ -5,13 +5,14 @@
 #include "EasyBuffer.hpp"
 #include "EasyPacket.hpp"
 #include "EasyDB.hpp"
+#include "EasySerializer.hpp"
 
 #include <unordered_map>
 #include <array>
 
 
 
-EasyServer::EasyServer(EasyBufferManager* bf, unsigned short port) : bf(bf), running(false), port(port), sock(nullptr), db(nullptr), m(nullptr), sessionTimeout(10000U)
+EasyServer::EasyServer(EasyBufferManager* bf, unsigned short port) : bf(bf), running(false), port(port), sock(nullptr), db(nullptr), m(nullptr)
 {
 
 }
@@ -104,6 +105,17 @@ bool EasyServer::IsRunning()
     return running;
 }
 
+void EasyServer::Broadcast(const std::vector<EasySerializeable*>& cache)
+{
+    m->sessionsMutex.lock();
+    for (auto& sid : m->sessionIDs)
+    {
+        Session* ses = m->sessions[sid];
+        SendInstantPacket(ses, cache);
+    }
+    m->sessionsMutex.unlock();
+}
+
 bool EasyServer::CreateSession_internal(Session* session)
 {
     bool ret = false;
@@ -113,73 +125,40 @@ bool EasyServer::CreateSession_internal(Session* session)
         ret = this->OnSessionCreate(session);
         if (ret)
         {
-            for (SessionManager* manager : session->managers)
-                manager->OnSessionCreate(session);
             m->sessionIDs.push_back(session->sessionID);
         }
     }
     return ret;
 }
 
-bool EasyServer::DestroySession_internal(SessionID_t sessionID, SessionStatus disconnectReason)
+bool EasyServer::DestroySession_external(SessionID_t sessionID, SessionStatus disconnectReason)
 {
     bool ret = false;
     if (m->sessions[sessionID] != nullptr)
     {
-        
         this->OnSessionDestroy(m->sessions[sessionID], disconnectReason);
-        if(auto res = std::find(m->sessionIDs.begin(), m->sessionIDs.end(), sessionID); res != m->sessionIDs.end())
-            m->sessionIDs.erase(res);
+        m->sessionIDs.erase(std::find(m->sessionIDs.begin(), m->sessionIDs.end(), sessionID));
         delete m->sessions[sessionID];
         m->sessions[sessionID] = nullptr;
+    }
+    ret = true;
+    return ret;
+}
+
+bool EasyServer::DestroySession_internal(Session* session, SessionStatus disconnectReason)
+{
+    bool ret = false;
+    SessionID_t sid = session->sessionID;
+    if (m->sessions[sid] != nullptr)
+    {
+        this->OnSessionDestroy(m->sessions[sid], disconnectReason);
+        if(auto res = std::find(m->sessionIDs.begin(), m->sessionIDs.end(), sid); res != m->sessionIDs.end())
+            m->sessionIDs.erase(res);
+        delete m->sessions[sid];
+        m->sessions[sid] = nullptr;
         ret = true;
     }
     return ret;
-}
-
-bool EasyServer::DestroySession(Session* session, SessionStatus disconnectReason)
-{
-    bool ret = false;
-    if (session)
-    {
-        m->sessionsMutex.lock();
-        ret = DestroySession_internal(session->sessionID, disconnectReason);
-        m->sessionsMutex.unlock();
-    }
-    return ret;
-}
-
-bool EasyServer::DestroySession(SessionID_t sessionID, SessionStatus disconnectReason)
-{
-    bool ret = false;
-    if (IS_SESSION(sessionID))
-    {
-        m->sessionsMutex.lock();
-        ret = DestroySession_internal(sessionID, disconnectReason);
-        m->sessionsMutex.unlock();
-    }
-    return ret;
-}
-
-Session* EasyServer::GetSession(SessionID_t sessionID)
-{
-    Session* ret = nullptr;
-    if (IS_SESSION(sessionID))
-    {
-        m->sessionsMutex.lock();
-        if (m->sessions[sessionID])
-        {
-            ret = m->sessions[sessionID];
-        }
-        m->sessionsMutex.unlock();
-    }
-    return ret;
-}
-
-bool EasyServer::SetSessionTimeout(uint32_t ms)
-{
-    this->sessionTimeout = ms;
-    return true;
 }
 
 bool EasyServer::SendInstantPacket(Session* destination, const std::vector<EasySerializeable*>& objs)
