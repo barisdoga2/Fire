@@ -26,6 +26,10 @@ FireClient/x64/Release/*
 FireClient/Debug/*
 FireClient/Release/*
 
+FireRender/x64/Debug/*
+FireRender/x64/Release/*
+FireRender/Debug/*
+FireRender/Release/*
 
 
 FireNet/x64/Debug/*

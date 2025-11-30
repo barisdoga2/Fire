@@ -1,0 +1,136 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Core">
+      <UniqueIdentifier>{d9516b4f-3cac-4a27-8d04-60686fb12982}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Model">
+      <UniqueIdentifier>{7d96ca45-d5d9-4a07-8186-e3056b48b2bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render">
+      <UniqueIdentifier>{1798dc86-6349-4261-9866-eedd9b3d1388}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Util">
+      <UniqueIdentifier>{e748ee8b-b66e-47a6-a32b-08808517d03b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ImGUI_Fun.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_glfw.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_opengl3.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_opengl3_loader.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ChunkRenderer.hpp">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="SkyboxRenderer.hpp">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyAnimation.hpp">
+      <Filter>Model</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyAnimator.hpp">
+      <Filter>Model</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyMaterial.hpp">
+      <Filter>Model</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyModel.hpp">
+      <Filter>Model</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyTexture.hpp">
+      <Filter>Model</Filter>
+    </ClInclude>
+    <ClInclude Include="HDR.hpp">
+      <Filter>Model</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyCamera.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyDisplay.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyShader.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyUtility.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="GL_Ext.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="WinUtils.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="imgui_impl_glfw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_opengl3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ChunkRenderer.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyboxRenderer.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyAnimation.cpp">
+      <Filter>Model</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyAnimator.cpp">
+      <Filter>Model</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyMaterial.cpp">
+      <Filter>Model</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyModel.cpp">
+      <Filter>Model</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyTexture.cpp">
+      <Filter>Model</Filter>
+    </ClCompile>
+    <ClCompile Include="HDR.cpp">
+      <Filter>Model</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyCamera.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyDisplay.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyShader.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyUtility.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="FireRender.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="WinUtils.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

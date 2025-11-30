@@ -21,9 +21,12 @@
 #include <iostream>
 #include <conio.h>
 #include <lua.hpp>
+#include <chrono>
+#include <EasyDisplay.hpp>
 
 #include "Net.hpp"
 #include "Server.hpp"
+#include "ServerUI.hpp"
 
 EasyBufferManager bf(50U, 1472U);
 Server* server = new Server(&bf, SERVER_PORT);
@@ -118,23 +121,77 @@ void LUAListen()
     lua_close(L);
 }
 
-
-
-int main()
+int main(int argc, char* argv[])
 {
+    bool running{};
+
     if (server->Start())
     {
-        if (running = true; running)
+        if (EasyDisplay display({ 400, 600 }, { 1,2 }); display.Init())
         {
-            std::thread luaThread = std::thread([&]() { LUAListen(); });
-            while (running)
+            if (running = true; running)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000U));
-                running &= (true && !stop);
+                if (ServerUI serverUI(display); serverUI.Init())
+                {
+                    std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+                    std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
+
+                    const double fps_constant = 1000.0 / 144.0;
+                    const double ups_constant = 1000.0 / 24.0;
+                    const double debug_constant = 1000.0 / 1.0;
+
+                    double debug_timer = 0.0;
+                    double fps_timer = 0.0;
+                    double ups_timer = 0.0;
+
+                    running = true;
+                    while (running)
+                    {
+                        currentTime = std::chrono::high_resolution_clock::now();
+                        double elapsed_ms = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
+                        lastTime = currentTime;
+
+                        fps_timer += elapsed_ms;
+                        ups_timer += elapsed_ms;
+                        debug_timer += elapsed_ms;
+
+                        if (fps_timer >= fps_constant)
+                        {
+                            serverUI.StartRender(fps_timer / 1000.0);
+                            running &= serverUI.Render(fps_timer / 1000.0);
+                            serverUI.EndRender();
+                            fps_timer = 0.0;
+                        }
+
+                        if (ups_timer >= ups_constant)
+                        {
+                            running &= serverUI.Update(ups_timer / 1000.0);
+                            ups_timer = 0.0;
+                        }
+
+                        if (debug_timer >= debug_constant)
+                        {
+                            if(server->m->sessionsMutex.try_lock())
+                            {
+                                std::vector<Session*> sessions;
+                                for (auto& sid : server->m->sessionIDs)
+                                    sessions.push_back(server->m->sessions[sid]);
+                                serverUI.OnSessionListUpdated(sessions);
+                                server->m->sessionsMutex.unlock();
+
+                                debug_timer = 0.0;
+                            }
+                        }
+
+                        running &= !display.ShouldClose();
+                    }
+                }
             }
-            server->Stop();
-            luaThread.join();
         }
     }
-	return 0;
+
+    server->Stop();
+
+    return 0;
 }
+

@@ -86,14 +86,14 @@ bool EasyPlayground::Init()
 	{
 		ReloadShaders();
 
-		EasyMaterial* back = new EasyMaterial("terrainGrass");
-		EasyMaterial* r = new EasyMaterial("terrainMud");
-		EasyMaterial* g = new EasyMaterial("terrainPath");
-		EasyMaterial* b = new EasyMaterial("terrainBrick");
+		//EasyMaterial* back = new EasyMaterial("terrainGrass");
+		//EasyMaterial* r = new EasyMaterial("terrainMud");
+		//EasyMaterial* g = new EasyMaterial("terrainPath");
+		//EasyMaterial* b = new EasyMaterial("terrainBrick");
 
-		std::vector<char> blend, height;
-		LoadFileBinary(GetPath("res/images/blend.png"), &blend);
-		LoadFileBinary(GetPath("res/images/height.png"), &height);
+		//std::vector<char> blend, height;
+		//LoadFileBinary(GetPath("res/images/blend.png"), &blend);
+		//LoadFileBinary(GetPath("res/images/height.png"), &height);
 
 
 		ReGenerateMap();
@@ -403,14 +403,14 @@ void EasyPlayground::ReGenerateMap()
 	Chunk::GenerateChunkAt(chunks, { 0,0 }, seed);
 
 	// Make 3x3
-	Chunk::GenerateChunkAt(chunks, { 1,0 }, seed);
-	Chunk::GenerateChunkAt(chunks, { -1,0 }, seed);
-	Chunk::GenerateChunkAt(chunks, { 0,1 }, seed);
-	Chunk::GenerateChunkAt(chunks, { 0,-1 }, seed);
-	Chunk::GenerateChunkAt(chunks, { 1,1 }, seed);
-	Chunk::GenerateChunkAt(chunks, { 1,-1 }, seed);
-	Chunk::GenerateChunkAt(chunks, { -1,1 }, seed);
-	Chunk::GenerateChunkAt(chunks, { -1,-1 }, seed);
+	//Chunk::GenerateChunkAt(chunks, { 1,0 }, seed);
+	//Chunk::GenerateChunkAt(chunks, { -1,0 }, seed);
+	//Chunk::GenerateChunkAt(chunks, { 0,1 }, seed);
+	//Chunk::GenerateChunkAt(chunks, { 0,-1 }, seed);
+	//Chunk::GenerateChunkAt(chunks, { 1,1 }, seed);
+	//Chunk::GenerateChunkAt(chunks, { 1,-1 }, seed);
+	//Chunk::GenerateChunkAt(chunks, { -1,1 }, seed);
+	//Chunk::GenerateChunkAt(chunks, { -1,-1 }, seed);
 
 
 

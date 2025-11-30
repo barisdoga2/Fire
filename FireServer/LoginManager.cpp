@@ -50,6 +50,7 @@ bool LoginManager::Receive(EasyServer* server, ObjCacheType_t& in_cache, ObjCach
                             }
                         }
                         session->managers.push_back(Server::managers[HEARTBEAT_MANAGER]);
+                        Server::managers[HEARTBEAT_MANAGER]->OnSessionCreate(session);
                     }
                     out_cache[session].push_back(new sChampionSelectResponse(response, message));
                     std::cout << "[LoginMng] Champion select request received\n";

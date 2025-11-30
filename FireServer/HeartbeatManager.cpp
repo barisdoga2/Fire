@@ -46,7 +46,7 @@ bool HeartbeatManager::Receive(EasyServer* server, ObjCacheType_t& in_cache, Obj
 
 void HeartbeatManager::OnSessionCreate(Session* session)
 {
-
+    
 }
 
 void HeartbeatManager::OnSessionDestroy(Session* session, SessionStatus destroyReason)

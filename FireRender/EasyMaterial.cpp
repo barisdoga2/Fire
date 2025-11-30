@@ -1,3 +1,4 @@
+#include "pch.h"
 #include <assert.h>
 #include <tinyxml2.h>
 #include <stb_image.h>

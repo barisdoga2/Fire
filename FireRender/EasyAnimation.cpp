@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "EasyAnimation.hpp"
 
 #include <cassert>

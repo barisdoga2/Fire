@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "SkyboxRenderer.hpp"
 #include "EasyUtility.hpp"
 

@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 
     WinUtils::Init();
 
-    if (EasyDisplay display({ 1536,864 }); display.Init())
+    if (EasyDisplay display({ 1536 * 0.8,864 * 0.8 }); display.Init())
     {
         if (EasyPlayground playground(display); playground.Init())
         {

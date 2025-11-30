@@ -120,13 +120,13 @@ void Server::OnInit()
 bool Server::OnSessionCreate(Session* session)
 {
     bool status = true;
-
-    session->userData = new UD(session);
-
-    status = true;
+    
     if (status)
     {
+        session->userData = new UD(session);
+
         session->managers.push_back(managers[LOGIN_MANAGER]);
+
         sLoginResponse acceptResponse = sLoginResponse(true, "Server welcomes you!");
         SendInstantPacket(session, { &acceptResponse });
     }

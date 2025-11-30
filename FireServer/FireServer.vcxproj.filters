@@ -13,6 +13,9 @@
     <Filter Include="Server\Internal\Manager">
       <UniqueIdentifier>{5ed0ddaf-8399-437b-8b84-f32a42d72ff4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Etc">
+      <UniqueIdentifier>{ce36c316-5584-487d-8700-61864c9bb213}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -29,6 +32,15 @@
     </ClCompile>
     <ClCompile Include="HeartbeatManager.cpp">
       <Filter>Server\Internal\Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerUI.cpp">
+      <Filter>Server\Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_opengl3.cpp">
+      <Filter>Etc</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_glfw.cpp">
+      <Filter>Etc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -50,12 +62,30 @@
     <ClInclude Include="Managers.hpp">
       <Filter>Server\Internal\Manager</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h" />
+    <ClInclude Include="resource.h">
+      <Filter>Etc</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_opengl3.h">
+      <Filter>Etc</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_opengl3_loader.h">
+      <Filter>Etc</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_glfw.h">
+      <Filter>Etc</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerUI.hpp">
+      <Filter>Server\Internal</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="FireServer.rc" />
+    <Image Include="..\res\images\FireServer.ico">
+      <Filter>Etc</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\res\images\FireServer.ico" />
+    <ResourceCompile Include="FireServer.rc">
+      <Filter>Etc</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

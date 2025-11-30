@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "EasyModel.hpp"
 #include "EasyTexture.hpp"
 #include "EasyAnimation.hpp"

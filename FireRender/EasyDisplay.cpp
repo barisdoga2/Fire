@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "EasyDisplay.hpp"
 
 #include <iostream>
@@ -7,7 +8,7 @@
 #include <glad/glad.h>
 
 
-EasyDisplay::EasyDisplay(glm::tvec2<int> windowSize) : windowSize(windowSize)
+EasyDisplay::EasyDisplay(glm::tvec2<int> windowSize, glm::tvec2<int> position) : windowSize(windowSize), position(position)
 {
 
 }
@@ -51,6 +52,9 @@ bool EasyDisplay::Init()
 
 	// Center The Window
 	glfwSetWindowPos(window, (int)((monitorSize.x - windowSize.x) / 2), 30);
+
+	if (position.x != 0 && position.y != 0)
+		glfwSetWindowPos(window, 0,0+30);
 
 	// Enable GL Context
 	glfwMakeContextCurrent(window);

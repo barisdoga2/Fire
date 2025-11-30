@@ -7,147 +7,48 @@
     <Filter Include="Game\Util">
       <UniqueIdentifier>{ec208068-f55c-4a2a-ba78-c1e6edf4f215}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine">
-      <UniqueIdentifier>{a4223b6c-ea8c-438a-a633-5bb1d296d148}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Render">
-      <UniqueIdentifier>{bdd7a664-b9e9-4df2-9431-4b8d44866746}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Render\Core">
-      <UniqueIdentifier>{a2bd0f64-e285-4396-b4ec-6c95e99a8f6b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Render\Model">
-      <UniqueIdentifier>{0e241eeb-c913-45af-b631-af999044ff68}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Render\Renderer">
-      <UniqueIdentifier>{4e889f51-bdb2-4faa-9718-62d6455d4e13}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Ext">
-      <UniqueIdentifier>{4b33e866-9718-4f9a-8466-2f452515054e}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="imgui_impl_glfw.cpp">
-      <Filter>Engine\Ext</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_impl_opengl3.cpp">
-      <Filter>Engine\Ext</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyAnimation.cpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyAnimator.cpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyModel.cpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyTexture.cpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyCamera.cpp">
-      <Filter>Engine\Render\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyShader.cpp">
-      <Filter>Engine\Render\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyDisplay.cpp">
-      <Filter>Engine\Render\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="HDR.cpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyMaterial.cpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="ChunkRenderer.cpp">
-      <Filter>Engine\Render\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyUtility.cpp">
-      <Filter>Engine\Render\Core</Filter>
-    </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Game</Filter>
-    </ClCompile>
-    <ClCompile Include="SkyboxRenderer.cpp">
-      <Filter>Engine\Render\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="EasyPlayground.cpp">
       <Filter>Game</Filter>
     </ClCompile>
-    <ClCompile Include="WinUtils.cpp">
+    <ClCompile Include="ClientTest.cpp">
       <Filter>Game\Util</Filter>
     </ClCompile>
-    <ClCompile Include="ClientTest.cpp">
+    <ClCompile Include="imgui_impl_opengl3.cpp">
+      <Filter>Game\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_glfw.cpp">
       <Filter>Game\Util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="imgui_impl_opengl3_loader.h">
-      <Filter>Engine\Ext</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_glfw.h">
-      <Filter>Engine\Ext</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_opengl3.h">
-      <Filter>Engine\Ext</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyAnimation.hpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyAnimator.hpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyModel.hpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyTexture.hpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyCamera.hpp">
-      <Filter>Engine\Render\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyShader.hpp">
-      <Filter>Engine\Render\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyDisplay.hpp">
-      <Filter>Engine\Render\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="HDR.hpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyMaterial.hpp">
-      <Filter>Engine\Render\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="ChunkRenderer.hpp">
-      <Filter>Engine\Render\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyUtility.hpp">
-      <Filter>Engine\Render\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="GL_Ext.hpp">
-      <Filter>Engine\Render\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="SkyboxRenderer.hpp">
-      <Filter>Engine\Render\Renderer</Filter>
-    </ClInclude>
     <ClInclude Include="Config.hpp">
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="EasyPlayground.hpp">
       <Filter>Game</Filter>
     </ClInclude>
-    <ClInclude Include="ImGUI_Fun.hpp">
-      <Filter>Game</Filter>
-    </ClInclude>
-    <ClInclude Include="WinUtils.hpp">
-      <Filter>Game\Util</Filter>
-    </ClInclude>
     <ClInclude Include="ClientTest.hpp">
       <Filter>Game\Util</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Game\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_opengl3.h">
+      <Filter>Game\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_opengl3_loader.h">
+      <Filter>Game\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_glfw.h">
+      <Filter>Game\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI_Fun.hpp">
+      <Filter>Game</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

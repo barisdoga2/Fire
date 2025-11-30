@@ -21,32 +21,32 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{0ccc6fc7-cee3-478d-a148-8bc2c654a5ff}</ProjectGuid>
-    <RootNamespace>GameServer</RootNamespace>
+    <ProjectGuid>{a190abc4-a223-4c19-8be4-32387eefb30d}</ProjectGuid>
+    <RootNamespace>FireRender</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -80,17 +80,18 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../libs/x86/debug/;../x86/debug/;</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -99,34 +100,36 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../libs/x86/release/;../x86/release/;</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../libs/x64/debug/;../x64/debug/;</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -135,47 +138,59 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../libs/x64/release/;../x64/release/;</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="HeartbeatManager.cpp" />
-    <ClCompile Include="imgui_impl_glfw.cpp" />
-    <ClCompile Include="imgui_impl_opengl3.cpp" />
-    <ClCompile Include="LoginManager.cpp" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Server.cpp" />
-    <ClCompile Include="ServerUI.cpp" />
-    <ClCompile Include="World.cpp" />
+    <ClInclude Include="ChunkRenderer.hpp" />
+    <ClInclude Include="EasyAnimation.hpp" />
+    <ClInclude Include="EasyAnimator.hpp" />
+    <ClInclude Include="EasyCamera.hpp" />
+    <ClInclude Include="EasyDisplay.hpp" />
+    <ClInclude Include="EasyMaterial.hpp" />
+    <ClInclude Include="EasyModel.hpp" />
+    <ClInclude Include="EasyShader.hpp" />
+    <ClInclude Include="EasyTexture.hpp" />
+    <ClInclude Include="EasyUtility.hpp" />
+    <ClInclude Include="framework.h" />
+    <ClInclude Include="GL_Ext.hpp" />
+    <ClInclude Include="HDR.hpp" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="SkyboxRenderer.hpp" />
+    <ClInclude Include="WinUtils.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HeartbeatManager.hpp" />
-    <ClInclude Include="imgui_impl_glfw.h" />
-    <ClInclude Include="imgui_impl_opengl3.h" />
-    <ClInclude Include="imgui_impl_opengl3_loader.h" />
-    <ClInclude Include="LoginManager.hpp" />
-    <ClInclude Include="Managers.hpp" />
-    <ClInclude Include="Net.hpp" />
-    <ClInclude Include="resource.h" />
-    <ClInclude Include="Server.hpp" />
-    <ClInclude Include="ServerUI.hpp" />
-    <ClInclude Include="World.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="FireServer.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="..\res\images\FireServer.ico" />
+    <ClCompile Include="ChunkRenderer.cpp" />
+    <ClCompile Include="EasyAnimation.cpp" />
+    <ClCompile Include="EasyAnimator.cpp" />
+    <ClCompile Include="EasyCamera.cpp" />
+    <ClCompile Include="EasyDisplay.cpp" />
+    <ClCompile Include="EasyMaterial.cpp" />
+    <ClCompile Include="EasyModel.cpp" />
+    <ClCompile Include="EasyShader.cpp" />
+    <ClCompile Include="EasyTexture.cpp" />
+    <ClCompile Include="EasyUtility.cpp" />
+    <ClCompile Include="FireRender.cpp" />
+    <ClCompile Include="HDR.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="SkyboxRenderer.cpp" />
+    <ClCompile Include="WinUtils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

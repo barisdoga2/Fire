@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "EasyTexture.hpp"
 
 #include <iostream>

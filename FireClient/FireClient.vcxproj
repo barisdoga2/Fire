@@ -82,7 +82,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../include/;../FireNet/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -90,7 +90,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x86/debug/;../x86/debug/;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -101,7 +101,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../include/;../FireNet/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -109,7 +109,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x86/release/;../x86/release/;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -118,7 +118,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;OZZ_USE_DYNAMIC_LINKING;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../include/;../FireNet/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -127,7 +127,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x64/debug/;../x64/debug/;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -138,7 +138,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions); GLM_ENABLE_EXPERIMENTAL;;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../include/;../FireNet/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -146,52 +146,25 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x64/release/;../x64/release/;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ChunkRenderer.cpp" />
     <ClCompile Include="ClientTest.cpp" />
-    <ClCompile Include="EasyAnimation.cpp" />
-    <ClCompile Include="EasyAnimator.cpp" />
-    <ClCompile Include="EasyCamera.cpp" />
-    <ClCompile Include="EasyDisplay.cpp" />
-    <ClCompile Include="EasyMaterial.cpp" />
-    <ClCompile Include="EasyModel.cpp" />
     <ClCompile Include="EasyPlayground.cpp" />
-    <ClCompile Include="EasyShader.cpp" />
-    <ClCompile Include="EasyTexture.cpp" />
-    <ClCompile Include="EasyUtility.cpp" />
-    <ClCompile Include="HDR.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="SkyboxRenderer.cpp" />
-    <ClCompile Include="WinUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ChunkRenderer.hpp" />
     <ClInclude Include="ClientTest.hpp" />
     <ClInclude Include="Config.hpp" />
-    <ClInclude Include="EasyAnimation.hpp" />
-    <ClInclude Include="EasyAnimator.hpp" />
-    <ClInclude Include="EasyCamera.hpp" />
-    <ClInclude Include="EasyDisplay.hpp" />
-    <ClInclude Include="EasyMaterial.hpp" />
-    <ClInclude Include="EasyModel.hpp" />
     <ClInclude Include="EasyPlayground.hpp" />
-    <ClInclude Include="EasyShader.hpp" />
-    <ClInclude Include="EasyTexture.hpp" />
-    <ClInclude Include="GL_Ext.hpp" />
-    <ClInclude Include="HDR.hpp" />
     <ClInclude Include="ImGUI_Fun.hpp" />
     <ClInclude Include="imgui_impl_glfw.h" />
     <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="imgui_impl_opengl3_loader.h" />
-    <ClInclude Include="EasyUtility.hpp" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="SkyboxRenderer.hpp" />
-    <ClInclude Include="WinUtils.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="publish.bat" />
