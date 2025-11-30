@@ -8,7 +8,7 @@ LoginManager::LoginManager(Server* server) : SessionManager(server, LOGIN_MANAGE
 
 }
 
-bool LoginManager::Update(ObjCacheType_t& out_cache, double dt)
+bool LoginManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, double dt)
 {
     bool ret = false;
 
@@ -86,8 +86,9 @@ bool LoginManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
                         message = "Buy this champion first!";
                     else
                     {
-                        session->RegisterToManager(HEARTBEAT_MANAGER);
-                        session->RegisterToManager(CHAT_MANAGER);
+                        session->RegisterToManager(out_cache, HEARTBEAT_MANAGER);
+                        session->RegisterToManager(out_cache, CHAT_MANAGER);
+                        session->RegisterToManager(out_cache, PLAYER_MANAGER);
                     }
                     out_cache[sid].push_back(new sChampionSelectResponse(response, message));
                     std::cout << "[LoginMng] Champion select request received\n";

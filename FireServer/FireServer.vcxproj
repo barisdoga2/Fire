@@ -149,6 +149,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="PlayerManager.cpp" />
     <ClCompile Include="ChatManager.cpp" />
     <ClCompile Include="HeartbeatManager.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
@@ -160,6 +161,7 @@
     <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="PlayerManager.hpp" />
     <ClInclude Include="ChatManager.hpp" />
     <ClInclude Include="HeartbeatManager.hpp" />
     <ClInclude Include="imgui_impl_glfw.h" />

@@ -273,3 +273,63 @@ public:
     }
 };
 REGISTER_PACKET(sChatMessage, CHAT_MESSAGE);
+
+class sPlayerMovement : public EasySerializeable {
+public:
+    UserID_t userID;
+    glm::vec3 position;
+    glm::vec3 rotation;
+    glm::vec3 direction;
+    unsigned long long timestamp;
+
+    sPlayerMovement() : userID(), position(), rotation(), direction(), timestamp(), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT))
+    {
+
+    }
+
+    sPlayerMovement(UserID_t userID, glm::vec3 position, glm::vec3 rotation, glm::vec3 direction, unsigned long long timestamp) : userID(userID), position(position), rotation(rotation), direction(direction), timestamp(timestamp), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT))
+    {
+
+    }
+
+    ~sPlayerMovement()
+    {
+        
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(userID);
+        ser->Put(position);
+        ser->Put(rotation);
+        ser->Put(direction);
+        ser->Put(timestamp);
+    }
+};
+REGISTER_PACKET(sPlayerMovement, PLAYER_MOVEMENT);
+
+class sPlayerMovementPack : public EasySerializeable {
+public:
+    std::vector<sPlayerMovement> movements;
+
+    sPlayerMovementPack() : movements(), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT_PACK))
+    {
+
+    }
+
+    sPlayerMovementPack(const std::vector<sPlayerMovement>& movements) : movements(movements), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT_PACK))
+    {
+
+    }
+
+    ~sPlayerMovementPack()
+    {
+        
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(movements);
+    }
+};
+REGISTER_PACKET(sPlayerMovementPack, PLAYER_MOVEMENT_PACK);

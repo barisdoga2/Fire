@@ -3,9 +3,9 @@
 #include "Server.hpp"
 #include "SessionManager.hpp"
 
-class ChatManager : public SessionManager {
+class PlayerManager : public SessionManager {
 public:
-    ChatManager(Server* server);
+    PlayerManager(Server* server);
 
     bool Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, double dt) override;
 

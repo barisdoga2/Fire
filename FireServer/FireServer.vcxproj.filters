@@ -45,6 +45,9 @@
     <ClCompile Include="ChatManager.cpp">
       <Filter>Server\Internal\Manager</Filter>
     </ClCompile>
+    <ClCompile Include="PlayerManager.cpp">
+      <Filter>Server\Internal\Manager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Net.hpp">
@@ -81,6 +84,9 @@
       <Filter>Server\Internal\Manager</Filter>
     </ClInclude>
     <ClInclude Include="SessionManager.hpp">
+      <Filter>Server\Internal\Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerManager.hpp">
       <Filter>Server\Internal\Manager</Filter>
     </ClInclude>
   </ItemGroup>

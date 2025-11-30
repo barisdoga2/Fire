@@ -7,7 +7,7 @@ HeartbeatManager::HeartbeatManager(Server* server) : SessionManager(server, HEAR
 
 }
 
-bool HeartbeatManager::Update(ObjCacheType_t& out_cache, double dt)
+bool HeartbeatManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, double dt)
 {
     bool ret = false;
 
@@ -51,12 +51,12 @@ bool HeartbeatManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cac
     return ret;
 }
 
-void HeartbeatManager::OnSessionCreate(TickSession* session)
+void HeartbeatManager::OnSessionCreate(ObjCacheType_t& out_cache, TickSession* session)
 {
     
 }
 
-void HeartbeatManager::OnSessionDestroy(TickSession* session, SessionStatus destroyReason)
+void HeartbeatManager::OnSessionDestroy(ObjCacheType_t& out_cache, TickSession* session, SessionStatus destroyReason)
 {
 
 }

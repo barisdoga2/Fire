@@ -14,9 +14,9 @@ public:
 
 	}
 
-	virtual bool Update(ObjCacheType_t& out_cache, double dt) = 0U;
+	virtual bool Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, double dt) = 0U;
 	virtual bool Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) = 0U;
-	virtual void OnSessionCreate(TickSession* session) {}
-	virtual void OnSessionDestroy(TickSession* session, SessionStatus destroyReason) {}
+	virtual void OnSessionCreate(ObjCacheType_t& out_cache, TickSession* session) {}
+	virtual void OnSessionDestroy(ObjCacheType_t& out_cache, TickSession* session, SessionStatus destroyReason) {}
 
 };

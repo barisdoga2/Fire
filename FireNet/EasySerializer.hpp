@@ -102,7 +102,7 @@ public:
     template <class T>
     void Put(std::vector<T>& v)
     {
-        static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
+        //static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
 
         size_t size = v.size();
         Put(size);

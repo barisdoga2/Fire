@@ -6,6 +6,7 @@
 #include "HeartbeatManager.hpp"
 #include "LoginManager.hpp"
 #include "ChatManager.hpp"
+#include "PlayerManager.hpp"
 
 std::unordered_map<SessionManagers, SessionManager*> all_managers{};
 
@@ -14,16 +15,16 @@ TickSession::TickSession(Session* session) : sessionID(session->sessionID), user
     
 }
 
-TickSession::~TickSession()
+void TickSession::Destroy(ObjCacheType_t& out_cache, SessionStatus status)
 {
     for (auto& [mid, manager] : this->managers)
-        manager->OnSessionDestroy(this, status);
+        manager->OnSessionDestroy(out_cache, this, status);
 }
 
-void TickSession::RegisterToManager(SessionManagers sessionManager)
+void TickSession::RegisterToManager(ObjCacheType_t& out_cache, SessionManagers sessionManager)
 {
     this->managers.emplace(sessionManager, all_managers[sessionManager]);
-    all_managers[sessionManager]->OnSessionCreate(this);
+    all_managers[sessionManager]->OnSessionCreate(out_cache, this);
 }
 
 Server::Server(EasyBufferManager* bf, unsigned short port) : EasyServer(bf, port), world(nullptr)
@@ -51,6 +52,11 @@ void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
         for (auto& [mid, manager] : all_managers)
         {
             manager->Receive(in_cache, out_cache);
+        }
+
+        for (auto& [mid, manager] : all_managers)
+        {
+            manager->Update(in_cache, out_cache, 0.0);
         }
 
         in_cache.clear();
@@ -110,6 +116,7 @@ bool Server::Start()
         all_managers[LOGIN_MANAGER] = new LoginManager(this);
         all_managers[HEARTBEAT_MANAGER] = new HeartbeatManager(this);
         all_managers[CHAT_MANAGER] = new ChatManager(this);
+        all_managers[PLAYER_MANAGER] = new PlayerManager(this);
     }
     return ret;
 }
@@ -148,8 +155,9 @@ bool Server::OnSessionCreate(Session* session)
     
     if (status)
     {
+        ObjCacheType_t dummy{};
         TickSession* tSession = new TickSession(session);
-        tSession->RegisterToManager(LOGIN_MANAGER);
+        tSession->RegisterToManager(dummy, LOGIN_MANAGER);
         sessions[session->sessionID] = tSession;
         
         sLoginResponse acceptResponse = sLoginResponse(true, "Server welcomes you!");
@@ -169,7 +177,9 @@ void Server::OnSessionDestroy(Session* session, SessionStatus disconnectReason)
     sDisconnectResponse disconnectResponse = sDisconnectResponse("Disconnect reason: '" + SessionStatus_Str(disconnectReason) + "'!");
     SendInstantPacket(session, { &disconnectResponse });
 
+    ObjCacheType_t dummy{};
     auto res = sessions.find(session->sessionID);
+    res->second->Destroy(dummy, disconnectReason);
     delete res->second;
     sessions.erase(res);
 

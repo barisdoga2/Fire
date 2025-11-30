@@ -8,6 +8,7 @@ enum SessionManagers : unsigned int {
 	LOGIN_MANAGER = 0U,
 	HEARTBEAT_MANAGER = 1U,
 	CHAT_MANAGER = 2U,
+	PLAYER_MANAGER = 3U,
 };
 
 
@@ -18,7 +19,6 @@ enum SessionManagers : unsigned int {
 class Server;
 class TickSession {
 	std::unordered_map<SessionManagers, SessionManager*> managers{};
-
 public:
 	static inline const uint32_t sessionTimeout{ 10000 };
 
@@ -35,11 +35,14 @@ public:
 
 	SessionStatus status = UNSET;
 
+	unsigned long long moveTimestamp{};
+	glm::vec3 position{}, rotation{}, direction{};
+
 	TickSession(Session* session);
 
-	~TickSession();
+	void Destroy(ObjCacheType_t& out_cache, SessionStatus status);
 
-	void RegisterToManager(SessionManagers manager);
+	void RegisterToManager(ObjCacheType_t& out_cache, SessionManagers manager);
 };
 
 

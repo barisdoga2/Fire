@@ -20,6 +20,8 @@
 #define LOGOUT_REQUEST ((PacketID_t)(119U))
 #define BROADCAST_MESSAGE ((PacketID_t)(120U))
 #define CHAT_MESSAGE ((PacketID_t)(121U))
+#define PLAYER_MOVEMENT ((PacketID_t)(122U))
+#define PLAYER_MOVEMENT_PACK ((PacketID_t)(123U))
 
 
 

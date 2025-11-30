@@ -7,7 +7,7 @@ ChatManager::ChatManager(Server* server) : SessionManager(server, CHAT_MANAGER)
 
 }
 
-bool ChatManager::Update(ObjCacheType_t& out_cache, double dt)
+bool ChatManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, double dt)
 {
     bool ret = false;
 
@@ -56,14 +56,14 @@ bool ChatManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
     return ret;
 }
 
-void ChatManager::OnSessionCreate(TickSession* session)
+void ChatManager::OnSessionCreate(ObjCacheType_t& out_cache, TickSession* session)
 {
     unsigned long long ts = Clock::now().time_since_epoch().count();
     for (auto& [sid, ses] : server->sessions)
         messageCache[sid].push_back(new sChatMessage(session->username + " has joined the game!", "[Server]", ts));
 }
 
-void ChatManager::OnSessionDestroy(TickSession* session, SessionStatus destroyReason)
+void ChatManager::OnSessionDestroy(ObjCacheType_t& out_cache, TickSession* session, SessionStatus destroyReason)
 {
     unsigned long long ts = Clock::now().time_since_epoch().count();
     for (auto& [sid, ses] : server->sessions)
