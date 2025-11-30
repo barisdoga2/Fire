@@ -189,12 +189,18 @@
     <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="imgui_impl_opengl3_loader.h" />
     <ClInclude Include="EasyUtility.hpp" />
-    <ClInclude Include="Sched.hpp" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="SkyboxRenderer.hpp" />
     <ClInclude Include="WinUtils.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="publish.bat" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="FireClient.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\res\images\Fire.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -54,7 +54,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login']))
 		{
 			$stmt = $conn->prepare("INSERT INTO sessions (user_id, session_key, valid_until) VALUES (?, ?, ?)");
 			$newValid = date("Y-m-d H:i:s", time() + 3600); // convert to datetime string
-			$stmt->bind_param("isi", $_SESSION['id'], generateRandomString(16), $newValid);
+			$rngStr = generateRandomString(16);
+			$stmt->bind_param("isi", $_SESSION['id'], $rngStr, $newValid);
 			$stmt->execute();
 			
 			$stmt = $conn->prepare("SELECT * FROM sessions WHERE user_id=?");
@@ -105,16 +106,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register']))
     $user = trim($_POST['username'] ?? '');
     $pass = trim($_POST['password'] ?? '');
     if ($user && $pass)
-	{
+    {
         $hash = hash('sha256', $pass);
         $stmt = $conn->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
         try
-		{
+        {
             $stmt->bind_param("ss", $user, $hash);
             $stmt->execute();
+            $newUserId = $stmt->insert_id;
+            $stmt2 = $conn->prepare("INSERT INTO user_stats (user_id) VALUES (?)");
+            $stmt2->bind_param("i", $newUserId);
+            $stmt2->execute();
+            $stmt2->close();
             $message = "Kayit basarili.";
         }
-		catch (mysqli_sql_exception $e)
+        catch (mysqli_sql_exception $e)
 		{
             if (str_contains($e->getMessage(), 'Duplicate entry'))
 			{
@@ -127,8 +133,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register']))
         }
         $stmt->close();
     }
-	else
-	{
+    else
+    {
         $message = "Empty username and/or password!";
     }
 }
@@ -149,7 +155,8 @@ if (isset($_GET['code']) && isset($_GET['state']))
 
     if (isset($token_data['id_token']))
 	{
-        list(, $payload, ) = explode('.', $token_data['id_token']);
+		$parts = explode('.', $token_data['id_token']);
+		$payload = $parts[1] ?? '';
         $user_data = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload)), true);
 
         $_SESSION['username'] = $user_data['email'] ?? 'GoogleUser';

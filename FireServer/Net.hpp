@@ -26,6 +26,7 @@
 #define MATERIAL_DEF ((PacketID_t)(12U))
 #define WORLD_DEF ((PacketID_t)(13U))
 
+
 class UserStats {
 public:
     unsigned int userID{};
@@ -36,6 +37,24 @@ public:
     std::vector<unsigned int> champions_owned{};
 };
 
+class Session;
+class SessionManager;
+class UD {
+public:
+    Session* session{};
+    UserStats* stats{};
+    std::vector<SessionManager*> managers{};
+
+    UD(const UD& ud) : session(ud.session), stats(ud.stats), managers(ud.managers)
+    {
+
+    }
+
+    UD(Session* session = nullptr, UserStats* stats = nullptr, const std::vector<SessionManager*>& managers = {}) : session(session), stats(stats), managers(managers)
+    {
+
+    }
+};
 
 struct NetPlayer {
     glm::vec2 position;
@@ -86,8 +105,6 @@ public:
     }
 };
 REGISTER_PACKET(sPlayerBootInfo, PLAYER_BOOT_INFO);
-
-
 
 class sChampionSelectRequest : public EasySerializeable {
 public:
@@ -176,8 +193,6 @@ public:
     }
 };
 REGISTER_PACKET(sChampionBuyResponse, CHAMPION_BUY_RESPONSE);
-
-
 
 class sHearbeat : public EasySerializeable {
 public:

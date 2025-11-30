@@ -139,6 +139,8 @@ public:
 
     virtual bool Update(ObjCacheType_t& out_cache, double dt) = 0U;
     virtual bool Receive(EasyServer* server, ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) = 0U;
+    virtual void OnSessionCreate(Session* session) {}
+    virtual void OnSessionDestroy(Session* session, SessionStatus destroyReason) {}
 
 };
 

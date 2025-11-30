@@ -10,6 +10,9 @@
     <Filter Include="Server\Internal">
       <UniqueIdentifier>{ceb530fc-87e2-46d1-a7ab-c5820101683e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Server\Internal\Manager">
+      <UniqueIdentifier>{5ed0ddaf-8399-437b-8b84-f32a42d72ff4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -20,6 +23,12 @@
     </ClCompile>
     <ClCompile Include="World.cpp">
       <Filter>Server\Internal</Filter>
+    </ClCompile>
+    <ClCompile Include="LoginManager.cpp">
+      <Filter>Server\Internal\Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="HeartbeatManager.cpp">
+      <Filter>Server\Internal\Manager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -32,5 +41,21 @@
     <ClInclude Include="World.hpp">
       <Filter>Server\Internal</Filter>
     </ClInclude>
+    <ClInclude Include="HeartbeatManager.hpp">
+      <Filter>Server\Internal\Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="LoginManager.hpp">
+      <Filter>Server\Internal\Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="Managers.hpp">
+      <Filter>Server\Internal\Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="FireServer.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\res\images\FireServer.ico" />
   </ItemGroup>
 </Project>

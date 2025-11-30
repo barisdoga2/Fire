@@ -149,14 +149,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="HeartbeatManager.cpp" />
+    <ClCompile Include="LoginManager.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="HeartbeatManager.hpp" />
+    <ClInclude Include="LoginManager.hpp" />
+    <ClInclude Include="Managers.hpp" />
     <ClInclude Include="Net.hpp" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="Server.hpp" />
     <ClInclude Include="World.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="FireServer.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\res\images\FireServer.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
