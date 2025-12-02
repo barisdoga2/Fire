@@ -17,17 +17,30 @@ bool PlayerManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, 
 
         for (auto& [sid, cache] : in_cache)
         {
+            auto r = server->sessions.find(sid);
+            if (r == server->sessions.end())
+            {
+                for (auto it = cache.begin(); it != cache.end(); )
+                {
+                    delete* it;
+                    it++;
+                }
+                cache.clear();
+                continue;
+            }
+            TickSession* session = r->second;
+
             for (auto it = cache.begin(); it != cache.end(); )
             {
                 if (sPlayerMovement* playerMovement = dynamic_cast<sPlayerMovement*>(*it); playerMovement)
                 {
                     std::cout << "[PlayerMng] Player movement message received!\n";
-                    if (server->sessions[sid]->userID == playerMovement->userID)
+                    if (session->userID == playerMovement->userID)
                     {
-                        server->sessions[sid]->position = playerMovement->position;
-                        server->sessions[sid]->rotation = playerMovement->rotation;
-                        server->sessions[sid]->direction = playerMovement->direction;
-                        server->sessions[sid]->moveTimestamp = playerMovement->timestamp;
+                        session->position = playerMovement->position;
+                        session->rotation = playerMovement->rotation;
+                        session->direction = playerMovement->direction;
+                        session->moveTimestamp = playerMovement->timestamp;
                     }
 
                     delete* it;
@@ -41,6 +54,7 @@ bool PlayerManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, 
                 }
             }
         }
+
         std::vector<sPlayerMovement> movements;
         for (auto& [sid, session] : server->sessions)
             movements.emplace_back(session->userID, session->position, session->rotation, session->direction, session->moveTimestamp);

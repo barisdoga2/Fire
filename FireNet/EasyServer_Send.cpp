@@ -226,7 +226,7 @@ public:
         // Flush, send 'internal_ready_cache' to clients, run every 6ms for 3ms
         Flush();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10U));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1U));
     }
 };
 

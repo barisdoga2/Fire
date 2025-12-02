@@ -501,7 +501,7 @@ public:
         // Flush, move 'internal_in_cache' into main context's 'in_cache', run every 5ms
         Flush();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10U));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1U));
     }
 };
 

@@ -15,7 +15,7 @@ std::unordered_map<SessionManagers, SessionManager*> all_managers{};
 
 TickSession::TickSession(Session* session) : sessionID(session->sessionID), userID(session->userID), addr(session->addr), lastReceive(session->lastReceive), logoutRequested(false)
 {
-    
+
 }
 
 void TickSession::Destroy(ObjCacheType_t& out_cache, SessionStatus status)
@@ -48,13 +48,13 @@ void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
     // Iterate receive cache
     {
         sessionsMutex.lock();
-        for(TickSession* session : lateCreate)
+        for (TickSession* session : lateCreate)
         {
             session->RegisterToManager(out_cache, LOGIN_MANAGER);
             sessions[session->sessionID] = session;
         }
         lateCreate.clear();
-        for(auto& [sid, disconnectReason] : lateDestroy)
+        for (auto& [sid, disconnectReason] : lateDestroy)
         {
             auto res = sessions.find(sid);
             res->second->Destroy(out_cache, disconnectReason);
@@ -62,22 +62,18 @@ void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
             sessions.erase(res);
         }
         lateDestroy.clear();
-        
+
+        auto now = Clock::now();
         for (auto& [sid, session] : in_cache)
         {
-            sessions[sid]->lastReceive = Clock::now();
+            if(auto s = sessions.find(sid); s != sessions.end())
+                s->second->lastReceive = Clock::now();
         }
-        for (auto& [mid, manager] : all_managers)
-        {
-            manager->Receive(in_cache, out_cache);
-        }
-
         for (auto& [mid, manager] : all_managers)
         {
             manager->Update(in_cache, out_cache, 0.0);
         }
 
-        in_cache.clear();
         sessionsMutex.unlock();
     }
 

@@ -100,7 +100,7 @@ void EasyServer::Update()
 
         helper.UpdateOutgoingObjCache();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10U));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1U));
     }
 }
 
