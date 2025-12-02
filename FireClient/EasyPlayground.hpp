@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include "EasyCamera.hpp"
 #include "EasyShader.hpp"
 #include "EasyModel.hpp"
@@ -8,8 +9,30 @@
 #include "ChunkRenderer.hpp"
 #include "SkyboxRenderer.hpp"
 
+#include <EasySerializer.hpp>
+#include <EasyNet.hpp>
+
+struct EasyNetwork {
+    bool isLogin{};
+    std::chrono::steady_clock::time_point lastHeartbeatReceive{};
+    std::chrono::steady_clock::time_point nextHeartbeatSend{};
+    std::chrono::steady_clock::time_point nextPlayerMovementSend{};
+
+    
+    std::mutex m{};
+    std::vector<EasySerializeable*> in{}, out{};
+    std::vector<EasySerializeable*> in_cache{}, out_cache{};
+
+};
+
+struct NetworkPlayer {
+    UserID_t userID;
+    std::string username;
+    EasyModel::EasyTransform transform;
+};
 
 class HDR;
+class EasySerializeable;
 class EasyPlayground {
 private:
 public:
@@ -38,6 +61,9 @@ public:
 
     std::vector<EasyModel*> mapObjects;
 
+    EasyNetwork network;
+    std::unordered_map<UserID_t, NetworkPlayer> networkPlayers;
+
     EasyPlayground(const EasyDisplay& display);
     ~EasyPlayground();
 
@@ -50,6 +76,10 @@ public:
     void ImGUIRender();
     void ReloadShaders();
     void ReGenerateMap();
+
+    void NetworkUpdate(double _dt);
+    void OnLogin();
+    void OnDisconnect(SessionStatus disconnectStatus);
 
     void ImGUI_BroadcastMessageWindow();
     void ImGUI_PlayerInfoWindow();
