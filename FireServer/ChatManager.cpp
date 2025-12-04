@@ -15,7 +15,7 @@ bool ChatManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, do
     Timestamp_t currentTime = Clock::now();
     if (nextUpdate < currentTime)
     {
-        nextUpdate = currentTime + Millis_t(300U);
+        nextUpdate = currentTime + Millis_t(1U);
 
         std::vector<sChatMessage*> messages;
         for (auto& [sid, cache] : in_cache)

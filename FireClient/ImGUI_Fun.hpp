@@ -216,15 +216,13 @@ inline void LoggedIn(std::vector<EasySerializeable*>& recvObjs, std::mutex& recv
         p->OnLogin();
     while (loggedIn)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50U));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2U));
         {
             std::lock_guard<std::mutex> lock(recvMtx);
             std::lock_guard<std::mutex> lock2(p->network.m);
             p->network.in.insert(p->network.in.end(), recvObjs.begin(), recvObjs.end());
             recvObjs.clear();
         }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(50U));
         {
             std::lock_guard<std::mutex> lock(sendMtx);
             std::lock_guard<std::mutex> lock2(p->network.m);
@@ -275,7 +273,7 @@ inline void Login(std::string username_, std::string password, EasyPlayground* p
                 client.ClientReceive(*crypt, recvObjs);
                 recvMtx.unlock();
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100U));
+            std::this_thread::sleep_for(std::chrono::milliseconds(2U));
         }
     });
 
@@ -291,7 +289,7 @@ inline void Login(std::string username_, std::string password, EasyPlayground* p
                 sendObjs.clear();
                 sendMtx.unlock();
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100U));
+            std::this_thread::sleep_for(std::chrono::milliseconds(2U));
         }
     });
 
