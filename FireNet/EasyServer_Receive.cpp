@@ -139,6 +139,7 @@ public:
     bool ReadKeyFromMYSQL(const SessionID_t& session_id, Key_t& key, UserID_t& user_id)
     {
         bool ret = false;
+#ifndef NO_HOST
         sql::PreparedStatement* stmt = server->db->PrepareStatement("SELECT * FROM sessions WHERE id=? LIMIT 1;");
         stmt->setUInt(1, session_id);
         sql::ResultSet* res = stmt->executeQuery();
@@ -151,6 +152,11 @@ public:
         }
         delete res;
         delete stmt;
+#else
+        key = { 0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U };
+        user_id = 2U;
+        ret = true;
+#endif
         return ret;
     }
 

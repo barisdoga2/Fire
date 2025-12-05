@@ -13,11 +13,16 @@ EasyDB::EasyDB()
 {
 	try
 	{
+#ifndef NO_HOST
 		driver = get_driver_instance();
 		connection = driver->connect("127.0.0.1", "root", "");
 		connection->setSchema("fire");
 		connected = true;
 		std::cout << "DB Manager connected." << std::endl;
+#else
+		connected = true;
+		std::cout << "DB Manager skipped." << std::endl;
+#endif
 	}
 	catch (sql::SQLException e)
 	{

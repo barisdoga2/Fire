@@ -89,6 +89,7 @@ inline bool ParseWebLoginResponse(const std::string& serverUrl,const std::string
     loginFailed     = false;
     loginStatusText = "Logging in...";
 
+#ifndef NO_HOST
     std::string response = client.ClientWebRequest(serverUrl, username_, password);
     const std::string prefix  = "<textarea name=\"jwt\" readonly>";
     const std::string prefix2 = "<div class=\"msg\">";
@@ -146,9 +147,24 @@ inline bool ParseWebLoginResponse(const std::string& serverUrl,const std::string
     {
         loginStatusText = "Error while parsing response!";
     }
-
     loginFailed = true;
     return false;
+#else
+    loginFailed = false;
+    loginStatusText = "Logged in...";
+    sessionID = 2U;
+    username = username_;
+    Key_t key_t = { 0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U };
+    if (crypt)
+        delete crypt;
+    crypt = new PeerCryptInfo(sessionID, 0U, 0U, key_t);
+
+    if (rememberMe)
+        SaveConfig(true, usernameArr, passwordArr);
+    else
+        SaveConfig(false, "", "");
+    return true;
+#endif
 }
 
 template<typename T, typename Handler>

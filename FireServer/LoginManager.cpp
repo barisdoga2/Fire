@@ -37,6 +37,7 @@ bool LoginManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, d
             {
                 std::cout << "[LoginMng] Login request received\n";
 
+#ifndef NO_HOST
                 sql::PreparedStatement* stmt = server->db->PrepareStatement("SELECT * FROM users WHERE id=? LIMIT 1;");
                 stmt->setUInt(1, session->userID);
                 sql::ResultSet* res = stmt->executeQuery();
@@ -88,6 +89,17 @@ bool LoginManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, d
                 }
                 delete res2;
                 delete stmt2;
+#else
+                session->stats.userID = 2U;
+                session->stats.gametime = 0U;
+                session->stats.golds = 0U;
+                session->stats.diamonds = 0U;
+                session->stats.tutorial_done = false;
+                session->stats.champions_owned.push_back(1U);
+                session->username = "admin";
+                std::cout << "[LoginMng] Player boot info sent!\n";
+                out_cache[sid].push_back(new sPlayerBootInfo(session->stats.userID, session->stats.diamonds, session->stats.golds, session->stats.gametime, session->stats.tutorial_done, session->stats.champions_owned));
+#endif
             }
             else
             {
