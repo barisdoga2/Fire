@@ -2,9 +2,8 @@
 
 #include <unordered_set>
 #include <vector>
-#include <EasyNet.hpp>
+#include <FireNet.hpp>
 #include <EasySerializer.hpp>
-
 
 #ifndef _DEBUG
 #define REMOTE
@@ -20,15 +19,29 @@
 #define SERVER_URL "http://127.0.0.1/index.php"
 #endif
 
+#define FIRE_ENCRYPTION true
+#define FIRE_COMPRESSION true
 
-#define CIRCLE_DEF ((PacketID_t)(10U))
-#define POLY_DEF ((PacketID_t)(11U))
-#define MATERIAL_DEF ((PacketID_t)(12U))
-#define WORLD_DEF ((PacketID_t)(13U))
+#define LOGIN_REQUEST                                           ((PacketID_t)(100U))
+#define LOGIN_RESPONSE                                          ((PacketID_t)(101U))
+#define LOGOUT_REQUEST                                          ((PacketID_t)(102U))
+#define DISCONNECT_RESPONSE                                     ((PacketID_t)(103U))
+#define HEARTBEAT                                               ((PacketID_t)(104U))
+#define BROADCAST_MESSAGE                                       ((PacketID_t)(105U))
+#define CHAMPION_SELECT_REQUEST                                 ((PacketID_t)(200U))
+#define CHAMPION_BUY_REQUEST                                    ((PacketID_t)(201U))
+#define CHAMPION_SELECT_RESPONSE                                ((PacketID_t)(202U))
+#define CHAMPION_BUY_RESPONSE                                   ((PacketID_t)(203U))
+#define PLAYER_BOOT_INFO                                        ((PacketID_t)(204U))
+#define CHAT_MESSAGE                                            ((PacketID_t)(205U))
+#define PLAYER_MOVEMENT                                         ((PacketID_t)(206U))
+#define PLAYER_MOVEMENT_PACK                                    ((PacketID_t)(207U))
+
+
 
 class UserStats {
 public:
-    unsigned int userID{};
+    unsigned int uid{};
     unsigned int gametime{};
     unsigned int golds{};
     unsigned int diamonds{};
@@ -36,27 +49,144 @@ public:
     std::vector<unsigned int> champions_owned{};
 };
 
-struct NetPlayer {
-    glm::vec2 position;
-    std::unordered_set<uint32_t> subscribedChunks;
-
-};
-
-class EasyPeer {
+class sLogoutRequest : public EasySerializeable {
 public:
-    NetPlayer player;
 
-    EasyPeer(const EasyPeer& peer) : player(peer.player)
+    sLogoutRequest() : EasySerializeable(static_cast<PacketID_t>(LOGOUT_REQUEST))
     {
 
     }
 
-    EasyPeer() : player({ { 0.0f, 0.0f }, {} })
+    ~sLogoutRequest()
     {
 
     }
 
+    void Serialize(EasySerializer* ser) override
+    {
+
+    }
 };
+REGISTER_PACKET(sLogoutRequest, LOGOUT_REQUEST);
+
+class sLoginRequest : public EasySerializeable {
+public:
+    sLoginRequest() : EasySerializeable(static_cast<PacketID_t>(LOGIN_REQUEST))
+    {
+
+    }
+
+    ~sLoginRequest()
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+
+    }
+};
+REGISTER_PACKET(sLoginRequest, LOGIN_REQUEST);
+
+class sLoginResponse : public EasySerializeable {
+public:
+    bool response;
+    std::string message;
+
+    sLoginResponse() : response(), message(), EasySerializeable(static_cast<PacketID_t>(LOGIN_RESPONSE))
+    {
+
+    }
+
+    ~sLoginResponse()
+    {
+
+    }
+
+    sLoginResponse(bool response, std::string message) : response(response), message(message), EasySerializeable(static_cast<PacketID_t>(LOGIN_RESPONSE))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(response);
+        ser->Put(message);
+    }
+};
+REGISTER_PACKET(sLoginResponse, LOGIN_RESPONSE);
+
+class sDisconnectResponse : public EasySerializeable {
+public:
+    std::string message;
+
+    sDisconnectResponse() : message(), EasySerializeable(static_cast<PacketID_t>(DISCONNECT_RESPONSE))
+    {
+
+    }
+
+    ~sDisconnectResponse()
+    {
+
+    }
+
+    sDisconnectResponse(std::string message) : message(message), EasySerializeable(static_cast<PacketID_t>(DISCONNECT_RESPONSE))
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(message);
+    }
+};
+REGISTER_PACKET(sDisconnectResponse, DISCONNECT_RESPONSE);
+
+class sHearbeat : public EasySerializeable {
+public:
+    sHearbeat() : EasySerializeable(static_cast<PacketID_t>(HEARTBEAT))
+    {
+
+    }
+
+    ~sHearbeat()
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+
+    }
+};
+REGISTER_PACKET(sHearbeat, HEARTBEAT);
+
+class sBroadcastMessage : public EasySerializeable {
+public:
+    std::string message;
+
+    sBroadcastMessage() : message(), EasySerializeable(static_cast<PacketID_t>(BROADCAST_MESSAGE))
+    {
+
+    }
+
+    sBroadcastMessage(std::string message) : message(message), EasySerializeable(static_cast<PacketID_t>(BROADCAST_MESSAGE))
+    {
+
+    }
+
+    ~sBroadcastMessage()
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(message);
+    }
+};
+REGISTER_PACKET(sBroadcastMessage, BROADCAST_MESSAGE);
+
 
 class sPlayerBootInfo : public EasySerializeable {
 public:
@@ -198,51 +328,6 @@ public:
     }
 };
 REGISTER_PACKET(sChampionBuyResponse, CHAMPION_BUY_RESPONSE);
-
-class sHearbeat : public EasySerializeable {
-public:
-    sHearbeat() : EasySerializeable(static_cast<PacketID_t>(HEARTBEAT))
-    {
-
-    }
-
-    ~sHearbeat()
-    {
-        
-    }
-
-    void Serialize(EasySerializer* ser) override
-    {
-
-    }
-};
-REGISTER_PACKET(sHearbeat, HEARTBEAT);
-
-class sBroadcastMessage : public EasySerializeable {
-public:
-    std::string message;
-
-    sBroadcastMessage() : message(), EasySerializeable(static_cast<PacketID_t>(BROADCAST_MESSAGE))
-    {
-
-    }
-
-    sBroadcastMessage(std::string message) : message(message), EasySerializeable(static_cast<PacketID_t>(BROADCAST_MESSAGE))
-    {
-
-    }
-
-    ~sBroadcastMessage()
-    {
-        
-    }
-
-    void Serialize(EasySerializer* ser) override
-    {
-        ser->Put(message);
-    }
-};
-REGISTER_PACKET(sBroadcastMessage, BROADCAST_MESSAGE);
 
 class sChatMessage : public EasySerializeable {
 public:

@@ -80,9 +80,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS;NO_HOST</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -99,9 +99,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS;NO_HOST</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -116,9 +116,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS;NO_HOST</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -135,9 +135,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS;NO_HOST</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);OZZ_USE_DYNAMIC_LINKING;GLM_ENABLE_EXPERIMENTAL;VS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>../include/;../FireNet/;../FireRender/;</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -149,30 +149,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="PlayerManager.cpp" />
-    <ClCompile Include="ChatManager.cpp" />
-    <ClCompile Include="HeartbeatManager.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui_impl_opengl3.cpp" />
-    <ClCompile Include="LoginManager.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Server.cpp" />
+    <ClCompile Include="FireServer.cpp" />
     <ClCompile Include="ServerUI.cpp" />
     <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="PlayerManager.hpp" />
-    <ClInclude Include="ChatManager.hpp" />
-    <ClInclude Include="HeartbeatManager.hpp" />
     <ClInclude Include="imgui_impl_glfw.h" />
     <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="imgui_impl_opengl3_loader.h" />
-    <ClInclude Include="LoginManager.hpp" />
-    <ClInclude Include="Net.hpp" />
+    <ClInclude Include="ServerNet.hpp" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="Server.hpp" />
+    <ClInclude Include="FireServer.hpp" />
     <ClInclude Include="ServerUI.hpp" />
-    <ClInclude Include="SessionManager.hpp" />
+    <ClInclude Include="SqLite3.hpp" />
     <ClInclude Include="World.hpp" />
   </ItemGroup>
   <ItemGroup>

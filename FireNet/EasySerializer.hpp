@@ -3,7 +3,6 @@
 #include <unordered_map>
 #include <stdint.h>
 #include <glm/glm.hpp>
-#include "EasyNet.hpp"
 #include "EasyBuffer.hpp"
 #include "EasyPacket.hpp"
 
@@ -125,99 +124,6 @@ public:
         }
     }
 };
-
-class sLogoutRequest : public EasySerializeable {
-public:
-
-    sLogoutRequest() : EasySerializeable(static_cast<PacketID_t>(LOGOUT_REQUEST))
-    {
-        
-    }
-
-    ~sLogoutRequest()
-    {
-        
-    }
-
-    void Serialize(EasySerializer* ser) override
-    {
-        
-    }
-};
-REGISTER_PACKET(sLogoutRequest, LOGOUT_REQUEST);
-
-class sLoginRequest : public EasySerializeable {
-public:
-    sLoginRequest() : EasySerializeable(static_cast<PacketID_t>(LOGIN_REQUEST))
-    {
-
-    }
-
-    ~sLoginRequest()
-    {
-        
-    }
-
-    void Serialize(EasySerializer* ser) override
-    {
-
-    }
-};
-REGISTER_PACKET(sLoginRequest, LOGIN_REQUEST);
-
-class sLoginResponse : public EasySerializeable {
-public:
-    bool response;
-    std::string message;
-
-    sLoginResponse() : response(), message(), EasySerializeable(static_cast<PacketID_t>(LOGIN_RESPONSE))
-    {
-
-    }
-
-    ~sLoginResponse()
-    {
-        
-    }
-
-    sLoginResponse(bool response, std::string message) : response(response), message(message), EasySerializeable(static_cast<PacketID_t>(LOGIN_RESPONSE))
-    {
-
-    }
-
-    void Serialize(EasySerializer* ser) override
-    {
-        ser->Put(response);
-        ser->Put(message);
-    }
-};
-REGISTER_PACKET(sLoginResponse, LOGIN_RESPONSE);
-
-class sDisconnectResponse : public EasySerializeable {
-public:
-    std::string message;
-
-    sDisconnectResponse() : message(), EasySerializeable(static_cast<PacketID_t>(DISCONNECT_RESPONSE))
-    {
-
-    }
-
-    ~sDisconnectResponse()
-    {
-        
-    }
-
-    sDisconnectResponse(std::string message) : message(message), EasySerializeable(static_cast<PacketID_t>(DISCONNECT_RESPONSE))
-    {
-
-    }
-
-    void Serialize(EasySerializer* ser) override
-    {
-        ser->Put(message);
-    }
-};
-REGISTER_PACKET(sDisconnectResponse, DISCONNECT_RESPONSE);
 
 static inline bool MakeDeserialized(EasyBuffer* buff, std::vector<EasySerializeable*>& peer_cache)
 {

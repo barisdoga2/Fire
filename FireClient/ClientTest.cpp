@@ -1,11 +1,11 @@
 #include "ClientTest.hpp"
 #include "EasyPacket.hpp"
 #include "EasySocket.hpp"
-#include "EasyNet.hpp"
+#include "EasyIpAddress.hpp"
 
 #include <curl/curl.h>
 
-ClientPeer::ClientPeer(std::string key) : user_id(0U), socket(new EasySocket()), EasyPeer(), crypt(nullptr)
+ClientPeer::ClientPeer(std::string key) : user_id(0U), socket(new EasySocket()), crypt(nullptr)
 {
 
 }
@@ -17,7 +17,7 @@ ClientPeer::~ClientPeer()
     delete socket;
 }
 
-ClientTest::ClientTest(EasyBufferManager& bf, std::string ip, unsigned short port) : bf(bf), ip(ip), port(port)
+ClientTest::ClientTest(EasyBufferManager* bf, std::string ip, unsigned short port) : bf(bf), ip(ip), port(port)
 {
     
 }
@@ -66,16 +66,17 @@ std::string ClientTest::ClientWebRequest(std::string url, std::string username, 
     }
 }
 
-uint64_t ClientTest::ClientSend(PeerCryptInfo& crypt, const std::vector<EasySerializeable*>& objs)
+uint64_t ClientTest::ClientSend(CryptData& crypt, const std::vector<EasySerializeable*>& objs)
 {
     if (objs.size() == 0U)
         return 0U;
 
-    static EasyBuffer* buffer = bf.Get();
-    static EasyBuffer* buffer2 = bf.Get();
+    EasyBuffer* buffer = bf->Get();
+    EasyBuffer* buffer2 = bf->Get();
     uint64_t retVal = 1U;
     if (buffer && buffer2)
     {
+
         buffer->reset();
         buffer2->reset();
 
@@ -107,13 +108,15 @@ uint64_t ClientTest::ClientSend(PeerCryptInfo& crypt, const std::vector<EasySeri
     {
         retVal = 0U;
     }
+    bf->Free(buffer);
+    bf->Free(buffer2);
     return retVal;
 }
 
-uint64_t ClientTest::ClientReceive(PeerCryptInfo& crypt, std::vector<EasySerializeable*>& objs)
+uint64_t ClientTest::ClientReceive(CryptData& crypt, std::vector<EasySerializeable*>& objs)
 {
-    static EasyBuffer* buffer = bf.Get();
-    static EasyBuffer* buffer2 = bf.Get();
+    EasyBuffer* buffer = bf->Get();
+    EasyBuffer* buffer2 = bf->Get();
     uint64_t retVal = 1U;
     if (buffer && buffer2)
     {
@@ -141,5 +144,7 @@ uint64_t ClientTest::ClientReceive(PeerCryptInfo& crypt, std::vector<EasySeriali
     {
         retVal = 0U;
     }
+    bf->Free(buffer);
+    bf->Free(buffer2);
     return retVal;
 }

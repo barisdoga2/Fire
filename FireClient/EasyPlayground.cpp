@@ -20,14 +20,14 @@
 #include "ImGui_Fun.hpp"
 
 
-EasyPlayground::EasyPlayground(const EasyDisplay& display) : display_(display)
+EasyPlayground::EasyPlayground(const EasyDisplay& display, EasyBufferManager* bm) : display_(display), bm(bm), network(bm)
 {
 
 }
 
 EasyPlayground::~EasyPlayground()
 {
-	Logout(this);
+	network.Stop();
 
 	// ImGUI
 	{
@@ -129,7 +129,11 @@ bool EasyPlayground::Init()
 		ImGui_ImplOpenGL3_Init(glsl_version);
 	}
 
+	char usernameArr[16] = "";
+	char passwordArr[32] = "";
 	LoadConfig(rememberMe, usernameArr, passwordArr);
+	network.session.username = usernameArr;
+	network.session.password = passwordArr;
 
 	return true;
 }
@@ -233,46 +237,46 @@ bool EasyPlayground::Render(double _dt)
 					if (model->animator)
 						shader.LoadUniform("boneMatrices", model->animator->GetFinalBoneMatrices());
 
-					for (auto& [uid, networkPlayer] : networkPlayers)
-					{
-						for (const auto& kv : model->instances)
-						{
-							EasyModel::EasyMesh* mesh = kv.first;
+					//for (auto& [uid, networkPlayer] : networkPlayers)
+					//{
+					//	for (const auto& kv : model->instances)
+					//	{
+					//		EasyModel::EasyMesh* mesh = kv.first;
 
-							if (!mesh->LoadToGPU())
-								continue;
+					//		if (!mesh->LoadToGPU())
+					//			continue;
 
-							GL(BindVertexArray(mesh->vao));
-							GL(EnableVertexAttribArray(0));
-							GL(EnableVertexAttribArray(1));
-							GL(EnableVertexAttribArray(2));
-							GL(EnableVertexAttribArray(3));
-							GL(EnableVertexAttribArray(4));
-							GL(EnableVertexAttribArray(5));
-							GL(EnableVertexAttribArray(6));
+					//		GL(BindVertexArray(mesh->vao));
+					//		GL(EnableVertexAttribArray(0));
+					//		GL(EnableVertexAttribArray(1));
+					//		GL(EnableVertexAttribArray(2));
+					//		GL(EnableVertexAttribArray(3));
+					//		GL(EnableVertexAttribArray(4));
+					//		GL(EnableVertexAttribArray(5));
+					//		GL(EnableVertexAttribArray(6));
 
-							glActiveTexture(GL_TEXTURE0);
-							glBindTexture(GL_TEXTURE_2D, mesh->texture);
-							shader.LoadUniform("diffuse", 0);
+					//		glActiveTexture(GL_TEXTURE0);
+					//		glBindTexture(GL_TEXTURE_2D, mesh->texture);
+					//		shader.LoadUniform("diffuse", 0);
 
-							shader.LoadUniform("animated", mesh->animatable ? 1 : 0);
+					//		shader.LoadUniform("animated", mesh->animatable ? 1 : 0);
 
-							for (EasyModel::EasyTransform* t : kv.second)
-							{
-								shader.LoadUniform("model", CreateTransformMatrix(t->position + networkPlayer.transform.position, t->rotationQuat, t->scale));
-								glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
-							}
+					//		for (EasyModel::EasyTransform* t : kv.second)
+					//		{
+					//			shader.LoadUniform("model", CreateTransformMatrix(t->position + networkPlayer.transform.position, t->rotationQuat, t->scale));
+					//			glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
+					//		}
 
-							GL(DisableVertexAttribArray(6));
-							GL(DisableVertexAttribArray(5));
-							GL(DisableVertexAttribArray(4));
-							GL(DisableVertexAttribArray(3));
-							GL(DisableVertexAttribArray(2));
-							GL(DisableVertexAttribArray(1));
-							GL(DisableVertexAttribArray(0));
-							GL(BindVertexArray(0));
-						}
-					}
+					//		GL(DisableVertexAttribArray(6));
+					//		GL(DisableVertexAttribArray(5));
+					//		GL(DisableVertexAttribArray(4));
+					//		GL(DisableVertexAttribArray(3));
+					//		GL(DisableVertexAttribArray(2));
+					//		GL(DisableVertexAttribArray(1));
+					//		GL(DisableVertexAttribArray(0));
+					//		GL(BindVertexArray(0));
+					//	}
+					//}
 
 				}
 				
@@ -343,128 +347,118 @@ bool EasyPlayground::Render(double _dt)
 	return success;
 }
 
-
-
 void EasyPlayground::OnDisconnect(SessionStatus disconnectStatus)
 {
-	network.isLogin = false;
-	
+	//network.isLogin = false;
 }
 
 void EasyPlayground::OnLogin()
 {
-	network.isLogin = true;
+	//network.isLogin = true;
 
-	network.lastHeartbeatReceive = Clock::now();
-	network.nextHeartbeatSend = Clock::now();
-	network.nextPlayerMovementSend = Clock::now();
+	//network.lastHeartbeatReceive = Clock::now();
+	//network.nextHeartbeatSend = Clock::now();
+	//network.nextPlayerMovementSend = Clock::now();
 }
 
 void EasyPlayground::NetworkUpdate(double _dt)
 {
-	if (!network.isLogin)
-		return;
+	network.Update();
+	//if (!network.isLogin)
+	//	return;
+	//for (auto it = network.in_cache.begin(); it != network.in_cache.end(); )
+	//{
+	//	if (auto* d = dynamic_cast<sDisconnectResponse*>(*it); d)
+	//	{
+	//		std::cout << "Disconnect response received!\n";
+	//		loggedIn = false;
+	//		loginFailed = true;
+	//		loginStatusText = d->message;
+	//		delete d;
+	//		it = network.in_cache.erase(it);
+	//	}
+	//	else if (auto* h = dynamic_cast<sHearbeat*>(*it); h)
+	//	{
+	//		std::cout << "Heartbeat received!\n";
+	//		network.lastHeartbeatReceive = Clock::now();
+	//		delete h;
+	//		it = network.in_cache.erase(it);
+	//	}
+	//	else if (auto* b = dynamic_cast<sBroadcastMessage*>(*it); b)
+	//	{
+	//		std::cout << "Broadcast message received!\n";
+	//		isBroadcastMessage = true;
+	//		broadcastMessage = b->message;
+	//		delete b;
+	//		it = network.in_cache.erase(it);
+	//	}
+	//	else if (auto* c = dynamic_cast<sChatMessage*>(*it); c)
+	//	{
+	//		std::cout << "Chat message received!\n";
+	//		OnChatMessageReceived(c->username, c->message, c->timestamp);
+	//		delete b;
+	//		it = network.in_cache.erase(it);
+	//	}
+	//	else if (auto* m = dynamic_cast<sPlayerMovementPack*>(*it); m)
+	//	{
+	//		std::cout << "Player movement pack received!\n";
 
-	for (auto it = network.in_cache.begin(); it != network.in_cache.end(); )
-	{
-		if (auto* d = dynamic_cast<sDisconnectResponse*>(*it); d)
-		{
-			std::cout << "Disconnect response received!\n";
-			loggedIn = false;
-			loginFailed = true;
-			loginStatusText = d->message;
-			delete d;
-			it = network.in_cache.erase(it);
-		}
-		else if (auto* h = dynamic_cast<sHearbeat*>(*it); h)
-		{
-			std::cout << "Heartbeat received!\n";
-
-			network.lastHeartbeatReceive = Clock::now();
-			delete h;
-			it = network.in_cache.erase(it);
-		}
-		else if (auto* b = dynamic_cast<sBroadcastMessage*>(*it); b)
-		{
-			std::cout << "Broadcast message received!\n";
-			isBroadcastMessage = true;
-			broadcastMessage = b->message;
-			delete b;
-			it = network.in_cache.erase(it);
-		}
-		else if (auto* c = dynamic_cast<sChatMessage*>(*it); c)
-		{
-			std::cout << "Chat message received!\n";
-			OnChatMessageReceived(c->username, c->message, c->timestamp);
-			delete b;
-			it = network.in_cache.erase(it);
-		}
-		else if (auto* m = dynamic_cast<sPlayerMovementPack*>(*it); m)
-		{
-			std::cout << "Player movement pack received!\n";
-
-			// Handle Packet
-			for (sPlayerMovement& p : m->movements)
-			{
-				//p.userID; // user specifier
-				//p.position; // position at packet creation
-				//p.rotation; // rotation at packet creation
-				//p.direction; // direction at packet creation
-				//unsigned long long timestamp; // time on packet creation. Im working on lan, so now think the server and clients are perfectly time sync and this timestamp inserted when the packet is created. So server collects the sPlayerMovement packets and redirect to each other client with packing into one packet. 
-
-				if (p.userID != client.client.user_id)
-				{
-					// Other players data
-					if (auto res = networkPlayers.find(p.userID); res != networkPlayers.end())
-					{
-						res->second.transform.position = p.position;
-					}
-					else
-					{
-						networkPlayers.insert({ p.userID, {p.userID, "", {{p.position}, {0,0,0}, {1,1,1}}} });
-					}
-
-				}
-				else
-				{
-					// This players data, ignore
-				}
-			}
-
-			delete m;
-			it = network.in_cache.erase(it);
-		}
-		else
-		{
-			++it;
-		}
-	}
-
-	if (network.lastHeartbeatReceive + std::chrono::seconds(10) < Clock::now())
-	{
-		std::cout << "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!" + "\n";
-		loggedIn = false;
-		loginFailed = true;
-		loginStatusText = "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!";
-	}
-	if (network.nextHeartbeatSend < Clock::now())
-	{
-		network.nextHeartbeatSend += std::chrono::seconds(1);
-
-		network.out_cache.push_back(new sHearbeat());
-		std::cout << "Heartbeat sent!\n";
-	}
-	if (network.nextPlayerMovementSend < Clock::now())
-	{
-		network.nextPlayerMovementSend += std::chrono::seconds(1);
-
-		position.x += 0.01f;
-		rotation.x += 0.02f;
-		direction.x += 0.04f;
-		moveTimestamp += 1000;
-		network.out_cache.push_back(new sPlayerMovement(stats.userID, position, rotation, direction, moveTimestamp));
-		std::cout << "Player movement sent!\n";
-	}
+	//		// Handle Packet
+	//		for (sPlayerMovement& p : m->movements)
+	//		{
+	//			//p.userID; // user specifier
+	//			//p.position; // position at packet creation
+	//			//p.rotation; // rotation at packet creation
+	//			//p.direction; // direction at packet creation
+	//			//unsigned long long timestamp; // time on packet creation. Im working on lan, so now think the server and clients are perfectly time sync and this timestamp inserted when the packet is created. So server collects the sPlayerMovement packets and redirect to each other client with packing into one packet. 
+	//			if (p.userID != client.client.user_id)
+	//			{
+	//				// Other players data
+	//				if (auto res = networkPlayers.find(p.userID); res != networkPlayers.end())
+	//				{
+	//					res->second.transform.position = p.position;
+	//				}
+	//				else
+	//				{
+	//					networkPlayers.insert({ p.userID, {p.userID, "", {{p.position}, {0,0,0}, {1,1,1}}} });
+	//				}
+	//			}
+	//			else
+	//			{
+	//				// This players data, ignore
+	//			}
+	//		}
+	//		delete m;
+	//		it = network.in_cache.erase(it);
+	//	}
+	//	else
+	//	{
+	//		++it;
+	//	}
+	//}
+	//if (network.lastHeartbeatReceive + std::chrono::seconds(10) < Clock::now())
+	//{
+	//	std::cout << "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!" + "\n";
+	//	loggedIn = false;
+	//	loginFailed = true;
+	//	loginStatusText = "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!";
+	//}
+	//if (network.nextHeartbeatSend < Clock::now())
+	//{
+	//	network.nextHeartbeatSend += std::chrono::seconds(1);
+	//	network.out_cache.push_back(new sHearbeat());
+	//	std::cout << "Heartbeat sent!\n";
+	//}
+	//if (network.nextPlayerMovementSend < Clock::now())
+	//{
+	//	network.nextPlayerMovementSend += std::chrono::seconds(1);
+	//	position.x += 0.01f;
+	//	rotation.x += 0.02f;
+	//	direction.x += 0.04f;
+	//	moveTimestamp += 1000;
+	//	network.out_cache.push_back(new sPlayerMovement(stats.uid, position, rotation, direction, moveTimestamp));
+	//	std::cout << "Player movement sent!\n";
+	//}
 }
 
 bool EasyPlayground::Update(double _dt)
@@ -492,14 +486,14 @@ bool EasyPlayground::Update(double _dt)
 		ups = 1.0 / avgDt;
 	}
 
-	if (network.m.try_lock())
-	{
-		network.in_cache.insert(network.in_cache.end(), network.in.begin(), network.in.end());
-		network.in.clear();
-		network.out.insert(network.out.end(), network.out_cache.begin(), network.out_cache.end());
-		network.out_cache.clear();
-		network.m.unlock();
-	}
+	//if (network.m.try_lock())
+	//{
+	//	network.in_cache.insert(network.in_cache.end(), network.in.begin(), network.in.end());
+	//	network.in.clear();
+	//	network.out.insert(network.out.end(), network.out_cache.begin(), network.out_cache.end());
+	//	network.out_cache.clear();
+	//	network.m.unlock();
+	//}
 
 	NetworkUpdate(_dt);
 

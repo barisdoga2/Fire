@@ -5,69 +5,64 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Etc">
+      <UniqueIdentifier>{074973b3-3ece-413a-ba47-1fb2e2ab95bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Net\Core">
+      <UniqueIdentifier>{551ca822-4b45-49cd-ab78-b0735f695fd5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Net\Base">
+      <UniqueIdentifier>{7a8d1f0f-246a-4560-870c-c385fba87ec4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EasyBuffer.hpp">
-      <Filter>Net</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyDB.hpp">
-      <Filter>Net</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyIpAddress.hpp">
-      <Filter>Net</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyNet.hpp">
-      <Filter>Net</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyPacket.hpp">
-      <Filter>Net</Filter>
-    </ClInclude>
-    <ClInclude Include="EasySerializer.hpp">
-      <Filter>Net</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyServer.hpp">
-      <Filter>Net</Filter>
-    </ClInclude>
-    <ClInclude Include="EasySocket.hpp">
-      <Filter>Net</Filter>
-    </ClInclude>
     <ClInclude Include="framework.h">
-      <Filter>Net</Filter>
+      <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="pch.h">
-      <Filter>Net</Filter>
+      <Filter>Etc</Filter>
+    </ClInclude>
+    <ClInclude Include="FireNet.hpp" />
+    <ClInclude Include="EasyBuffer.hpp">
+      <Filter>Net\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyIpAddress.hpp">
+      <Filter>Net\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyPacket.hpp">
+      <Filter>Net\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EasySocket.hpp">
+      <Filter>Net\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyStatistics.hpp">
+      <Filter>Net\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseServer.hpp">
+      <Filter>Net\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="EasySerializer.hpp">
+      <Filter>Net\Base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
-      <Filter>Net</Filter>
+      <Filter>Etc</Filter>
     </ClCompile>
     <ClCompile Include="EasyBuffer.cpp">
-      <Filter>Net</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyDB.cpp">
-      <Filter>Net</Filter>
+      <Filter>Net\Core</Filter>
     </ClCompile>
     <ClCompile Include="EasyIpAddress.cpp">
-      <Filter>Net</Filter>
+      <Filter>Net\Core</Filter>
     </ClCompile>
     <ClCompile Include="EasyPacket.cpp">
-      <Filter>Net</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyServer.cpp">
-      <Filter>Net</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyServer_Receive.cpp">
-      <Filter>Net</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyServer_Send.cpp">
-      <Filter>Net</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyServer_Update.cpp">
-      <Filter>Net</Filter>
+      <Filter>Net\Core</Filter>
     </ClCompile>
     <ClCompile Include="EasySocket.cpp">
-      <Filter>Net</Filter>
+      <Filter>Net\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseServer.cpp">
+      <Filter>Net\Base</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

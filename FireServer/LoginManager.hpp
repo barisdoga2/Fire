@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Server.hpp"
+#include "FireServer.hpp"
 #include "SessionManager.hpp"
 
 
-class LoginManager : public SessionManager {
+class LoginManager : public SessionManager3 {
 public:
-    LoginManager(Server* server);
+    LoginManager(FireServer* server);
 
     bool Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, double dt) override;
 

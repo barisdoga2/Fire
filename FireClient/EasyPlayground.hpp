@@ -1,6 +1,10 @@
 #pragma once
 
 #include <mutex>
+
+#include <EasySerializer.hpp>
+#include <FireNet.hpp>
+
 #include "EasyCamera.hpp"
 #include "EasyShader.hpp"
 #include "EasyModel.hpp"
@@ -8,28 +12,9 @@
 #include "EasyDisplay.hpp"
 #include "ChunkRenderer.hpp"
 #include "SkyboxRenderer.hpp"
+#include "ClientNetwork.hpp"
 
-#include <EasySerializer.hpp>
-#include <EasyNet.hpp>
 
-struct EasyNetwork {
-    bool isLogin{};
-    std::chrono::steady_clock::time_point lastHeartbeatReceive{};
-    std::chrono::steady_clock::time_point nextHeartbeatSend{};
-    std::chrono::steady_clock::time_point nextPlayerMovementSend{};
-
-    
-    std::mutex m{};
-    std::vector<EasySerializeable*> in{}, out{};
-    std::vector<EasySerializeable*> in_cache{}, out_cache{};
-
-};
-
-struct NetworkPlayer {
-    UserID_t userID;
-    std::string username;
-    EasyModel::EasyTransform transform;
-};
 
 class HDR;
 class EasySerializeable;
@@ -61,10 +46,17 @@ public:
 
     std::vector<EasyModel*> mapObjects;
 
-    EasyNetwork network;
-    std::unordered_map<UserID_t, NetworkPlayer> networkPlayers;
 
-    EasyPlayground(const EasyDisplay& display);
+
+
+    ClientNetwork network;
+    EasyBufferManager* bm;
+    bool isRender{};
+    bool rememberMe{};
+    std::thread loginThread{};
+    std::string loginStatusText{};
+
+    EasyPlayground(const EasyDisplay& display, EasyBufferManager* bm);
     ~EasyPlayground();
 
     bool Init();
@@ -87,6 +79,7 @@ public:
     void ImGUI_LoginWindow();
     void ImGUI_ChampionSelectWindow();
     void ImGUI_DrawChatWindow();
+    void ImGUI_InGameWindow();
 
     void scroll_callback(GLFWwindow* window, double xpos, double ypos);
     void cursor_callback(GLFWwindow* window, double xpos, double ypos);

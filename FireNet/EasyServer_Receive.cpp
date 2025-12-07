@@ -139,7 +139,6 @@ public:
     bool ReadKeyFromMYSQL(const SessionID_t& session_id, Key_t& key, UserID_t& user_id)
     {
         bool ret = false;
-#ifndef NO_HOST
         sql::PreparedStatement* stmt = server->db->PrepareStatement("SELECT * FROM sessions WHERE id=? LIMIT 1;");
         stmt->setUInt(1, session_id);
         sql::ResultSet* res = stmt->executeQuery();
@@ -152,17 +151,12 @@ public:
         }
         delete res;
         delete stmt;
-#else
-        key = { 0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U };
-        user_id = 2U;
-        ret = true;
-#endif
         return ret;
     }
 
     void BaseReceive()
     {
-        static EasyBuffer* receiveBuff = server->bf->Get();
+        EasyBuffer* receiveBuff = server->bf->Get();
         static Timestamp_t nextListen = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (nextListen < currentTime)
@@ -170,13 +164,13 @@ public:
             Timestamp_t endTime = nextListen + Millis_t(4U);
             nextListen = currentTime + Millis_t(9U);
 
-            PeerSocketInfo inSockInfo;
             while (currentTime < endTime)
             {
                 if (receiveBuff != nullptr)
                 {
                     receiveBuff->reset();
-                    uint64_t ret = server->sock->receive(receiveBuff->begin(), receiveBuff->capacity(), receiveBuff->m_payload_size, inSockInfo);
+                    Addr_t addr;
+                    uint64_t ret = server->sock->receive(receiveBuff->begin(), receiveBuff->capacity(), receiveBuff->m_payload_size, addr);
                     if (ret == WSAEISCONN)
                     {
                         if (receiveBuff->m_payload_size >= EasyPacket::MinimumSize())
@@ -185,7 +179,7 @@ public:
                             SessionID_t sessionID = *packet.SessionID();
                             if (IS_SESSION(sessionID))
                             {
-                                rawCache[sessionID].cache.emplace_back(sessionID, inSockInfo.addr, receiveBuff);
+                                rawCache[sessionID].cache.emplace_back(sessionID, addr, receiveBuff);
                                 receiveBuff = server->bf->Get();
                                 STATS_RECEIVED;
                             }
@@ -216,6 +210,7 @@ public:
                 currentTime = Clock::now();
             }
         }
+        server->bf->Free(receiveBuff);
     }
 
     void Prepare()
@@ -285,7 +280,7 @@ public:
                         Addr_t addr = it->second.cache.at(0).addr;
                         SequenceID_t sequenceID_in = 0U;
                         SequenceID_t sequenceID_out = 0U;
-                        Session* newSession = new Session(it->first, user_id, addr, key, sequenceID_in, sequenceID_out, Clock::now());
+                        Session* newSession = new Session(it->first, user_id, addr, key, {}, sequenceID_in, sequenceID_out, Clock::now());
                         newSessions.vec.push_back(newSession);
                         r2pCache.emplace(
                             std::piecewise_construct,
@@ -298,7 +293,7 @@ public:
                     {
                         // Not found in database, free the buffers
                         for (auto& b : it->second.cache)
-                            server->bf->Free(b.buffer);
+                        delete b.buffer;
                         STATS_DB_FAIL;
                     }
                     it = unknownRawCache.erase(it);
@@ -371,14 +366,14 @@ public:
                             if (it->second.cache.size() > 0)
                                 respAddr = it->second.cache.at(0).addr;
 
-                            Session* toDestroy = new Session(session->sessionID, session->userID, respAddr, session->key, 0, 0, Clock::now());
+                            Session* toDestroy = new Session(session->sid, session->uid, respAddr, session->key, {}, 0, 0, Clock::now());
                             sLoginResponse loginResponse = sLoginResponse(false, "User was already logged in! Try again!");
                             server->SendInstantPacket(toDestroy, { &loginResponse });
                             delete toDestroy;
 
                             for (RawBuffer& b : it->second.cache)
                             {
-                                server->bf->Free(b.buffer);
+                                delete b.buffer;
                             }
                             server->DestroySession_internal(session, sessionStatus);
                             it = unknownRawCache.erase(it);
@@ -386,7 +381,7 @@ public:
                         }
                         else
                         {
-                            session->sequenceID_in += static_cast<SequenceID_t>(it->second.cache.size());
+                            session->seqid_in += static_cast<SequenceID_t>(it->second.cache.size());
                             r2pCache.emplace(it->first, R2PBuffer(session, it->second.cache)); // r2pCache cache is empty but we have session for Crypt data read from Session and removed from unknowns
                             it = unknownRawCache.erase(it);
                             STATS_SESSION_READ;
@@ -405,8 +400,8 @@ public:
 
     void Process()
     {
-        static EasyBuffer* decompressionBuff = server->bf->Get(true);
-        static Timestamp_t nextProcess = Clock::now();
+        EasyBuffer* decompressionBuff = server->bf->Get();
+        Timestamp_t nextProcess = Clock::now();
         Timestamp_t currentTime = Clock::now();
         if (r2pCache.size() > 0U && nextProcess < currentTime)
         {
@@ -414,14 +409,14 @@ public:
             for (R2PCacheType_t::iterator it = r2pCache.begin(); it != r2pCache.end(); ++it)
             {
                 decompressionBuff->reset();
-                PeerCryptInfo cryptInfo(it->first, it->second.session->sequenceID_in, 0U, it->second.session->key);
+                CryptData cryptInfo(it->first, it->second.session->seqid_in, 0U, it->second.session->key);
                 for (std::vector<R2PBuffer::R2PRawBuffer>::iterator it2 = it->second.buffer.begin(); it2 != it->second.buffer.end(); ++it2)
                 {
                     if (EasyPacket::MakeDecrypted(cryptInfo, it2->buffer))
                     {
                         if (EasyPacket::MakeDecompressed(it2->buffer, decompressionBuff))
                         {
-                            if (MakeDeserialized(decompressionBuff, internal_in_cache[it->second.session->sessionID]))
+                            if (MakeDeserialized(decompressionBuff, internal_in_cache[it->second.session->sid]))
                             {
                                 STATS_DESERIALIZE;
                             }
@@ -439,12 +434,13 @@ public:
                     {
                         STATS_DECRYPT_FAIL;
                     }
-                    server->bf->Free(it2->buffer);
+                    delete it2->buffer;
                     ++cryptInfo.sequence_id_in;
                 }
             }
             r2pCache.clear();
         }
+        server->bf->Free(decompressionBuff);
     }
 
     void Flush()

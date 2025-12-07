@@ -4,7 +4,7 @@
     <Filter Include="Game">
       <UniqueIdentifier>{22a92313-6422-4e98-9dbc-7036df69324c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Game\Util">
+    <Filter Include="Etc">
       <UniqueIdentifier>{ec208068-f55c-4a2a-ba78-c1e6edf4f215}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -16,13 +16,13 @@
       <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="ClientTest.cpp">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </ClCompile>
     <ClCompile Include="imgui_impl_opengl3.cpp">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </ClCompile>
     <ClCompile Include="imgui_impl_glfw.cpp">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -33,37 +33,38 @@
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="ClientTest.hpp">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="imgui_impl_opengl3.h">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="imgui_impl_opengl3_loader.h">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="imgui_impl_glfw.h">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="ImGUI_Fun.hpp">
       <Filter>Game</Filter>
     </ClInclude>
+    <ClInclude Include="ClientNetwork.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="publish.bat">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\res\images\Fire.ico">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FireClient.rc">
-      <Filter>Game\Util</Filter>
+      <Filter>Etc</Filter>
     </ResourceCompile>
   </ItemGroup>
 </Project>

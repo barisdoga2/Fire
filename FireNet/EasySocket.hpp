@@ -1,9 +1,9 @@
 #pragma once
+
 #include <optional>
 #include <vector>
 
-#include "EasyNet.hpp"
-#include "EasyIpAddress.hpp"
+#include "FireNet.hpp"
 
 #ifndef WSAEWOULDBLOCK
 #define WSABASEERR              10000
@@ -49,7 +49,7 @@
 
 
 
-class EasyPeer;
+class EasyIpAddress;
 class PeerInfo;
 class EasySocket {
 private:
@@ -66,7 +66,7 @@ public:
 	
 	EasySocket();
 
-	uint64_t bind(unsigned short port, const EasyIpAddress& ip = EasyIpAddress::Any);
+	uint64_t bind(unsigned short port, const EasyIpAddress& ip);
 
 	void unbind();
 
@@ -75,7 +75,7 @@ public:
 	uint64_t send(const void* data, const size_t size, uint64_t addrU64); // Server use only
 
 	uint64_t receive(void* data, const size_t& size, size_t& received, EasyIpAddress& remoteAddress, unsigned short& remotePort);
-	uint64_t receive(void* data, const std::size_t& capacity, std::size_t& received, PeerSocketInfo& info); // Server use only
+	uint64_t receive(void* data, const std::size_t& capacity, std::size_t& received, Addr_t& addr_in); // Server use only
 
 	void setBlocking(bool block);
 

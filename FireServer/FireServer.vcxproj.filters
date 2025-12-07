@@ -10,9 +10,6 @@
     <Filter Include="Server\Internal">
       <UniqueIdentifier>{ceb530fc-87e2-46d1-a7ab-c5820101683e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Server\Internal\Manager">
-      <UniqueIdentifier>{5ed0ddaf-8399-437b-8b84-f32a42d72ff4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Etc">
       <UniqueIdentifier>{ce36c316-5584-487d-8700-61864c9bb213}</UniqueIdentifier>
     </Filter>
@@ -21,19 +18,10 @@
     <ClCompile Include="Main.cpp">
       <Filter>Server</Filter>
     </ClCompile>
-    <ClCompile Include="Server.cpp">
+    <ClCompile Include="FireServer.cpp">
       <Filter>Server\Internal</Filter>
     </ClCompile>
     <ClCompile Include="World.cpp">
-      <Filter>Server\Internal</Filter>
-    </ClCompile>
-    <ClCompile Include="LoginManager.cpp">
-      <Filter>Server\Internal\Manager</Filter>
-    </ClCompile>
-    <ClCompile Include="HeartbeatManager.cpp">
-      <Filter>Server\Internal\Manager</Filter>
-    </ClCompile>
-    <ClCompile Include="ServerUI.cpp">
       <Filter>Server\Internal</Filter>
     </ClCompile>
     <ClCompile Include="imgui_impl_opengl3.cpp">
@@ -42,28 +30,19 @@
     <ClCompile Include="imgui_impl_glfw.cpp">
       <Filter>Etc</Filter>
     </ClCompile>
-    <ClCompile Include="ChatManager.cpp">
-      <Filter>Server\Internal\Manager</Filter>
-    </ClCompile>
-    <ClCompile Include="PlayerManager.cpp">
-      <Filter>Server\Internal\Manager</Filter>
+    <ClCompile Include="ServerUI.cpp">
+      <Filter>Etc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Net.hpp">
+    <ClInclude Include="ServerNet.hpp">
       <Filter>Server\Shared</Filter>
     </ClInclude>
-    <ClInclude Include="Server.hpp">
+    <ClInclude Include="FireServer.hpp">
       <Filter>Server\Internal</Filter>
     </ClInclude>
     <ClInclude Include="World.hpp">
       <Filter>Server\Internal</Filter>
-    </ClInclude>
-    <ClInclude Include="HeartbeatManager.hpp">
-      <Filter>Server\Internal\Manager</Filter>
-    </ClInclude>
-    <ClInclude Include="LoginManager.hpp">
-      <Filter>Server\Internal\Manager</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Etc</Filter>
@@ -78,16 +57,10 @@
       <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="ServerUI.hpp">
+      <Filter>Etc</Filter>
+    </ClInclude>
+    <ClInclude Include="SqLite3.hpp">
       <Filter>Server\Internal</Filter>
-    </ClInclude>
-    <ClInclude Include="ChatManager.hpp">
-      <Filter>Server\Internal\Manager</Filter>
-    </ClInclude>
-    <ClInclude Include="SessionManager.hpp">
-      <Filter>Server\Internal\Manager</Filter>
-    </ClInclude>
-    <ClInclude Include="PlayerManager.hpp">
-      <Filter>Server\Internal\Manager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

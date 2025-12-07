@@ -13,7 +13,7 @@ inline void SaveConfig(bool remember, const std::string& user, const std::string
     f << "password=" << passHash << "\n";
 }
 
-void LoadConfig(bool& remember, char(&user)[16], char(&pass)[32])
+inline void LoadConfig(bool& remember, char(&user)[16], char(&pass)[32])
 {
     std::ifstream f("config.ini");
     if (!f.is_open())

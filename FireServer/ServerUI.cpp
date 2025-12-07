@@ -11,7 +11,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <GLFW/glfw3.h>
-#include <EasyServer.hpp>
+//#include <EasyServer.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include "imgui_impl_opengl3.h"
@@ -35,36 +35,36 @@ public:
 	unsigned int selectedID = 0;
 
 	// Copy from incoming Session* list
-	void UpdateSessions(const std::vector<Session*>& list)
-	{
-		// Remove old ones not existing anymore:
-		std::unordered_set<unsigned int> incoming;
+	//void UpdateSessions(const std::vector<Session*>& list)
+	//{
+	//	// Remove old ones not existing anymore:
+	//	std::unordered_set<unsigned int> incoming;
 
-		for (auto* s : list)
-		{
-			if (!s)
-				continue;
+	//	for (auto* s : list)
+	//	{
+	//		if (!s)
+	//			continue;
 
-			incoming.insert(s->sessionID);
+	//		incoming.insert(s->sid);
 
-			SessionDebugInfo info{};
-			info.id = s->sessionID;
-			info.userId = s->userID;
-			//info.ip = s->addr;
-			info.lastReceiveMS = s->lastReceive.time_since_epoch().count(); // Example
+	//		SessionDebugInfo info{};
+	//		info.id = s->sid;
+	//		info.userId = s->uid;
+	//		//info.ip = s->addr;
+	//		info.lastReceiveMS = s->lastReceive.time_since_epoch().count(); // Example
 
-			sessions[info.id] = info;
-		}
+	//		sessions[info.id] = info;
+	//	}
 
-		// remove stale
-		for (auto it = sessions.begin(); it != sessions.end(); )
-		{
-			if (!incoming.count(it->first))
-				it = sessions.erase(it);
-			else
-				++it;
-		}
-	}
+	//	// remove stale
+	//	for (auto it = sessions.begin(); it != sessions.end(); )
+	//	{
+	//		if (!incoming.count(it->first))
+	//			it = sessions.erase(it);
+	//		else
+	//			++it;
+	//	}
+	//}
 };
 
 static SessionDebugger gDebugger;
@@ -117,10 +117,10 @@ bool ServerUI::Init()
 	return true;
 }
 
-void ServerUI::OnSessionListUpdated(const std::vector<Session*>& list)
-{
-	gDebugger.UpdateSessions(list);
-}
+//void ServerUI::OnSessionListUpdated(const std::vector<Session*>& list)
+//{
+//	gDebugger.UpdateSessions(list);
+//}
 
 void ServerUI::ImGUI_DrawSessionDetailWindow()
 {

@@ -5,9 +5,15 @@
 #include <glm/glm.hpp>
 #include <box2d/box2d.h>
 
-#include <EasyNet.hpp>
 #include <EasySerializer.hpp>
-#include "Net.hpp"
+#include "FireNet.hpp"
+
+
+#define CIRCLE_DEF ((PacketID_t)(10U))
+#define POLY_DEF ((PacketID_t)(11U))
+#define MATERIAL_DEF ((PacketID_t)(12U))
+#define WORLD_DEF ((PacketID_t)(13U))
+
 
 #if 0
 constexpr float WORLD_SIZE = 10000.f;
@@ -165,31 +171,3 @@ namespace b2 {
         return world;
     }
 }
-
-
-struct WChunk {
-    uint32_t id;
-    glm::ivec2 gridPos;
-    std::unordered_set<EasyPeer*> subscribers;
-
-    void addSubscriber(EasyPeer* p) { subscribers.insert(p); }
-    void removeSubscriber(EasyPeer* p) { subscribers.erase(p); }
-
-    void broadcast(const std::string& msg);
-    glm::vec2 getWorldCenter();
-
-};
-
-class World {
-public:
-    b2WorldId world;
-    World();
-    WChunk* getChunkAt(const glm::vec2& pos);
-    std::vector<WChunk*> getChunksInRadius(const glm::vec2& pos, float radius);
-    void updatePeerSubscription(EasyPeer& peer);
-    void Update(double _dt);
-private:
-    std::vector<WChunk> chunks;
-    uint32_t widthChunks, heightChunks;
-
-};

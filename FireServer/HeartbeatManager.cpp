@@ -2,7 +2,7 @@
 
 
 
-HeartbeatManager::HeartbeatManager(Server* server) : SessionManager(server, HEARTBEAT_MANAGER)
+HeartbeatManager::HeartbeatManager(FireServer* server) : SessionManager3(server, HEARTBEAT_MANAGER)
 {
 
 }
@@ -30,7 +30,7 @@ bool HeartbeatManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cach
                 cache.clear();
                 continue;
             }
-            TickSession* session = r->second;
+            FireSession* session = r->second;
 
             for (auto it = cache.begin(); it != cache.end(); )
             {
@@ -69,12 +69,12 @@ bool HeartbeatManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cac
     return ret;
 }
 
-void HeartbeatManager::OnSessionCreate(ObjCacheType_t& out_cache, TickSession* session)
+void HeartbeatManager::OnSessionCreate(ObjCacheType_t& out_cache, FireSession* session)
 {
     
 }
 
-void HeartbeatManager::OnSessionDestroy(ObjCacheType_t& out_cache, TickSession* session, SessionStatus destroyReason)
+void HeartbeatManager::OnSessionDestroy(ObjCacheType_t& out_cache, FireSession* session, SessionStatus destroyReason)
 {
 
 }

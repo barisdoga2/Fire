@@ -3,7 +3,6 @@
 #include <vector>
 #include <EasyDisplay.hpp>
 
-class Session;
 class ServerUI {
 private:
 public:
@@ -21,7 +20,7 @@ public:
     void StartRender(double _dt);
     void EndRender();
 
-    void OnSessionListUpdated(const std::vector<Session*>& list);
+    //void OnSessionListUpdated(const std::vector<Session*>& list);
     void ImGUI_DrawSessionDetailWindow();
     void ImGUI_DrawSessionListWindow();
 

@@ -31,15 +31,18 @@ StatisticsCounter_t stats_bufferManager{};
 EasyBuffer::EasyBuffer(size_t capacity)
     : m_capacity(capacity),
     m_payload_size(0),
-    m_data(std::make_unique<uint8_t[]>(capacity))
+    m_data((uint8_t*)malloc(capacity * sizeof(uint8_t)))
 {
     clear();
 }
 
-EasyBuffer::~EasyBuffer() = default;
+EasyBuffer::~EasyBuffer()
+{
+    
+}
 
 void EasyBuffer::clear() noexcept {
-    std::memset(m_data.get(), 0, m_capacity);
+    std::memset(m_data, 0, m_capacity);
     m_payload_size = 0;
 }
 
@@ -48,11 +51,11 @@ void EasyBuffer::reset() noexcept {
 }
 
 uint8_t* EasyBuffer::begin() noexcept {
-    return m_data.get();
+    return m_data;
 }
 
 const uint8_t* EasyBuffer::begin() const noexcept {
-    return m_data.get();
+    return m_data;
 }
 
 size_t EasyBuffer::capacity() const noexcept {
@@ -63,10 +66,6 @@ size_t EasyBuffer::size() const noexcept {
     return m_payload_size;
 }
 
-void EasyBuffer::setSize(size_t sz) noexcept {
-    m_payload_size = (sz <= m_capacity) ? sz : m_capacity;
-}
-
 // ----------------------------------------------------------------------
 
 EasyBufferManager::EasyBufferManager(size_t bufferCount, size_t bufferLength)
@@ -74,30 +73,34 @@ EasyBufferManager::EasyBufferManager(size_t bufferCount, size_t bufferLength)
 {
     free_buffers.reserve(bufferCount);
     for (size_t i = 0; i < bufferCount; ++i)
-        free_buffers.emplace_back(std::make_unique<EasyBuffer>(bufferLength));
+        free_buffers.push_back(new EasyBuffer(bufferLength));
 }
 
 EasyBufferManager::~EasyBufferManager()
 {
-    std::scoped_lock lock(mutex);
-    for (auto* b : busy_buffers)
+    for (EasyBuffer* b : busy_buffers)
+        delete b;
+    for (EasyBuffer* b : free_buffers)
         delete b;
     busy_buffers.clear();
+    free_buffers.clear();
 }
 
-EasyBuffer* EasyBufferManager::Get(bool force)
+EasyBuffer* EasyBufferManager::Get()
 {
-    std::scoped_lock lock(mutex);
-
-    if (free_buffers.empty()) {
+    m.lock();
+    if (free_buffers.empty()) 
+    {
+        m.unlock();
         STATS_GET_FAIL;
         return nullptr;
     }
 
-    auto buffer = free_buffers.back().release();
-    free_buffers.pop_back();
+    auto buffer = free_buffers.at(0U);
+    free_buffers.erase(std::find(free_buffers.begin(), free_buffers.end(), buffer));
     busy_buffers.push_back(buffer);
     buffer->reset();
+    m.unlock();
 
     STATS_GET;
     return buffer;
@@ -110,17 +113,10 @@ bool EasyBufferManager::Free(EasyBuffer* buffer)
         return false;
     }
 
-    std::scoped_lock lock(mutex);
-
-    auto it = std::find(busy_buffers.begin(), busy_buffers.end(), buffer);
-    if (it == busy_buffers.end()) {
-        STATS_FREE_FAIL;
-        return false;
-    }
-
-    buffer->reset();
-    free_buffers.emplace_back(*it);
-    busy_buffers.erase(it);
+    m.lock();
+    free_buffers.push_back(buffer);
+    busy_buffers.erase(std::find(busy_buffers.begin(), busy_buffers.end(), buffer));
+    m.unlock();
 
     STATS_FREE;
     return true;

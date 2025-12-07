@@ -1,6 +1,6 @@
 #include "PlayerManager.hpp"
 
-PlayerManager::PlayerManager(Server* server) : SessionManager(server, PLAYER_MANAGER)
+PlayerManager::PlayerManager(FireServer* server) : SessionManager3(server, PLAYER_MANAGER)
 {
 
 }
@@ -28,7 +28,7 @@ bool PlayerManager::Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, 
                 cache.clear();
                 continue;
             }
-            TickSession* session = r->second;
+            FireSession* session = r->second;
 
             for (auto it = cache.begin(); it != cache.end(); )
             {
@@ -77,12 +77,12 @@ bool PlayerManager::Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
     return ret;
 }
 
-void PlayerManager::OnSessionCreate(ObjCacheType_t& out_cache, TickSession* session)
+void PlayerManager::OnSessionCreate(ObjCacheType_t& out_cache, FireSession* session)
 {
     
 }
 
-void PlayerManager::OnSessionDestroy(ObjCacheType_t& out_cache, TickSession* session, SessionStatus destroyReason)
+void PlayerManager::OnSessionDestroy(ObjCacheType_t& out_cache, FireSession* session, SessionStatus destroyReason)
 {
     
 }

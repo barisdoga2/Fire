@@ -1,18 +1,18 @@
 #pragma once
 
-#include "Server.hpp"
+#include "FireServer.hpp"
 #include "SessionManager.hpp"
 
-class PlayerManager : public SessionManager {
+class PlayerManager : public SessionManager3 {
 public:
-    PlayerManager(Server* server);
+    PlayerManager(FireServer* server);
 
     bool Update(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache, double dt) override;
 
     bool Receive(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache) override;
 
-    virtual void OnSessionCreate(ObjCacheType_t& out_cache, TickSession* session) override;
+    virtual void OnSessionCreate(ObjCacheType_t& out_cache, FireSession* session) override;
 
-    virtual void OnSessionDestroy(ObjCacheType_t& out_cache, TickSession* session, SessionStatus destroyReason) override;
+    virtual void OnSessionDestroy(ObjCacheType_t& out_cache, FireSession* session, SessionStatus destroyReason) override;
 
 };

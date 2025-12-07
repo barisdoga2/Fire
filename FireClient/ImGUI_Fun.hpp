@@ -1,23 +1,47 @@
 #include "ClientTest.hpp"
-#include "../FireServer/Net.hpp"
-#include <EasyServer.hpp>
+#include <EasySerializer.hpp>
+#include "../FireServer/ServerNet.hpp"
 #include <EasySocket.hpp>
+#include <curl/curl.h>
 
-class ChatMessage
+inline ImTextureID LoadTextureSTB(const char* filename, int* outW = nullptr, int* outH = nullptr)
 {
+    int w, h, ch;
+    unsigned char* data = stbi_load(filename, &w, &h, &ch, 4);
+    if (!data) return 0;
+
+    GLuint texID;
+    glGenTextures(1, &texID);
+    glBindTexture(GL_TEXTURE_2D, texID);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    stbi_image_free(data);
+
+    if (outW) *outW = w;
+    if (outH) *outH = h;
+
+    return (ImTextureID)(intptr_t)texID;
+}
+
+class ChatMessage {
 public:
+    static inline std::vector<ChatMessage> messages{};
+    static inline bool scrollToBottom{};
+    static inline bool isBroadcastMessage{};
+    static inline std::string broadcastMessage{};
+
     std::string username;
     std::string message;
     unsigned long long timeSent = 0;
     unsigned long long timeout = 10000000000;
 
-    ChatMessage(const std::string& m,
-        const std::string& u,
-        unsigned long long ts)
-        : username(u), message(m), timeSent(ts)
-    {
-
-    }
+    ChatMessage(const std::string& m, const std::string& u,  unsigned long long ts) : username(u), message(m), timeSent(ts)
+    { }
 
     std::string toString() const
     {
@@ -28,498 +52,32 @@ public:
     {
         return (now - timeSent) >= timeout;
     }
-};
 
-std::vector<ChatMessage> messages;
-bool scrollToBottom = false;
-char inputBuf[256] = { 0 };
-
-void OnChatMessageReceived(const std::string& msg,const std::string& user,unsigned long long timeSent)
-{
-    messages.emplace_back(user, msg, timeSent);
-    scrollToBottom = true;
-}
-
-void UpdateMessageBox(unsigned long long now)
-{
-    for (auto it = messages.begin(); it != messages.end(); )
+    static void OnChatMessageReceived(const std::string& msg,const std::string& user,unsigned long long timeSent)
     {
-        if (it->expired(now))
-            it = messages.erase(it);
-        else
-            ++it;
-    }
-}
-
-
-EasyBufferManager bf(50U, 1472U);
-ClientTest client(bf, SERVER_IP, SERVER_PORT);
-
-// Common
-
-
-// Session
-std::string username;
-SessionID_t sessionID;
-PeerCryptInfo* crypt;
-
-// Login
-char usernameArr[16] = "";
-char passwordArr[32] = "";
-bool rememberMe = false;
-bool loginInProgress = false;
-bool loginStatusWindow = false;
-bool loginFailed = false;
-bool champSelect = false;
-bool loggedIn = false;
-std::string loginStatusText;
-std::thread loginThread;
-std::atomic<bool> loginThreadRunning = false;
-bool isRender{};
-UserStats stats;
-unsigned int championSelected{};
-bool isBroadcastMessage{};
-std::string broadcastMessage{};
-
-unsigned long long moveTimestamp{};
-glm::vec3 position{}, rotation{}, direction{};
-
-inline bool ParseWebLoginResponse(const std::string& serverUrl,const std::string& username_,const std::string& password)
-{
-    loginFailed     = false;
-    loginStatusText = "Logging in...";
-
-#ifndef NO_HOST
-    std::string response = client.ClientWebRequest(serverUrl, username_, password);
-    const std::string prefix  = "<textarea name=\"jwt\" readonly>";
-    const std::string prefix2 = "<div class=\"msg\">";
-
-    if (response._Starts_with("Curl error:"))
-    {
-        loginStatusText = response.substr(std::string("Curl error:").length());
-        loginFailed     = true;
-        return false;
+        messages.emplace_back(user, msg, timeSent);
+        scrollToBottom = true;
     }
 
-    if (size_t index = response.find(prefix); index != std::string::npos)
+    static void Update(unsigned long long now)
     {
-        // Got jwt-style payload
-        loginStatusText = "Waiting the game server...";
-
-        response = response.substr(index + prefix.length());
-        response = response.substr(0, response.find("</textarea>"));
-
-        // sessionID:userID:key
-        sessionID = static_cast<SessionID_t>(
-            std::stoul(response.substr(0, response.find_first_of(':'))));
-
-        response = response.substr(response.find_first_of(':') + 1U);
-        //userID   = static_cast<uint32_t>(
-        //    std::stoul(response.substr(0, response.find_first_of(':'))));
-
-        response = response.substr(response.find_first_of(':') + 1U);
-        std::string key = response;
-
-        Key_t key_t(KEY_SIZE);
-        std::memcpy(key_t.data(), key.data(), KEY_SIZE);
-
-        if (crypt)
-            delete crypt;
-        crypt   = new PeerCryptInfo(sessionID, 0U, 0U, key_t);
-        username = username_;
-
-        if (rememberMe)
-            SaveConfig(true, usernameArr, passwordArr);
-        else
-            SaveConfig(false, "", "");
-
-        return true;
-    }
-
-    // Error div
-    if (size_t index = response.find(prefix2); index != std::string::npos)
-    {
-        response       = response.substr(index + prefix2.length());
-        response       = response.substr(0, response.find("</div>"));
-        loginStatusText = response;
-    }
-    else
-    {
-        loginStatusText = "Error while parsing response!";
-    }
-    loginFailed = true;
-    return false;
-#else
-    loginFailed = false;
-    loginStatusText = "Logged in...";
-    sessionID = 2U;
-    username = username_;
-    Key_t key_t = { 0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U,0U };
-    if (crypt)
-        delete crypt;
-    crypt = new PeerCryptInfo(sessionID, 0U, 0U, key_t);
-
-    if (rememberMe)
-        SaveConfig(true, usernameArr, passwordArr);
-    else
-        SaveConfig(false, "", "");
-    return true;
-#endif
-}
-
-template<typename T, typename Handler>
-bool WaitForPacket(std::vector<EasySerializeable*>& recvObjs,std::mutex& recvMtx,unsigned timeoutMs, const char* timeoutMessage,Handler  onPacket)
-{
-    constexpr unsigned stepMs = 100U;
-    unsigned remaining        = timeoutMs / stepMs;
-
-    while (!loginFailed && remaining--)
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(stepMs));
-
-        std::lock_guard<std::mutex> lock(recvMtx);
-        for (auto it = recvObjs.begin(); it != recvObjs.end(); )
+        for (auto it = messages.begin(); it != messages.end(); )
         {
-            if (auto* pkt = dynamic_cast<T*>(*it); pkt)
-            {
-                onPacket(pkt);
-                delete pkt;
-                recvObjs.erase(it);
-                return true;
-            }
+            if (it->expired(now))
+                it = messages.erase(it);
             else
-            {
                 ++it;
-            }
         }
     }
-
-    if (!loginFailed)
-    {
-        loginStatusText = timeoutMessage;
-        loginFailed     = true;
-    }
-    return false;
-}
-
-inline void Logout(EasyPlayground* p)
-{
-    std::vector<EasySerializeable*> logout = { new sLogoutRequest() };
-    if (loggedIn || !loginFailed || champSelect || loginInProgress)
-    {
-        client.ClientSend(*crypt, logout);
-        std::cout << "Logout request sent!\n";
-    }
-
-    loggedIn = false;
-    loginFailed = true;
-    loginInProgress = false;
-    loginStatusWindow = false;
-    champSelect = false;
-
-    // reset crypt, username, session, etc.
-    if (crypt) { delete crypt; crypt = nullptr; }
-
-    sessionID = 0;
-    username = "";
-    stats = {}; // reset
-}
-
-inline void LoggedIn(std::vector<EasySerializeable*>& recvObjs, std::mutex& recvMtx, std::vector<EasySerializeable*>& sendObjs, std::mutex& sendMtx, EasyPlayground* p)
-{
-    bool wasLoggedIn = loggedIn;
-    if(wasLoggedIn)
-        p->OnLogin();
-    while (loggedIn)
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(2U));
-        {
-            std::lock_guard<std::mutex> lock(recvMtx);
-            std::lock_guard<std::mutex> lock2(p->network.m);
-            p->network.in.insert(p->network.in.end(), recvObjs.begin(), recvObjs.end());
-            recvObjs.clear();
-        }
-        {
-            std::lock_guard<std::mutex> lock(sendMtx);
-            std::lock_guard<std::mutex> lock2(p->network.m);
-            sendObjs.insert(sendObjs.end(), p->network.out.begin(), p->network.out.end());
-            p->network.out.clear();
-        }
-        UpdateMessageBox(Clock::now().time_since_epoch().count());
-    }
-    if(wasLoggedIn)
-        p->OnDisconnect(SessionStatus::UNSET);
-}
-
-inline void Login(std::string username_, std::string password, EasyPlayground* p)
-{
-	client.client.socket = new EasySocket();
-
-    // Reset state
-    loggedIn   = false;
-    loginFailed = false;
-
-    if (crypt)
-    {
-        crypt->key          = {};
-        crypt->sequence_id_in  = 0U;
-        crypt->sequence_id_out = 0U;
-        crypt->session_id      = 0U;
-    }
-
-    // 1) Web login + crypt setup
-    if (!ParseWebLoginResponse(SERVER_URL, username_, password))
-    {
-        loginThreadRunning = false;
-        isRender           = false;
-        return;
-    }
-
-    // 2) Prepare shared queues and threads
-    std::vector<EasySerializeable*> sendObjs;
-    std::vector<EasySerializeable*> recvObjs;
-    std::mutex sendMtx, recvMtx;
-
-    std::thread recvTh([&]
-    {
-        while (!loginFailed)
-        {
-            if (crypt && recvMtx.try_lock())
-            {
-                client.ClientReceive(*crypt, recvObjs);
-                recvMtx.unlock();
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(2U));
-        }
-    });
-
-    std::thread sendTh([&]
-    {
-        while (!loginFailed)
-        {
-            if (crypt && sendMtx.try_lock())
-            {
-                client.ClientSend(*crypt, sendObjs);
-                for (EasySerializeable* s : sendObjs)
-                    delete s;
-                sendObjs.clear();
-                sendMtx.unlock();
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(2U));
-        }
-    });
-
-    // 3) Send initial hello
-    {
-        std::lock_guard<std::mutex> lock(sendMtx);
-        sendObjs.push_back(new sLoginRequest());
-        std::cout << "Login request sent!\n";
-    }
-
-    // 4) Wait Login Response
-    if (!loginFailed)
-    {
-        WaitForPacket<sLoginResponse>(
-            recvObjs, recvMtx, 6000U, "Login response timeout!",
-            [&](sLoginResponse* res)
-            {
-                std::cout << "Login response received!\n";
-                loginStatusText = res->message;
-                loginFailed     = !res->response;
-            });
-    }
-
-    // 5) Player boot info
-    if (!loginFailed)
-    {
-        WaitForPacket<sPlayerBootInfo>(
-            recvObjs, recvMtx, 6000U, "Player boot timeout!",
-            [&](sPlayerBootInfo* info)
-            {
-                std::cout << "Player boot info received!\n";
-                loginStatusText          = "Player boot info received!";
-                stats.userID             = info->userID;
-                stats.gametime           = info->gametime;
-                stats.golds              = info->golds;
-                stats.diamonds           = info->diamonds;
-                stats.tutorial_done      = info->tutorialDone;
-                stats.champions_owned    = info->championsOwned;
-            });
-    }
-
-    // 6) Champion select (wait external UI to set championSelected & clear champSelect)
-    if (!loginFailed)
-    {
-        championSelected = 0U;
-        champSelect      = true;
-
-        while (champSelect && !loginFailed)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100U));
-            std::lock_guard<std::mutex> lock(recvMtx);
-            for (auto it = recvObjs.begin(); it != recvObjs.end(); )
-            {
-                if (auto* d = dynamic_cast<sDisconnectResponse*>(*it); d)
-                {
-                    std::cout << "Disconnect response received!\n";
-
-                    champSelect = false;
-                    loggedIn = false;
-                    loginFailed = true;
-                    loginStatusText = d->message;
-
-                    delete d;
-                    it = recvObjs.erase(it);
-                }
-                else
-                {
-                    ++it;
-                }
-            }
-        }
-
-        if (!loginFailed)
-        {
-            loginStatusText = "Selecting champion!";
-            std::lock_guard<std::mutex> lock(sendMtx);
-            sendObjs.push_back(new sChampionSelectRequest(championSelected));
-            std::cout << "Champion select request sent!\n";
-        }
-    }
-
-    // 7) Champion select response
-    if (!loginFailed)
-    {
-        WaitForPacket<sChampionSelectResponse>(
-            recvObjs, recvMtx, 6000U, "Champion select response timeout!",
-            [&](sChampionSelectResponse* res)
-            {
-                std::cout << "Champion select response received!\n";
-                loginFailed     = !res->response;
-                loginStatusText = res->message;
-            });
-    }
-
-    // 8) Main online loop
-    loggedIn = !loginFailed;
-
-    if (loggedIn)
-    {
-        LoggedIn(recvObjs, recvMtx, sendObjs, sendMtx, p);
-    }
-
-    if (sendTh.joinable()) sendTh.join();
-    if (recvTh.joinable()) recvTh.join();
-
-    loginThreadRunning = false;
-    isRender           = false;
-}
-
-inline ImTextureID LoadTextureSTB(const char* filename, int* outW = nullptr, int* outH = nullptr)
-{
-	int w, h, ch;
-	unsigned char* data = stbi_load(filename, &w, &h, &ch, 4);
-	if (!data) return 0;
-
-	GLuint texID;
-	glGenTextures(1, &texID);
-	glBindTexture(GL_TEXTURE_2D, texID);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-	stbi_image_free(data);
-
-	if (outW) *outW = w;
-	if (outH) *outH = h;
-
-	return (ImTextureID)(intptr_t)texID;
-}
-
-int DrawChampionSelectWindow(const std::vector<ImTextureID>& icons, float buttonSize = 64.0f, float padding = 10.0f)
-{
-    int N = (int)icons.size();
-    if (N == 0)
-        return -1;
-
-    const int cols = 5;   // <<< FIXED: ALWAYS 3 PER ROW
-
-    // Window small placeholder size (auto-resize will override)
-    ImVec2 winSize(420, 252);   // smaller window
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-
-    // Center on both X and Y precisely
-    ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);;
-
-   
-    ImGui::Begin("Champion Select",
-        nullptr,
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoSavedSettings);
-
-    auto CenteredText = [&](const char* txt)
-        {
-            float w = ImGui::CalcTextSize(txt).x;
-            ImGui::SetCursorPosX((winSize.x - w) * 0.5f);
-            ImGui::Text("%s", txt);
-        };
-
-
-    CenteredText("Champion Select");
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
-    ImGui::Spacing();
-
-    int clicked = -1;
-
-    for (int i = 0; i < N; i++)
-    {
-        bool owned = std::find(
-            stats.champions_owned.begin(),
-            stats.champions_owned.end(),
-            i + 1) != stats.champions_owned.end();
-
-        ImGui::PushID(i);
-
-        if (!owned)
-        {
-            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.40f);
-            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-        }
-
-        bool pressed =
-            ImGui::ImageButton(std::to_string(i).c_str(), icons[i], ImVec2(buttonSize, buttonSize));
-
-        if (pressed && owned)
-            clicked = i;
-
-        if (!owned)
-        {
-            ImGui::PopItemFlag();
-            ImGui::PopStyleVar();
-        }
-
-        ImGui::PopID();
-
-        // Put 3 items per row
-        if ((i % cols) != cols - 1)
-            ImGui::SameLine(0, padding);
-    }
-
-    ImGui::End();
-    return clicked;
-}
+};
 
 void EasyPlayground::ImGUI_DrawChatWindow()
 {
+    if (!network.isInGame)
+        return;
+
+    static char inputBuf[256] = { 0 };
+
     const ImVec2 winSize(400, 160);
 
     ImVec2 vp = ImGui::GetMainViewport()->Pos;
@@ -551,13 +109,13 @@ void EasyPlayground::ImGUI_DrawChatWindow()
         ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
-    for (const auto& msg : messages)
+    for (const auto& msg : ChatMessage::messages)
         ImGui::TextWrapped("%s", msg.toString().c_str());
 
-    if (scrollToBottom)
+    if (ChatMessage::scrollToBottom)
     {
         ImGui::SetScrollHereY(1.0f);
-        scrollToBottom = false;
+        ChatMessage::scrollToBottom = false;
     }
 
     ImGui::EndChild();
@@ -586,8 +144,7 @@ void EasyPlayground::ImGUI_DrawChatWindow()
         if (!text.empty())
         {
             // Send
-            std::vector<EasySerializeable*> chatMsg = { new sChatMessage(text, "", 0)};
-            client.ClientSend(*crypt, chatMsg);
+            network.GetSendCache().push_back(new sChatMessage(text, "", 0));
             inputBuf[0] = '\0';
         }
     }
@@ -597,7 +154,7 @@ void EasyPlayground::ImGUI_DrawChatWindow()
 
 void EasyPlayground::ImGUI_PlayerInfoWindow()
 {
-    if (!loggedIn && !champSelect)
+    if (!(network.isInGame || network.isLoggedIn || network.isBoot || network.isChampionSelect || network.isAuth))
         return;
 
     // Position: TOP RIGHT
@@ -619,16 +176,16 @@ void EasyPlayground::ImGUI_PlayerInfoWindow()
         ImGuiWindowFlags_NoSavedSettings);
 
     // ---- Header ----
-    ImGui::Text("Username:   %s", username.c_str());
-    ImGui::Text("User ID:    %u", stats.userID);
-    ImGui::Text("Session ID: %u", sessionID);
+    ImGui::Text("Username:   %s", network.session.username.c_str());
+    ImGui::Text("User ID:    %u", network.session.stats.uid);
+    ImGui::Text("Session ID: %u", network.session.sid);
     ImGui::Separator();
 
     // ---- Stats ----
-    ImGui::Text("Gold:       %u", stats.golds);
-    ImGui::Text("Diamond:    %u", stats.diamonds);
-    ImGui::Text("Game Time:  %.1f hours", stats.gametime);
-    ImGui::Text("Champions Owned: %d", (int)stats.champions_owned.size());
+    ImGui::Text("Gold:       %u", network.session.stats.golds);
+    ImGui::Text("Diamond:    %u", network.session.stats.diamonds);
+    ImGui::Text("Game Time:  %.1f hours", network.session.stats.gametime);
+    ImGui::Text("Champions Owned: %d", (int)network.session.stats.champions_owned.size());
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -640,9 +197,7 @@ void EasyPlayground::ImGUI_PlayerInfoWindow()
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.70f, 0.15f, 0.15f, 1));
 
     if (ImGui::Button("Logout", ImVec2(120, 28)))
-    {
-        Logout(this);
-    }
+        network.Stop();
 
     ImGui::PopStyleColor(3);
     ImGui::End();
@@ -663,24 +218,63 @@ void EasyPlayground::ImGUI_ChampionSelectWindow()
 		loaded = true;
 	}
 
-	int clicked = DrawChampionSelectWindow(
-		icons
-	);
+    int N = (int)icons.size();
+    int clicked = -1;
+    if (N != 0)
+    {
+        const int cols = 5;
+        ImVec2 winSize(420, 252);
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);;
+        ImGui::Begin("Champion Select", nullptr, ImGuiWindowFlags_NoResize |ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove |ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
+        auto CenteredText = [&](const char* txt)
+            {
+                float w = ImGui::CalcTextSize(txt).x;
+                ImGui::SetCursorPosX((winSize.x - w) * 0.5f);
+                ImGui::Text("%s", txt);
+            };
+        CenteredText("Champion Select");
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        for (int i = 0; i < N; i++)
+        {
+            bool owned = std::find(network.session.stats.champions_owned.begin(), network.session.stats.champions_owned.end(),i + 1) != network.session.stats.champions_owned.end();
+            ImGui::PushID(i);
+            if (!owned)
+            {
+                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.40f);
+                ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+            }
+            bool pressed =ImGui::ImageButton(std::to_string(i).c_str(), icons[i], ImVec2(64.0f, 64.0f));
 
-	if (clicked >= 0)
-	{
-		// Do something
-		printf("Icon %d clicked!\n", clicked);
-		championSelected = clicked + 1;
-		champSelect = false;
-	}
+            if (pressed && owned)
+                clicked = i;
+            if (!owned)
+            {
+                ImGui::PopItemFlag();
+                ImGui::PopStyleVar();
+            }
+            ImGui::PopID();
+            if ((i % cols) != cols - 1)
+                ImGui::SameLine(0, 10.0f);
+        }
+        ImGui::End();
+    }
+
+    if (clicked >= 0)
+    {
+        loginStatusText = "Selecting champion...";
+        network.GetSendCache().push_back(new sChampionSelectRequest(clicked));
+        std::cout << "[EasyPlayground] ImGUI_ChampionSelectWindow - Champion select request sent.\n";
+        network.isChampionSelected = true;
+    }
 }
 
 void EasyPlayground::ImGUI_LoginStatusWindow()
 {
-	if (!loginInProgress || champSelect)
-		return;
-
 	ImVec2 winSize(420, 252);   // smaller window
 	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
 
@@ -726,18 +320,18 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 	float btnWidth = 100.0f;
 	CenterItem(btnWidth);
 
-	if (!loginFailed)
+	if (!network.isLoginFailed)
 	{
 		if (ImGui::Button("Cancel", ImVec2(btnWidth, 28)))
 		{
-            Logout(this);
+            network.Stop();
 		}
 	}
 	else
 	{
 		if (ImGui::Button("OK", ImVec2(btnWidth, 28)))
 		{
-			Logout(this);
+            network.Stop();
 		}
 	}
 
@@ -746,7 +340,7 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 
 void EasyPlayground::ImGUI_BroadcastMessageWindow()
 {
-    if (!isBroadcastMessage || broadcastMessage.length() == 0)
+    if (!ChatMessage::isBroadcastMessage || ChatMessage::broadcastMessage.length() == 0)
         return;
 
     ImVec2 winSize(420, 252);   // smaller window
@@ -782,10 +376,10 @@ void EasyPlayground::ImGUI_BroadcastMessageWindow()
     ImGui::Spacing();
 
     // Text
-    float textWidth = ImGui::CalcTextSize(broadcastMessage.c_str()).x;
+    float textWidth = ImGui::CalcTextSize(ChatMessage::broadcastMessage.c_str()).x;
 
     CenterItem(textWidth);
-    ImGui::Text("%s", broadcastMessage.c_str());
+    ImGui::Text("%s", ChatMessage::broadcastMessage.c_str());
 
     ImGui::Spacing();
     ImGui::Spacing();
@@ -795,8 +389,8 @@ void EasyPlayground::ImGUI_BroadcastMessageWindow()
     CenterItem(btnWidth);
     if (ImGui::Button("OK", ImVec2(btnWidth, 28)))
     {
-        isBroadcastMessage = false;
-        broadcastMessage = "";
+        ChatMessage::isBroadcastMessage = false;
+        ChatMessage::broadcastMessage = "";
     }
 
     ImGui::End();
@@ -804,6 +398,9 @@ void EasyPlayground::ImGUI_BroadcastMessageWindow()
 
 void EasyPlayground::ImGUI_LoginWindow()
 {
+    if (network.isChampionSelect || network.isLoggedIn || network.isBoot)
+        return;
+    
 	ImVec2 winSize = ImVec2(420, 252);
 	ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);
 	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(),
@@ -835,23 +432,23 @@ void EasyPlayground::ImGUI_LoginWindow()
 	ImGui::Spacing();
 
 	// Username
+    network.session.username.resize(USERNAME_LEGTH, '\0');
 	CenteredText("Username");
 	CenteredItem(240);
-	ImGui::InputText("##username", usernameArr, IM_ARRAYSIZE(usernameArr));
+	ImGui::InputText("##username", network.session.username.data(), network.session.username.size());
 	ImGui::Spacing();
 
 	// Password
+    network.session.password.resize(PASSWORD_LEGTH, '\0');
 	CenteredText("Password");
 	CenteredItem(240);
-	ImGui::InputText("##password", passwordArr, IM_ARRAYSIZE(passwordArr), ImGuiInputTextFlags_Password);
+	ImGui::InputText("##password", network.session.password.data(), network.session.password.size(), ImGuiInputTextFlags_Password);
 	ImGui::Spacing();
 
 	// Remember me
-	{
-		float w = ImGui::CalcTextSize("Remember me").x + 30.0f;
-		CenteredItem(w);
-		ImGui::Checkbox("Remember me", &rememberMe);
-	}
+    float w = ImGui::CalcTextSize("Remember me").x + 30.0f;
+    CenteredItem(w);
+    ImGui::Checkbox("Remember me", &rememberMe);
 
 	ImGui::Spacing();
 	ImGui::Spacing();
@@ -861,75 +458,70 @@ void EasyPlayground::ImGUI_LoginWindow()
 	CenteredItem(btnWidth);
 	if (ImGui::Button("Login", ImVec2(btnWidth, 32)))
 	{
-		loginFailed = false;
-		loginInProgress = true;
-		loginStatusWindow = true;
-
 		// Save config on click
-		std::string u = usernameArr;
-		std::string p = passwordArr;
-
+        static std::atomic<bool> loginThreadRunning{};
 		if (!loginThreadRunning)
 		{
 			loginThreadRunning = true;
-			loginThread = std::thread([u, p, this]() {Login(u, p, this); });
+			loginThread = std::thread([this]() {network.Login(SERVER_URL, loginStatusText, rememberMe, loginThreadRunning); });
 			loginThread.detach();
-
-
-
-
 		}
 	}
 
 	ImGui::End();
 }
 
+void EasyPlayground::ImGUI_InGameWindow()
+{
+    ImGui::SetNextWindowPos({ 0,0 });
+    ImGui::Begin("ImGUI Settings");
+    ImGui::Checkbox("Fog Enabled", &imgui_isFog);
+    ImGui::Checkbox("Triangles Enabled", &imgui_triangles);
+    ImGui::Checkbox("Normals Enabled", &imgui_showNormalLines);
+    ImGui::InputFloat("Normal Length", &imgui_showNormalLength);
+    ImGui::End();
+
+    ImGUI_PlayerInfoWindow();
+    ImGUI_BroadcastMessageWindow();
+    ImGUI_DrawChatWindow();
+}
+
 void EasyPlayground::ImGUIRender()
 {
-	if (loggedIn)
-		isRender = true;
-
-	static bool show_demo_window = true;
-	static bool show_another_window = false;
-	static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-	// Start the Dear ImGui frame
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::SetNextWindowPos({ 0,0 });
+    if (!network.isAuth && !network.isLoginFailed)
+    {
+        ImGUI_LoginWindow();
+    }
+    else if (network.isAuth && !network.isLoginFailed)
+    {
+        ImGUI_LoginStatusWindow();
+    }
+    else if (!network.isAuth && network.isLoginFailed)
+    {
+        ImGUI_LoginStatusWindow();
+    }
+    else if (network.isInGame)
+    {
+        ImGUI_InGameWindow();
+    }
+    else if(network.isAuth && network.isBoot && network.isLoggedIn && !network.isChampionSelect && !network.isChampionSelected)
+    {
+        ImGUI_ChampionSelectWindow();
+        ImGUI_PlayerInfoWindow();
+    }
+    else if(network.isAuth && network.isBoot && network.isLoggedIn && !network.isChampionSelect && network.isChampionSelected)
+    {
+        ImGUI_LoginStatusWindow();
+        ImGUI_PlayerInfoWindow();
+    }
+    else if(network.isAuth && network.isBoot && network.isLoggedIn && network.isChampionSelected && network.isChampionSelect)
+    {
 
-	if (champSelect)
-		ImGUI_ChampionSelectWindow();
-
-    ImGUI_PlayerInfoWindow();
-
-	ImGui::SetNextWindowPos({ 0,0 });
-
-	if (!loggedIn)
-	{
-		if (loginStatusWindow)
-			ImGUI_LoginStatusWindow();
-		else
-			ImGUI_LoginWindow();
-	}
-	else
-	{
-		ImGui::SetNextWindowPos({ 0,0 });
-		ImGui::Begin("ImGUI Settings");
-		ImGui::Checkbox("Fog Enabled", &imgui_isFog);
-		ImGui::Checkbox("Triangles Enabled", &imgui_triangles);
-		ImGui::Checkbox("Normals Enabled", &imgui_showNormalLines);
-		ImGui::InputFloat("Normal Length", &imgui_showNormalLength);
-		ImGui::End();
-
-        ImGUI_BroadcastMessageWindow();
-
-        ImGUI_DrawChatWindow();
-	}
-
-	// Rendering
+    }
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

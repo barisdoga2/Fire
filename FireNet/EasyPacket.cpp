@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "EasyPacket.hpp"
 
 #include <cryptopp/aes.h>
 #include <cryptopp/gcm.h>
@@ -12,17 +11,59 @@
 #include <cryptopp/cryptlib.h>
 #include <bzlib.h>
 
+#include "EasyPacket.hpp"
+#include "EasyBuffer.hpp"
 
 using namespace CryptoPP;
 
 
+
+SessionID_t* EasyPacket::SessionID() const
+{
+    return (SessionID_t*)(m_buffer->begin());
+}
+
+SequenceID_t* EasyPacket::SequenceID() const
+{
+    return (SequenceID_t*)(m_buffer->begin() + sizeof(SessionID_t));
+}
+
+IV_t* EasyPacket::IV() const
+{
+    return (IV_t*)(m_buffer->begin() + sizeof(SessionID_t) + sizeof(SequenceID_t));
+}
+
+uint8_t* EasyPacket::Payload() const
+{
+    return m_buffer->begin() + HeaderSize();
+}
+
+size_t EasyPacket::PayloadSize() const
+{
+    return m_buffer->m_payload_size;
+}
+
+size_t EasyPacket::HeaderSize()
+{
+    return sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE;
+}
+
+size_t EasyPacket::MinimumSize()
+{
+    return sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + 1U;
+}
+
+SequenceID_t* EasyPacket::SequenceID(const EasyBuffer* buffer)
+{
+    return (SequenceID_t*)(buffer->begin() + sizeof(SessionID_t));
+}
 
 EasyPacket::EasyPacket(EasyBuffer* buffer) : m_buffer(buffer)
 {
 
 }
 
-bool EasyPacket::MakeEncrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
+bool EasyPacket::MakeEncrypted(const CryptData& crypt, EasyBuffer* buffer)
 {
     bool ret = false;
     EasyPacket source(buffer);
@@ -38,17 +79,18 @@ bool EasyPacket::MakeEncrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
     {
         if (buffer->m_payload_size > 0U)
         {
-            static IV_t iv(IV_SIZE);
-            AutoSeededRandomPool prng;
-            prng.GenerateBlock(iv.data(), IV_SIZE);
+            // Generate IV
+            IV_t iv(IV_SIZE);
+            AutoSeededRandomPool{}.GenerateBlock(iv.data(), IV_SIZE);
 
             // Fill Header
-            memcpy(source.SessionID(), &crypt.session_id, sizeof(SessionID_t));
-            memcpy(source.SequenceID(), &crypt.sequence_id_out, sizeof(SequenceID_t));
+            memcpy(source.SessionID(), &crypt.session_id, sizeof(SessionID_t)); // Set packet sid
+            memcpy(source.SequenceID(), &crypt.sequence_id_out, sizeof(SequenceID_t)); // Set packet seq id
+            memcpy(source.IV(), iv.data(), IV_SIZE);
 
-            // Set Key
+            // Set Key w IV
             GCM<AES>::Encryption enc;
-            enc.SetKeyWithIV(crypt.key.data(), KEY_SIZE, (uint8_t*)source.IV(), IV_SIZE);
+            enc.SetKeyWithIV(crypt.key.data(), KEY_SIZE, (uint8_t*)source.IV(), IV_SIZE); // Set key w IV
 
             // GCM Filter
             AuthenticatedEncryptionFilter aef(enc, new ArraySink(source.Payload(), source.PayloadSize() + TAG_SIZE), false, TAG_SIZE);
@@ -81,7 +123,7 @@ bool EasyPacket::MakeEncrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
     return ret;
 }
 
-bool EasyPacket::MakeDecrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
+bool EasyPacket::MakeDecrypted(const CryptData& crypt, EasyBuffer* buffer)
 {
     bool ret = false;
     EasyPacket source(buffer);
@@ -97,7 +139,7 @@ bool EasyPacket::MakeDecrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer)
     {
         if ((*source.SessionID() == crypt.session_id) && (buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE))
         {
-            // Set Key
+            // Set Key w IV
             GCM<AES>::Decryption dec;
             dec.SetKeyWithIV(crypt.key.data(), KEY_SIZE, (uint8_t*)source.IV(), IV_SIZE);
 

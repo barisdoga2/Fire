@@ -1,8 +1,8 @@
 #include "pch.h"
-#include "EasyIpAddress.hpp"
 
 #include <ws2tcpip.h>
 
+#include "EasyIpAddress.hpp"
 
 
 const EasyIpAddress EasyIpAddress::Any(0, 0, 0, 0);

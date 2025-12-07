@@ -24,12 +24,12 @@
 #include <chrono>
 #include <EasyDisplay.hpp>
 
-#include "Net.hpp"
-#include "Server.hpp"
+#include "ServerNet.hpp"
+#include "FireServer.hpp"
 #include "ServerUI.hpp"
 
-EasyBufferManager bf(50U, 1472U);
-Server* server = new Server(&bf, SERVER_PORT);
+EasyBufferManager* bm = new EasyBufferManager(50U, 1472U);
+FireServer* server = new FireServer(bm, SERVER_PORT);
 
 bool running{};
 bool stop{};
@@ -53,7 +53,7 @@ int Broadcast(lua_State* L)
     }
     if (text.length() > 0U)
     {
-        server->Broadcast({ new sBroadcastMessage(text) });
+        //server->Broadcast({ new sBroadcastMessage(text) });
     }
     return 0;
 }
@@ -66,8 +66,8 @@ void LUAListen()
 
     L = luaL_newstate();
     luaL_openlibs(L);
-    lua_register(L, "ServerStats", Server::Stats);
-    lua_register(L, "Q", Server::Stats);
+    //lua_register(L, "ServerStats", FireServer::Stats);
+    //lua_register(L, "Q", FireServer::Stats);
     lua_register(L, "Stop", Stop);
     lua_register(L, "Broadcast", Broadcast);
     std::string input = "", input2 = "";
@@ -117,6 +117,16 @@ void LUAListen()
 
 int main(int argc, char* argv[])
 {
+    FireServer* server = new FireServer(bm, SERVER_PORT);
+    server->Start();
+    while (server->IsRunning())
+    {
+        server->Update();
+        SLEEP_MS(1U);
+    }
+    delete server;
+    return 0;
+
     bool running{};
 
     if (server->Start())

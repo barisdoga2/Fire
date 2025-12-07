@@ -1,6 +1,7 @@
 #pragma once
-#include "EasyNet.hpp"
-#include "EasyBuffer.hpp"
+
+#include "FireNet.hpp"
+
 
 
 class EasyBuffer;
@@ -11,42 +12,27 @@ private:
 public:
     EasyPacket(EasyBuffer* buffer);
 
-    static bool MakeEncrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer);
-    static bool MakeDecrypted(const PeerCryptInfo& crypt, EasyBuffer* buffer);
+    static bool MakeEncrypted(const CryptData& crypt, EasyBuffer* buffer);
+    static bool MakeDecrypted(const CryptData& crypt, EasyBuffer* buffer);
 
     static bool MakeCompressed(EasyBuffer* in, EasyBuffer* out);
     static bool MakeDecompressed(EasyBuffer* in, EasyBuffer* out);
 
-    inline SessionID_t* SessionID() const {
-        return (SessionID_t*)(m_buffer->begin());
-    }
+    SessionID_t* SessionID() const;
 
-    inline SequenceID_t* SequenceID() const {
-        return (SequenceID_t*)(m_buffer->begin() + sizeof(SessionID_t));
-    }
+    SequenceID_t* SequenceID() const;
 
-    inline IV_t* IV() const {
-        return (IV_t*)(m_buffer->begin() + sizeof(SessionID_t) + sizeof(SequenceID_t));
-    }
+    IV_t* IV() const;
 
-    inline uint8_t* Payload() const {
-        return m_buffer->begin() + HeaderSize();
-    }
+    uint8_t* Payload() const;
 
-    inline size_t PayloadSize() const {
-        return m_buffer->m_payload_size;
-    }
+    size_t PayloadSize() const;
 
-    static inline size_t HeaderSize() {
-        return sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE;
-    }
+    static size_t HeaderSize();
 
-    static inline size_t MinimumSize() {
-        return sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + 1U;
-    }
+    static size_t MinimumSize();
 
     // Static Accesssers
-    static inline SequenceID_t* SequenceID(const EasyBuffer* buffer) {
-        return (SequenceID_t*)(buffer->begin() + sizeof(SessionID_t));
-    }
+    static SequenceID_t* SequenceID(const EasyBuffer* buffer);
+
 };

@@ -1,14 +1,14 @@
 #pragma once
 
-#include "../FireServer/Net.hpp"
+#include "../FireServer/ServerNet.hpp"
 
 class EasySocket;
-class ClientPeer : public EasyPeer {
+class ClientPeer {
 public:
     EasySocket* socket;
     Timestamp_t lastReceive;
 
-    PeerCryptInfo* crypt;
+    CryptData* crypt;
 
     uint32_t user_id;
  
@@ -19,18 +19,18 @@ public:
 struct lua_State;
 class ClientTest {
 private:
-    EasyBufferManager& bf;
+    EasyBufferManager* bf;
     std::string ip;
     unsigned short port;
 
 public:
     ClientPeer client;
 
-    ClientTest(EasyBufferManager& bf, std::string ip, unsigned short port);
+    ClientTest(EasyBufferManager* bf, std::string ip, unsigned short port);
     ~ClientTest();
 
     std::string ClientWebRequest(std::string url, std::string username, std::string password);
-    uint64_t ClientReceive(PeerCryptInfo& crypt, std::vector<EasySerializeable*>& objs);
-    uint64_t ClientSend(PeerCryptInfo& crypt, const std::vector<EasySerializeable*>& objs);
+    uint64_t ClientReceive(CryptData& crypt, std::vector<EasySerializeable*>& objs);
+    uint64_t ClientSend(CryptData& crypt, const std::vector<EasySerializeable*>& objs);
 
 };

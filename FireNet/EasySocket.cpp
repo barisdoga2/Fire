@@ -1,7 +1,9 @@
 #include "pch.h"
+
 #include <ws2tcpip.h>
 
 #include "EasySocket.hpp"
+#include "EasyIpAddress.hpp"
 
 
 
@@ -101,11 +103,9 @@ uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_
 	return WSAEISCONN;
 }
 
-uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, PeerSocketInfo& info)  // Server use only
+uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, Addr_t& addr_in)  // Server use only
 {
 	create();
-
-	info = PeerSocketInfo();
 
 	received = 0;
 
@@ -118,7 +118,7 @@ uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_
 
 	received = static_cast<std::size_t>(recv);
 
-	info.addr = (static_cast<uint64_t>(addr.sin_addr.s_addr) << 16) | addr.sin_port;
+	addr_in = (static_cast<uint64_t>(addr.sin_addr.s_addr) << 16) | addr.sin_port;
 
 	return WSAEISCONN;
 }
