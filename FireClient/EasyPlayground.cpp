@@ -360,24 +360,61 @@ void EasyPlayground::OnLogin()
 
 void EasyPlayground::NetworkUpdate(double _dt)
 {
-	network->Update();
+	if (!network->IsInGame())
+		return;
 
-	std::vector<EasySerializeable*>& receive_cache = network->GetReceiveCache();
-	for (auto it = receive_cache.begin(); it != receive_cache.end(); )
+	// Heartbeat
 	{
-		if (auto* disconnectResponse = dynamic_cast<sDisconnectResponse*>(*it); disconnectResponse)
+		static Timestamp_t nextHeartbeat = Clock::now();
+		Millis_t heartbeatPeriod(1000U);
+		if (Clock::now() >= nextHeartbeat)
 		{
-			std::cout << "Disconnect response received!\n";
-			network->Disconnect(disconnectResponse->message);
+			nextHeartbeat = Clock::now() + heartbeatPeriod;
 
-			delete disconnectResponse;
-			it = receive_cache.erase(it);
-		}
-		else
-		{
-			it++;
+			std::cout << "[EasyPlayground] Update - Heartbeat sent.\n";
+			network->GetSendCache().push_back(new sHearbeat());
 		}
 	}
+
+	// Process Received
+	{
+		std::vector<EasySerializeable*>& receive_cache = network->GetReceiveCache();
+		for (auto it = receive_cache.begin(); it != receive_cache.end(); )
+		{
+			if (auto* disconnectResponse = dynamic_cast<sDisconnectResponse*>(*it); disconnectResponse)
+			{
+				std::cout << "[EasyPlayground] Update - Disconnect response received.\n";
+				network->Disconnect(disconnectResponse->message);
+				break; // Disconnect clears the cache already
+				//delete disconnectResponse;  // Disconnect clears the cache already
+				//it = receive_cache.erase(it);  // Disconnect clears the cache already
+			}
+			else if (auto* heartbeat = dynamic_cast<sHearbeat*>(*it); heartbeat)
+			{
+				std::cout << "[EasyPlayground] Update - Heartbeat received.\n";
+
+				delete heartbeat;
+				it = receive_cache.erase(it);
+			}
+			else if (auto* broadcastMessage = dynamic_cast<sBroadcastMessage*>(*it); broadcastMessage)
+			{
+				std::cout << "[EasyPlayground] Update - Broadcast message received.\n";
+
+				ChatMessage::isBroadcastMessage = true;
+				ChatMessage::broadcastMessage = broadcastMessage->message;
+
+				delete broadcastMessage;
+				it = receive_cache.erase(it);
+			}
+			else
+			{
+				it++;
+			}
+		}
+	}
+
+	network->Update();
+
 
 	//if (!network->isLogin)
 	//	return;
@@ -500,6 +537,8 @@ bool EasyPlayground::Update(double _dt)
 		// calculate FPS
 		ups = 1.0 / avgDt;
 	}
+
+	isRender = network->IsInGame();
 
 	if (network->IsInGame())
 	{

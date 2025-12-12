@@ -10,6 +10,7 @@
 #endif
 
 #define SERVER_PORT 54000U
+#define SESSION_TIMEOUT 10000U
 
 #ifdef REMOTE
 #define SERVER_IP "31.210.43.142"

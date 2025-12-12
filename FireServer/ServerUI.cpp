@@ -47,14 +47,30 @@ namespace UISnapshot {
 }
 
 namespace UIConsole {
-	static std::vector<std::string> gConsoleLines;
+	struct UIConsoleLine
+	{
+		std::string text;
+		std::chrono::steady_clock::time_point time;
+
+		UIConsoleLine(std::string text, std::chrono::steady_clock::time_point time) : text(text), time(time)
+		{
+
+		}
+
+	};
+
+	static std::vector<UIConsoleLine> gConsoleLines;
 	static char gConsoleInput[512] = {};
 	static bool gAutoScroll = true;
 
 	class ImGuiConsoleBuf : public std::streambuf
 	{
+		std::vector<UIConsoleLine>& lines;
+		std::string currentLine;
+		std::mutex mtx;
+
 	public:
-		ImGuiConsoleBuf(std::vector<std::string>& lines)
+		ImGuiConsoleBuf(std::vector<UIConsoleLine>& lines)
 			: lines(lines)
 		{
 		}
@@ -71,9 +87,10 @@ namespace UIConsole {
 			{
 				if (!currentLine.empty())
 				{
-					lines.push_back(
-						TimeNow_HHMMSS() + " - " + currentLine
-					);
+					lines.push_back({
+	TimeNow_HHMMSS() + " - " + currentLine,
+	std::chrono::steady_clock::now()
+						});
 					currentLine.clear();
 				}
 			}
@@ -94,9 +111,10 @@ namespace UIConsole {
 				char c = s[i];
 				if (c == '\n')
 				{
-					lines.push_back(
-						TimeNow_HHMMSS() + " - " + currentLine
-					);
+					lines.push_back({
+	TimeNow_HHMMSS() + " - " + currentLine,
+	std::chrono::steady_clock::now()
+						});
 					currentLine.clear();
 				}
 				else
@@ -107,10 +125,24 @@ namespace UIConsole {
 			return count;
 		}
 
-	private:
-		std::vector<std::string>& lines;
-		std::string currentLine;
-		std::mutex mtx;
+	public:
+		static void PruneOldLogs()
+		{
+			return;
+			using namespace std::chrono;
+
+			const auto now = steady_clock::now();
+			const auto ttl = seconds(30);
+
+			while (!gConsoleLines.empty())
+			{
+				if (now - gConsoleLines.front().time > ttl)
+					gConsoleLines.erase(gConsoleLines.begin());
+				else
+					break;
+			}
+		}
+
 	};
 
 	static std::streambuf* gOldCoutBuf = nullptr;
@@ -183,7 +215,7 @@ void ServerUI::OnCommand(CommandType type, std::string text)
 	}
 	else if (type == BROADCAST_COMMAND)
 	{
-		server->Broadcast(text);
+		server->BroadcastMessage(text);
 	}
 	else if (type == SHUTDOWN_COMMAND)
 	{
@@ -260,6 +292,8 @@ void ServerUI::ImGUI_DrawConsoleWindow()
 {
 	using namespace UIConsole;
 
+	UIConsole::ImGuiConsoleBuf::PruneOldLogs();
+
 	const float W = (float)display->windowSize.x;
 	const float H = (float)display->windowSize.y;
 
@@ -273,7 +307,7 @@ void ServerUI::ImGUI_DrawConsoleWindow()
 		ImGui::BeginChild("console_scroll", ImVec2(0, - ImGui::GetFrameHeightWithSpacing() - 5), false, ImGuiWindowFlags_HorizontalScrollbar);
 
 		for (const auto& line : gConsoleLines)
-			ImGui::TextUnformatted(line.c_str());
+			ImGui::TextUnformatted(line.text.c_str());
 
 		if (gAutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
 			ImGui::SetScrollHereY(1.0f);
@@ -295,7 +329,10 @@ void ServerUI::ImGUI_DrawConsoleWindow()
 		if (ImGui::Button("Send", ImVec2(btnW, ImGui::GetFrameHeight())))
 		{
 			OnCommand(CONSOLE_COMMAND, gConsoleInput);
-			gConsoleLines.emplace_back(gConsoleInput);
+			gConsoleLines.push_back({
+	TimeNow_HHMMSS() + " - " + gConsoleInput,
+	std::chrono::steady_clock::now()
+				});
 			gConsoleInput[0] = 0;
 		}
 	}

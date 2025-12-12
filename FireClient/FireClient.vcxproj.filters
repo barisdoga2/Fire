@@ -15,9 +15,6 @@
     <ClCompile Include="EasyPlayground.cpp">
       <Filter>Game</Filter>
     </ClCompile>
-    <ClCompile Include="ClientTest.cpp">
-      <Filter>Etc</Filter>
-    </ClCompile>
     <ClCompile Include="..\3rd_party\imgui_impl_glfw.cpp">
       <Filter>Etc</Filter>
     </ClCompile>
@@ -32,9 +29,6 @@
     </ClInclude>
     <ClInclude Include="EasyPlayground.hpp">
       <Filter>Game</Filter>
-    </ClInclude>
-    <ClInclude Include="ClientTest.hpp">
-      <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Etc</Filter>

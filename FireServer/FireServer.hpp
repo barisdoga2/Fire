@@ -32,13 +32,13 @@ public:
 
 	void Update(double dt) override;
 
-	void Broadcast(std::string broadcastMessage);
+	void BroadcastMessage(std::string broadcastMessage);
 
 	bool OnServerStart() override;
-	void OnServerStop() override;
+	void OnServerStop(std::string shutdownMessage) override;
 
-	bool OnSessionCreate(const SessionBase& base) override;
-	void OnSessionDestroy(const SessionBase& base) override;
+	bool OnSessionCreate(const SessionBase& base, EasyBuffer* buffer) override;
+	void OnSessionDestroy(const SessionBase& base, std::string disconnectMessage = "") override;
 	
 	bool OnSessionKeyExpiry(const SessionBase& base) override;
 	bool OnSessionReconnect(const SessionBase& base, const SessionBase& reconnectingBase) override;

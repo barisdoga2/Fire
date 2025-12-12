@@ -71,8 +71,6 @@ void FireServer::Update(double dt)
                 std::cout << "[FireServer] Update - Logout request received.\n";
                 fSession->logoutRequested = true;
 
-                DestroySession(fSession->sid);
-
                 fSession->recv = Clock::now();
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
@@ -115,13 +113,38 @@ void FireServer::Update(double dt)
                 objIt++;
             }
         }
-        recvIt++;
+        
+        if (recvIt->second.size() == 0U)
+            recvIt = recv.erase(recvIt);
+        else
+            recvIt++;
+    }
+
+    std::vector<SessionID_t> sessionsToLogout;
+    std::vector<SessionID_t> sessionsToTimeout;
+    for (auto& [sid, fSession] : sessions)
+    {   
+        if (fSession->recv + std::chrono::milliseconds(SESSION_TIMEOUT) < Clock::now())
+            sessionsToTimeout.push_back(sid);
+        else if(fSession->logoutRequested)
+            sessionsToLogout.push_back(sid);
+    }
+    for (SessionID_t& sid : sessionsToLogout)
+    {
+        DestroySession(sid);
+    }
+    for (SessionID_t& sid : sessionsToTimeout)
+    {
+        std::cout << "[FireServer] Update - Session timed out.\n";
+        DestroySession(sid, "Session timed out.");
     }
 }
 
-void FireServer::Broadcast(std::string broadcastMessage)
+void FireServer::BroadcastMessage(std::string broadcastMessage)
 {
-
+    ServerCache_t& send = GetSendCache();
+    for (auto& [sid, fs] : sessions)
+        send[sid].push_back(new sBroadcastMessage(broadcastMessage));
 }
 
 bool FireServer::OnServerStart()
@@ -142,14 +165,20 @@ bool FireServer::OnServerStart()
     return true;
 }
 
-void FireServer::OnServerStop()
+void FireServer::OnServerStop(std::string shutdownMessage)
 {
     std::cout << "[FireServer] Stopping...\n";
+
+    ServerCache_t& send = GetSendCache();
+    for (auto& [sid, fs] : sessions)
+        send[sid].push_back(new sDisconnectResponse(shutdownMessage));
+    FireServer::Update(0.0); // Send
+
     sqlite.Close();
     std::cout << "[FireServer] Stopped.\n";
 }
 
-bool FireServer::OnSessionCreate(const SessionBase& base)
+bool FireServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
 {
     std::cout << "[FireServer] - OnSessionCreate.\n";
 
@@ -171,6 +200,26 @@ bool FireServer::OnSessionCreate(const SessionBase& base)
             (std::istringstream{ db_session[1] }) >> std::get_time(&tm_parsed, "%Y-%m-%d %H:%M:%S");
             std::time_t parsed_time = std::mktime(&tm_parsed);
             *base.keyExpr = std::chrono::system_clock::from_time_t(parsed_time);
+
+            if (std::vector<EasySerializeable*> res = Process({ *base.sid, 0U, 0U, *base.key}, buffer); res.size() != 0U)
+            {
+                status = false;
+                for (auto it = res.begin() ; it != res.end() ; )
+                {
+                    if (sLoginRequest* loginRequest = dynamic_cast<sLoginRequest*>(*it); loginRequest)
+                    {
+                        std::cout << "[FireServer] OnSessionCreate - Login request received.\n";
+                        status = true;
+                    }
+                    delete* it;
+                    it = res.erase(it);
+                }
+            }
+            else
+            {
+                std::cout << "[FireServer] OnSessionCreate - Expected login request but something else received.\n";
+                status = false;
+            }
         }
         else
         {
@@ -241,12 +290,18 @@ bool FireServer::OnSessionCreate(const SessionBase& base)
     return status;
 }
 
-void FireServer::OnSessionDestroy(const SessionBase& base)
+void FireServer::OnSessionDestroy(const SessionBase& base, std::string disconnectMessage)
 {
     std::cout << "[FireServer] OnSessionDestroy - Session Destroyed.\n";
 
-    delete sessions[*base.sid];
-    sessions[*base.sid] = nullptr;
+    SessionID_t sid = *base.sid;
+
+    if(disconnectMessage.length() > 0U)
+        Send(sid, { new sDisconnectResponse(disconnectMessage) });
+
+    delete sessions[sid];
+    sessions[sid] = nullptr;
+    sessions.erase(sessions.find(sid));
 }
 
 bool FireServer::OnSessionKeyExpiry(const SessionBase& base)
@@ -301,9 +356,18 @@ bool FireServer::OnSessionKeyExpiry(const SessionBase& base)
 
 bool FireServer::OnSessionReconnect(const SessionBase& base, const SessionBase& reconnectingBase)
 {
-    std::cout << "[FireServer] OnSessionReconnect - Session Reconnected.\n";
+    std::cout << "[FireServer] OnSessionReconnect - Session reconnected.\n";
 
-    delete sessions[*base.sid];
-    sessions[*base.sid] = nullptr;
+    SessionID_t sid = *base.sid;
+
+    Addr_t addr = *reconnectingBase.addr;
+
+    Key_t key;
+    key.insert(key.end(), base.key->begin(), base.key->end());
+
+    BaseServer::DestroySession(sid, "Reconnected from another client!");
+
+    Send(sid, { new sDisconnectResponse("Account was already in game, disconnected, try again!") }, addr, 0U, 0U, key);
+
     return false;
 }

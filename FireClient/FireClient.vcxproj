@@ -153,13 +153,11 @@
     <ClCompile Include="..\3rd_party\imgui_impl_glfw.cpp" />
     <ClCompile Include="..\3rd_party\imgui_impl_opengl3.cpp" />
     <ClCompile Include="ClientNetwork.cpp" />
-    <ClCompile Include="ClientTest.cpp" />
     <ClCompile Include="EasyPlayground.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ClientNetwork.hpp" />
-    <ClInclude Include="ClientTest.hpp" />
     <ClInclude Include="Config.hpp" />
     <ClInclude Include="EasyPlayground.hpp" />
     <ClInclude Include="EasyPlayground_ImGUI.hpp" />

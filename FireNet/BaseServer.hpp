@@ -3,6 +3,7 @@
 #include "EasyNet.hpp"
 
 class EasySerializeable;
+class EasyBuffer;
 using ServerCache_t = std::unordered_map<SessionID_t, std::vector<EasySerializeable*>>;
 
 class SessionBase {
@@ -17,12 +18,12 @@ public:
 class ServerCallback {
 public:
     virtual bool OnServerStart() = 0U;
-    virtual void OnServerStop() = 0U;
+    virtual void OnServerStop(std::string shutdownMessage) = 0U;
 
     virtual bool OnSessionKeyExpiry(const SessionBase& base) = 0U;
     virtual bool OnSessionReconnect(const SessionBase& base, const SessionBase& reconnectingBase) = 0U;
-    virtual bool OnSessionCreate(const SessionBase& base) = 0U;
-    virtual void OnSessionDestroy(const SessionBase& base) = 0U;
+    virtual bool OnSessionCreate(const SessionBase& base, EasyBuffer* buffer) = 0U;
+    virtual void OnSessionDestroy(const SessionBase& base, std::string disconnectMessage = "") = 0U;
 
 };
 
@@ -42,7 +43,13 @@ public:
 
     ~BaseServer();
 
-    void DestroySession(SessionID_t sid);
+    std::vector<EasySerializeable*> Process(const CryptData& crypt, EasyBuffer* buffer);
+
+    void Send(SessionID_t sid, const std::vector<EasySerializeable*>& objs, const Addr_t& addr, const SequenceID_t& seqid_in, const SequenceID_t& seqid_out, const Key_t& key);
+
+    void Send(SessionID_t sid, const std::vector<EasySerializeable*>& objs);
+
+    void DestroySession(SessionID_t sid, std::string disconnectMessage = "");
 
     bool Start();
 

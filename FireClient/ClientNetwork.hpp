@@ -106,23 +106,18 @@ public:
         if (!isInGame)
             return;
 
-        // Heartbeat
+        bool to = session.lastReceive + std::chrono::milliseconds(SESSION_TIMEOUT) < Clock::now();
+        if (to)
         {
-            static Timestamp_t nextHeartbeat = Clock::now();
-            Millis_t heartbeatPeriod(1000U);
-
-            if (Clock::now() >= nextHeartbeat)
-            {
-                nextHeartbeat = Clock::now() + heartbeatPeriod;
-
-                std::cout << "[ClientNetwork] Update - Heartbeat sent.\n";
-                session.sendCache.push_back(new sHearbeat());
-                SendOne();
-            }
+            loginStatus = "Connection timed out!";
+            isInGame = false;
+            isLoginFailed = true;
         }
-
-        ReceiveOne();
-        SendOne();
+        else
+        {
+            ReceiveOne();
+            SendOne();
+        }
     }
 
     void Login(std::string url)
@@ -222,16 +217,15 @@ public:
                     {
                         std::cout << "[ClientNetwork] Login - sDisconnectResponse received.\n";
                         Disconnect(disconnectResp->message);
-                        
-                        delete* objIt;
-                        objIt = cache.erase(objIt);
+                        break; // Disconnect clears the cache already
+                        //delete* objIt; // Disconnect clears the cache already
+                        //objIt = cache.erase(objIt); // Disconnect clears the cache already
                     }
                     else
                     {
                         objIt++;
                     }
                 }
-
 
                 // Every 1 second do below
                 {
