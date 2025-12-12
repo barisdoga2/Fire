@@ -15,6 +15,78 @@
 
 #include "ClientNetwork.hpp"
 
+static bool isConsoleWindow = true;
+
+namespace UIConsole {
+    static std::vector<std::string> gConsoleLines;
+    static char gConsoleInput[512] = {};
+    static bool gAutoScroll = true;
+
+    class ImGuiConsoleBuf : public std::streambuf
+    {
+    public:
+        ImGuiConsoleBuf(std::vector<std::string>& lines)
+            : lines(lines)
+        {
+        }
+
+    protected:
+        int overflow(int c) override
+        {
+            if (c == EOF)
+                return EOF;
+
+            std::lock_guard<std::mutex> lock(mtx);
+
+            if (c == '\n')
+            {
+                if (!currentLine.empty())
+                {
+                    lines.push_back(
+                        TimeNow_HHMMSS() + " - " + currentLine
+                    );
+                    currentLine.clear();
+                }
+            }
+            else
+            {
+                currentLine.push_back(static_cast<char>(c));
+            }
+
+            return c;
+        }
+
+        std::streamsize xsputn(const char* s, std::streamsize count) override
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+
+            for (std::streamsize i = 0; i < count; ++i)
+            {
+                char c = s[i];
+                if (c == '\n')
+                {
+                    lines.push_back(
+                        TimeNow_HHMMSS() + " - " + currentLine
+                    );
+                    currentLine.clear();
+                }
+                else
+                {
+                    currentLine.push_back(c);
+                }
+            }
+            return count;
+        }
+
+    private:
+        std::vector<std::string>& lines;
+        std::string currentLine;
+        std::mutex mtx;
+    };
+
+    static std::streambuf* gOldCoutBuf = nullptr;
+    static ImGuiConsoleBuf* gImGuiCoutBuf = nullptr;
+}
 
 inline ImTextureID LoadTextureSTB(const char* filename, int* outW = nullptr, int* outH = nullptr)
 {
@@ -82,6 +154,56 @@ public:
         }
     }
 };
+
+void EasyPlayground::ImGUI_DrawConsoleWindow()
+{
+    if (!isConsoleWindow)
+        return;
+
+    using namespace UIConsole;
+
+    const float W = (float)display->windowSize.x;
+    const float H = (float)display->windowSize.y;
+
+    ImGui::SetNextWindowPos(ImVec2(0.0f, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(W * 0.55f, H * 0.35f), ImGuiCond_Always);
+
+    ImGui::Begin("Console", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+
+    // Scroll
+    {
+        ImGui::BeginChild("console_scroll", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - 5), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+        for (const auto& line : gConsoleLines)
+            ImGui::TextUnformatted(line.c_str());
+
+        if (gAutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+            ImGui::SetScrollHereY(1.0f);
+
+        ImGui::EndChild();
+    }
+
+    ImGui::Separator();
+
+    // Send Button and Area
+    {
+        const float btnW = 110.0f;
+        const float spacing = ImGui::GetStyle().ItemSpacing.x;
+        const float inputW = ImGui::GetContentRegionAvail().x - btnW - spacing;
+        ImGui::SetNextItemWidth(inputW);
+        ImGui::InputText("##cmd", gConsoleInput, sizeof(gConsoleInput));
+
+        ImGui::SameLine();
+        if (ImGui::Button("Send", ImVec2(btnW, ImGui::GetFrameHeight())))
+        {
+            // Process 'gConsoleInput'
+            gConsoleLines.emplace_back(gConsoleInput);
+            gConsoleInput[0] = 0;
+        }
+    }
+
+    ImGui::End();
+}
 
 void EasyPlayground::ImGUI_DrawChatWindow()
 {
@@ -234,6 +356,10 @@ void EasyPlayground::ImGUI_ChampionSelectWindow()
         ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
         ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);;
         ImGui::Begin("Champion Select", nullptr, ImGuiWindowFlags_NoResize |ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove |ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
+        auto CenterItem = [&](float width)
+            {
+                ImGui::SetCursorPosX((winSize.x - width) * 0.5f);
+            };
         auto CenteredText = [&](const char* txt)
             {
                 float w = ImGui::CalcTextSize(txt).x;
@@ -267,6 +393,17 @@ void EasyPlayground::ImGUI_ChampionSelectWindow()
             if ((i % cols) != cols - 1)
                 ImGui::SameLine(0, 10.0f);
         }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        float btnWidth = 100.0f;
+        CenterItem(btnWidth);
+        if (ImGui::Button("Logout", ImVec2(120, 28)))
+            network->Stop();
+
         ImGui::End();
     }
 
@@ -471,7 +608,16 @@ void EasyPlayground::ImGUI_LoginWindow()
 
 void EasyPlayground::ImGUI_DebugWindow()
 {
-    ImGui::SetNextWindowPos({ 0,0 });
+    ImVec2 winSize = ImVec2(340, 140);
+    ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);
+
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImVec2 pos = ImVec2(
+        vp->WorkPos.x + vp->WorkSize.x - winSize.x,
+        vp->WorkPos.y + vp->WorkSize.y - winSize.y
+    );
+    ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+
     ImGui::Begin("ImGUI Settings");
     ImGui::Checkbox("Fog Enabled", &imgui_isFog);
     ImGui::Checkbox("Triangles Enabled", &imgui_triangles);
@@ -480,11 +626,14 @@ void EasyPlayground::ImGUI_DebugWindow()
     ImGui::End();
 }
 
+
 void EasyPlayground::ImGUIRender()
 {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+
+    ImGUI_DrawConsoleWindow();
 
     if(network->IsInGame())
     {
@@ -507,7 +656,6 @@ void EasyPlayground::ImGUIRender()
         {
             ImGUI_LoginWindow();
         }
-        
     }
 
 	ImGui::Render();

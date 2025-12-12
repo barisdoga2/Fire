@@ -10,7 +10,7 @@ class EasyDisplay;
 struct GLFWwindow;
 class EasyCamera {
 public:
-	const EasyDisplay& display;
+	EasyDisplay* display;
 
 	glm::vec3 position{ 0.f, 0.f, 3.f };
 	glm::vec3 front{ 0.f, 0.f, -1.f };
@@ -45,7 +45,7 @@ public:
 	glm::vec3 targetPos;
 	glm::vec3 targetFront;
 
-    EasyCamera(const EasyDisplay& display, glm::vec3 pos, glm::vec3 target, float fov, float nearP, float farP);
+    EasyCamera(EasyDisplay* display, glm::vec3 pos, glm::vec3 target, float fov, float nearP, float farP);
     void Update(double dt);
     void ModeSwap(bool mode = false);
 

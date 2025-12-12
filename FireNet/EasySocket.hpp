@@ -63,13 +63,11 @@ private:
 	bool m_isBlocking;
 
 public:
-	
 	EasySocket();
 
 	uint64_t bind(unsigned short port, const EasyIpAddress& ip);
 
 	void unbind();
-
 
 	uint64_t send(const void* data, const size_t size, const EasyIpAddress& remoteAddress, const unsigned short& remotePort);
 	uint64_t send(const void* data, const size_t size, uint64_t addrU64); // Server use only
@@ -82,6 +80,8 @@ public:
 	unsigned short getLocalPort();
 
 	static SocketHandle invalidSocket();
+
+	static std::string AddrToString(const Addr_t& addr);
 
 private:
 	void create();

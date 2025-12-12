@@ -115,14 +115,17 @@ void LUAListen()
     lua_close(L);
 }
 
-int main(int argc, char* argv[])
+#include <windows.h>
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+    ServerUI::ForwardStandartIO();
+
     FireServer* server = new FireServer(bm, SERVER_PORT);
     if (bool running = server->Start(); running)
     {
-        if (EasyDisplay display({ 400, 600 }, { 1,2 }); display.Init())
+        if (EasyDisplay display({ 800, 600 }, { 1,2 }); display.Init())
         {
-            if (ServerUI serverUI(&display); serverUI.Init())
+            if (ServerUI serverUI(&display, server); serverUI.Init())
             {
                 std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
                 std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
@@ -142,20 +145,19 @@ int main(int argc, char* argv[])
                     fps_timer += elapsed_ms;
                     ups_timer += elapsed_ms;
 
+                    if (ups_timer >= ups_constant)
+                    {
+                        server->Update(ups_timer / 1000.0);
+                        running &= serverUI.Update(ups_timer / 1000.0);
+                        ups_timer = 0.0;
+                    }
+
                     if (fps_timer >= fps_constant)
                     {
                         serverUI.StartRender(fps_timer / 1000.0);
                         running &= serverUI.Render(fps_timer / 1000.0);
                         serverUI.EndRender();
                         fps_timer = 0.0;
-                    }
-
-                    if (ups_timer >= ups_constant)
-                    {
-                        server->Update(ups_timer / 1000.0);
-                        running &= server->IsRunning();
-                        running &= serverUI.Update(ups_timer / 1000.0);
-                        ups_timer = 0.0;
                     }
 
                     running &= !display.ShouldClose();
@@ -168,4 +170,3 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-

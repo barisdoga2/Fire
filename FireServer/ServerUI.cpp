@@ -7,6 +7,8 @@
 #include <sstream>
 #include <sstream>
 #include <iomanip>
+#include <streambuf>
+#include <mutex>
 #include <unordered_map>
 
 #include <glm/gtc/type_ptr.hpp>
@@ -18,62 +20,104 @@
 #include "../3rd_party/imgui_impl_opengl3.h"
 #include "../3rd_party/imgui_impl_glfw.h"
 #include <EasyDisplay.hpp>
+#include <EasySocket.hpp>
 #include "EasyUtils.hpp"
+#include "FireServer.hpp"
 
-struct SessionDebugInfo
-{
-	unsigned int id = 0;
-	unsigned int userId = 0;
-	uint64_t lastReceiveMS = 0;
-	std::string ip;
+namespace UISnapshot {
+	struct UISession
+	{
+		SessionID_t sid;
+		std::string username;
+		std::string ip;
+		std::string status;
+		uint64_t lastRecvMsAgo;
+		uint64_t keyExpiryMs;
+	};
 
-	// Expand with whatever you track
-};
+	struct UISnapshot
+	{
+		bool running = false;
+		uint64_t startTime = 0;
+		uint64_t uptimeSec = 0;
+		std::vector<UISession> sessions;
+	};
+	static UISnapshot gSnapshot;
+	static double gSnapshotTimer = 0.0;
+}
 
-class SessionDebugger
-{
-public:
-	std::unordered_map<unsigned int, SessionDebugInfo> sessions;
-	unsigned int selectedID = 0;
+namespace UIConsole {
+	static std::vector<std::string> gConsoleLines;
+	static char gConsoleInput[512] = {};
+	static bool gAutoScroll = true;
 
-	// Copy from incoming Session* list
-	//void UpdateSessions(const std::vector<Session*>& list)
-	//{
-	//	// Remove old ones not existing anymore:
-	//	std::unordered_set<unsigned int> incoming;
+	class ImGuiConsoleBuf : public std::streambuf
+	{
+	public:
+		ImGuiConsoleBuf(std::vector<std::string>& lines)
+			: lines(lines)
+		{
+		}
 
-	//	for (auto* s : list)
-	//	{
-	//		if (!s)
-	//			continue;
+	protected:
+		int overflow(int c) override
+		{
+			if (c == EOF)
+				return EOF;
 
-	//		incoming.insert(s->sid);
+			std::lock_guard<std::mutex> lock(mtx);
 
-	//		SessionDebugInfo info{};
-	//		info.id = s->sid;
-	//		info.userId = s->uid;
-	//		//info.ip = s->addr;
-	//		info.lastReceiveMS = s->lastReceive.time_since_epoch().count(); // Example
+			if (c == '\n')
+			{
+				if (!currentLine.empty())
+				{
+					lines.push_back(
+						TimeNow_HHMMSS() + " - " + currentLine
+					);
+					currentLine.clear();
+				}
+			}
+			else
+			{
+				currentLine.push_back(static_cast<char>(c));
+			}
 
-	//		sessions[info.id] = info;
-	//	}
+			return c;
+		}
 
-	//	// remove stale
-	//	for (auto it = sessions.begin(); it != sessions.end(); )
-	//	{
-	//		if (!incoming.count(it->first))
-	//			it = sessions.erase(it);
-	//		else
-	//			++it;
-	//	}
-	//}
-};
+		std::streamsize xsputn(const char* s, std::streamsize count) override
+		{
+			std::lock_guard<std::mutex> lock(mtx);
 
-static SessionDebugger gDebugger;
+			for (std::streamsize i = 0; i < count; ++i)
+			{
+				char c = s[i];
+				if (c == '\n')
+				{
+					lines.push_back(
+						TimeNow_HHMMSS() + " - " + currentLine
+					);
+					currentLine.clear();
+				}
+				else
+				{
+					currentLine.push_back(c);
+				}
+			}
+			return count;
+		}
 
+	private:
+		std::vector<std::string>& lines;
+		std::string currentLine;
+		std::mutex mtx;
+	};
 
+	static std::streambuf* gOldCoutBuf = nullptr;
+	static ImGuiConsoleBuf* gImGuiCoutBuf = nullptr;
+}
 
-ServerUI::ServerUI(EasyDisplay* display) : display(display)
+ServerUI::ServerUI(EasyDisplay* display, FireServer* server) : display(display), server(server)
 {
 
 }
@@ -90,114 +134,225 @@ ServerUI::~ServerUI()
 
 bool ServerUI::Init()
 {
-	// Callbacks
-	static ServerUI* instance = this;
-	glfwSetKeyCallback(display->window, [](GLFWwindow* w, int k, int s, int a, int m) { instance->key_callback(w, k, s, a, m); });
-	glfwSetCursorPosCallback(display->window, [](GLFWwindow* w, double x, double y) { instance->cursor_callback(w, x, y); });
-	glfwSetMouseButtonCallback(display->window, [](GLFWwindow* window, int button, int action, int mods) { instance->mouse_callback(window, button, action, mods); });
-	glfwSetScrollCallback(display->window, [](GLFWwindow* w, double x, double y) { instance->scroll_callback(w, x, y); });
-	glfwSetCharCallback(display->window, [](GLFWwindow* w, unsigned int x) { instance->char_callback(w, x); });
+	// GLFW Callbacks
+	{
+		static ServerUI* instance = this;
+		glfwSetKeyCallback(display->window, [](GLFWwindow* w, int k, int s, int a, int m) { instance->key_callback(w, k, s, a, m); });
+		glfwSetCursorPosCallback(display->window, [](GLFWwindow* w, double x, double y) { instance->cursor_callback(w, x, y); });
+		glfwSetMouseButtonCallback(display->window, [](GLFWwindow* window, int button, int action, int mods) { instance->mouse_callback(window, button, action, mods); });
+		glfwSetScrollCallback(display->window, [](GLFWwindow* w, double x, double y) { instance->scroll_callback(w, x, y); });
+		glfwSetCharCallback(display->window, [](GLFWwindow* w, unsigned int x) { instance->char_callback(w, x); });
+	}
 
 	// ImGUI
-	const char* glsl_version = "#version 130";
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	{
+		const char* glsl_version = "#version 130";
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 
-	ImVector<ImWchar> ranges;
-	ImFontGlyphRangesBuilder builder;
-	//builder.AddText(u8"ğĞşŞıİüÜöÖçÇ");
-	builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
-	builder.BuildRanges(&ranges);
-	io.Fonts->AddFontFromFileTTF(GetRelPath("res/fonts/Arial.ttf").c_str(), 20.f, 0, ranges.Data);
-	io.Fonts->Build();
-	ImGui::StyleColorsDark();
-	//ImGui::StyleColorsLight();
-	ImGui_ImplGlfw_InitForOpenGL(display->window, false);
-	ImGui_ImplOpenGL3_Init(glsl_version);
+		ImVector<ImWchar> ranges;
+		ImFontGlyphRangesBuilder builder;
+		//builder.AddText(u8"ğĞşŞıİüÜöÖçÇ");
+		builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+		builder.BuildRanges(&ranges);
+		io.Fonts->AddFontFromFileTTF(GetRelPath("res/fonts/Arial.ttf").c_str(), 14.f, 0, ranges.Data);
+		io.Fonts->Build();
+		ImGui::StyleColorsDark();
+		//ImGui::StyleColorsLight();
+		ImGui_ImplGlfw_InitForOpenGL(display->window, false);
+		ImGui_ImplOpenGL3_Init(glsl_version);
+	}
 
 	return true;
 }
 
-//void ServerUI::OnSessionListUpdated(const std::vector<Session*>& list)
-//{
-//	gDebugger.UpdateSessions(list);
-//}
-
-void ServerUI::ImGUI_DrawSessionDetailWindow()
+void ServerUI::ForwardStandartIO()
 {
-	if (gDebugger.selectedID == 0)
-		return;
+	using namespace UIConsole;
+	gImGuiCoutBuf = new ImGuiConsoleBuf(gConsoleLines);
+	gOldCoutBuf = std::cout.rdbuf(gImGuiCoutBuf);
+}
 
-	auto it = gDebugger.sessions.find(gDebugger.selectedID);
-	if (it == gDebugger.sessions.end())
+void ServerUI::OnCommand(CommandType type, std::string text)
+{
+	if (type == CONSOLE_COMMAND)
 	{
-		gDebugger.selectedID = 0;
-		return;
+		// ...
 	}
-
-	auto& info = it->second;
-
-	ImGui::SetNextWindowSize(ImVec2(420, 250), ImGuiCond_Always);
-
-	if (!ImGui::Begin("Session Details", nullptr,
-		ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoSavedSettings))
+	else if (type == BROADCAST_COMMAND)
 	{
-		ImGui::End();
-		return;
+		server->Broadcast(text);
 	}
+	else if (type == SHUTDOWN_COMMAND)
+	{
+		server->Stop(text);
+	}
+}
 
-	ImGui::Text("Session ID: %u", info.id);
+void ServerUI::ImGUI_DrawSessionsWindow()
+{
+	using namespace UISnapshot;
+
+	const float W = (float)display->windowSize.x;
+	const float H = (float)display->windowSize.y;
+
+	ImGui::SetNextWindowPos(ImVec2(W * 0.5f, 0.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(W * 0.5f, H * 0.5f), ImGuiCond_Always);
+
+	ImGui::Begin("Sessions",nullptr,ImGuiWindowFlags_NoMove |ImGuiWindowFlags_NoResize |ImGuiWindowFlags_NoCollapse);
+
+	const float colSession = 60.0f;
+	const float colUser = 75.0f;
+	const float colIP = 110.0f;
+	const float colStatus = 60.0f;
+	const float colReceive = 100.0f;
+
+	ImGui::Columns(5, nullptr, false);
+
+	ImGui::SetColumnWidth(0, colSession);
+	ImGui::SetColumnWidth(1, colUser);
+	ImGui::SetColumnWidth(2, colIP);
+	ImGui::SetColumnWidth(3, colStatus);
+	ImGui::SetColumnWidth(4, colReceive);
+
+	ImGui::Text("  Session");   ImGui::NextColumn();
+	ImGui::Text("  Username");  ImGui::NextColumn();
+	ImGui::Text("  IP");        ImGui::NextColumn();
+	ImGui::Text("  Status");    ImGui::NextColumn();
+	ImGui::Text("  Receive");   ImGui::NextColumn();
+
 	ImGui::Separator();
-	ImGui::Spacing();
+	ImGui::Columns(1);
 
-	ImGui::Text("User ID: %u", info.userId);
-	ImGui::Text("IP Address: %s", info.ip.c_str());
-	ImGui::Text("Last Receive: %llu ms ago", info.lastReceiveMS);
+	// Scroll
+	{
+		ImGui::BeginChild("sessions_scroll", ImVec2(0, 0), true);
 
-	ImGui::Spacing();
-	ImGui::Separator();
+		ImGui::Columns(5, nullptr, false);
 
-	// Close button
-	if (ImGui::Button("Close"))
-		gDebugger.selectedID = 0;
+		ImGui::SetColumnWidth(0, colSession);
+		ImGui::SetColumnWidth(1, colUser);
+		ImGui::SetColumnWidth(2, colIP);
+		ImGui::SetColumnWidth(3, colStatus);
+		ImGui::SetColumnWidth(4, colReceive);
+
+		for (const auto& s : gSnapshot.sessions)
+		{
+			const double sec = static_cast<double>(s.lastRecvMsAgo) * 0.000000001;
+
+			ImGui::Text("%u", s.sid);                ImGui::NextColumn();
+			ImGui::Text("%s", s.username.c_str());   ImGui::NextColumn();
+			ImGui::Text("%s", s.ip.c_str());         ImGui::NextColumn();
+			ImGui::Text("%s", s.status.c_str());     ImGui::NextColumn();
+			ImGui::Text("%.1f s", sec);				 ImGui::NextColumn();
+		}
+
+		ImGui::Columns(1);
+		ImGui::EndChild();
+	}
 
 	ImGui::End();
 }
 
-
-void ServerUI::ImGUI_DrawSessionListWindow()
+void ServerUI::ImGUI_DrawConsoleWindow()
 {
-	ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Always);
+	using namespace UIConsole;
 
-	if (!ImGui::Begin("Sessions", nullptr,
-		ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoSavedSettings))
+	const float W = (float)display->windowSize.x;
+	const float H = (float)display->windowSize.y;
+
+	ImGui::SetNextWindowPos(ImVec2(0.0f, H * 0.5f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(W, H * 0.5f), ImGuiCond_Always);
+
+	ImGui::Begin("Console",nullptr,ImGuiWindowFlags_NoMove |ImGuiWindowFlags_NoResize |ImGuiWindowFlags_NoCollapse);
+
+	// Scroll
 	{
-		ImGui::End();
-		return;
+		ImGui::BeginChild("console_scroll", ImVec2(0, - ImGui::GetFrameHeightWithSpacing() - 5), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+		for (const auto& line : gConsoleLines)
+			ImGui::TextUnformatted(line.c_str());
+
+		if (gAutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+			ImGui::SetScrollHereY(1.0f);
+
+		ImGui::EndChild();
 	}
 
-	ImGui::Text("Active Sessions: %zu", gDebugger.sessions.size());
 	ImGui::Separator();
 
-	for (auto& [id, info] : gDebugger.sessions)
+	// Send Button and Area
 	{
-		// Selectable row
-		char label[64];
-		snprintf(label, sizeof(label), "Session %u", id);
+		const float btnW = 110.0f;
+		const float spacing = ImGui::GetStyle().ItemSpacing.x;
+		const float inputW = ImGui::GetContentRegionAvail().x - btnW - spacing;
+		ImGui::SetNextItemWidth(inputW);
+		ImGui::InputText("##cmd", gConsoleInput, sizeof(gConsoleInput));
 
-		if (ImGui::Selectable(label, gDebugger.selectedID == id))
+		ImGui::SameLine();
+		if (ImGui::Button("Send", ImVec2(btnW, ImGui::GetFrameHeight())))
 		{
-			gDebugger.selectedID = id; // open detail window
+			OnCommand(CONSOLE_COMMAND, gConsoleInput);
+			gConsoleLines.emplace_back(gConsoleInput);
+			gConsoleInput[0] = 0;
 		}
 	}
 
 	ImGui::End();
 }
 
+void ServerUI::ImGUI_DrawManagementWindow()
+{
+	using namespace UISnapshot;
+
+	const float W = (float)display->windowSize.x;
+	const float H = (float)display->windowSize.y;
+
+	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(W * 0.5f, H * 0.5f), ImGuiCond_Always);
+
+	ImGui::Begin("Management",
+		nullptr,
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoCollapse);
+
+	ImGui::Text("Status: %s", gSnapshot.running ? "Running" : "Stopped");
+	ImGui::Text("Active Sessions: %zu", gSnapshot.sessions.size());
+	ImGui::Text("Uptime: %llu sec", gSnapshot.uptimeSec);
+
+	ImGui::Separator();
+
+	const float btnW = 120.0f;
+	const float spacing = ImGui::GetStyle().ItemSpacing.x;
+	const float inputW = ImGui::GetContentRegionAvail().x - btnW - spacing;
+
+	static char broadcastMsg[256]{};
+	ImGui::SetNextItemWidth(inputW);
+	ImGui::InputText("##broadcast", broadcastMsg, sizeof(broadcastMsg));
+	ImGui::SameLine();
+	if (ImGui::Button("Broadcast Message", ImVec2(btnW, ImGui::GetFrameHeight())))
+	{
+		OnCommand(BROADCAST_COMMAND, broadcastMsg);
+		broadcastMsg[0] = 0;
+	}
+
+	ImGui::Separator();
+
+	static char shutdownMsg[256]{};
+	ImGui::SetNextItemWidth(inputW);
+	ImGui::InputText("##shutdown", shutdownMsg, sizeof(shutdownMsg));
+	ImGui::SameLine();
+	if (ImGui::Button("Stop Server", ImVec2(btnW, ImGui::GetFrameHeight())))
+	{
+		OnCommand(SHUTDOWN_COMMAND, shutdownMsg);
+		shutdownMsg[0] = 0;
+	}
+
+	ImGui::End();
+}
 
 bool ServerUI::Render(double _dt)
 {
@@ -207,8 +362,9 @@ bool ServerUI::Render(double _dt)
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	ImGUI_DrawSessionListWindow();
-	ImGUI_DrawSessionDetailWindow();
+	ImGUI_DrawSessionsWindow();
+	ImGUI_DrawManagementWindow();
+	ImGUI_DrawConsoleWindow();
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -241,6 +397,36 @@ bool ServerUI::Update(double _dt)
 		ups = 1.0 / avgDt;
 	}
 
+	// Snapshot periodically
+	const double snapshotPeriod = 2.5;
+	{
+		using namespace UISnapshot;
+		gSnapshotTimer += _dt;
+		if (gSnapshotTimer >= snapshotPeriod)
+		{
+			gSnapshotTimer = 0.0;
+
+			gSnapshot.running = server->IsRunning();
+
+			gSnapshot.sessions.clear();
+			uint64_t nowMs = Clock::now().time_since_epoch().count();
+
+			for (auto& [sid, fSession] : server->sessions)
+			{
+				if (!fSession) continue;
+
+				UISession session{};
+				session.sid = sid;
+				session.username = fSession->username;
+				session.ip = EasySocket::AddrToString(fSession->addr);
+				session.status = fSession->logoutRequested ? "Closing" : "Active";
+				session.lastRecvMsAgo = nowMs - fSession->recv.time_since_epoch().count();
+				session.keyExpiryMs = 0; // fill later if you expose it
+
+				gSnapshot.sessions.push_back(session);
+			}
+		}
+	}
 
 	return !display->ShouldClose();
 }

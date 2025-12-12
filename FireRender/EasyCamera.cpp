@@ -9,7 +9,7 @@
 
 
 
-EasyCamera::EasyCamera(const EasyDisplay& display, glm::vec3 pos, glm::vec3 target, float fovP, float nearP, float farP)
+EasyCamera::EasyCamera(EasyDisplay* display, glm::vec3 pos, glm::vec3 target, float fovP, float nearP, float farP)
     : display(display)
 {
     fov = fovP;
@@ -17,13 +17,13 @@ EasyCamera::EasyCamera(const EasyDisplay& display, glm::vec3 pos, glm::vec3 targ
     near = nearP;
     position = pos;
     front = glm::normalize(target - pos);
-    aspect = display.windowSize.x / (float)display.windowSize.y;
+    aspect = display->windowSize.x / (float)display->windowSize.y;
     UpdateVectors();
 
     targetPos = position;
     targetFront = front;
 
-    projection_ = glm::perspective(glm::radians(fov), display.windowSize.x / (float)display.windowSize.y, nearP, farP);
+    projection_ = glm::perspective(glm::radians(fov), display->windowSize.x / (float)display->windowSize.y, nearP, farP);
     view_ = glm::lookAt(position, position + front, up);
 
     ModeSwap();
@@ -39,13 +39,13 @@ void EasyCamera::ModeSwap(bool mode)
     {
         firstMouse = true;
         mouseDelta = glm::vec2(0.0f);
-        glfwSetInputMode(display.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        glfwSetInputMode(display.window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+        glfwSetInputMode(display->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwSetInputMode(display->window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     }
     else
     {
-        glfwSetInputMode(display.window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
-        glfwSetInputMode(display.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        glfwSetInputMode(display->window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+        glfwSetInputMode(display->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
 }
 

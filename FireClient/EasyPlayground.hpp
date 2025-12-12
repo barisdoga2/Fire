@@ -71,6 +71,7 @@ public:
     void OnLogin();
     void OnDisconnect(SessionStatus disconnectStatus);
 
+    void ImGUI_DrawConsoleWindow();
     void ImGUI_BroadcastMessageWindow();
     void ImGUI_PlayerInfoWindow();
     void ImGUI_LoginStatusWindow();
@@ -84,5 +85,7 @@ public:
     void mouse_callback(GLFWwindow* window, int button, int action, int mods);
     void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
     void char_callback(GLFWwindow* window, unsigned int codepoint) const;
+
+    static void ForwardStandartIO();
 
 };

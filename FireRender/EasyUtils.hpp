@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <chrono>
 
 #include <assimp/scene.h>
 #include <glm/glm.hpp>
@@ -69,6 +70,8 @@ glm::mat4 ConvertMatrixToGLMFormat(const aiMatrix4x4& from);
 unsigned int CreateCube3D(float size, unsigned int* vbo, float* positions_out);
 
 std::string HashSHA256(const std::string& input);
+
+std::string TimeNow_HHMMSS();
 
 bool LoadFileBinary(std::string file, std::vector<char>* out);
 

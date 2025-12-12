@@ -106,6 +106,21 @@ public:
         if (!isInGame)
             return;
 
+        // Heartbeat
+        {
+            static Timestamp_t nextHeartbeat = Clock::now();
+            Millis_t heartbeatPeriod(1000U);
+
+            if (Clock::now() >= nextHeartbeat)
+            {
+                nextHeartbeat = Clock::now() + heartbeatPeriod;
+
+                std::cout << "[ClientNetwork] Update - Heartbeat sent.\n";
+                session.sendCache.push_back(new sHearbeat());
+                SendOne();
+            }
+        }
+
         ReceiveOne();
         SendOne();
     }
@@ -125,6 +140,7 @@ public:
 
             bool to{};
             Millis_t timeout = Millis_t(3000U);
+            Timestamp_t nextHeartbeat = Clock::now();
             Timestamp_t end = Clock::now() + timeout;
             std::string timeoutStatus = "Login response timed out!";
             while (isLoggingIn && !isInGame && !to)
@@ -183,6 +199,7 @@ public:
                     {
                         end = Clock::now() + timeout;
                         timeoutStatus = "Heartbeat timed out!";
+                        isInGame = true;
 
                         std::cout << "[ClientNetwork] Login - sGameBoot received.\n";
                         session.sendCache.push_back(new sHearbeat());
@@ -197,7 +214,6 @@ public:
                         timeoutStatus = "Heartbeat timed out!";
 
                         std::cout << "[ClientNetwork] Login - sHearbeat received.\n";
-                        isInGame = true;
 
                         delete* objIt;
                         objIt = cache.erase(objIt);
@@ -213,6 +229,21 @@ public:
                     else
                     {
                         objIt++;
+                    }
+                }
+
+
+                // Every 1 second do below
+                {
+                    Millis_t heartbeatPeriod(1000U);
+
+                    if (Clock::now() >= nextHeartbeat)
+                    {
+                        nextHeartbeat = Clock::now() + heartbeatPeriod;
+
+                        std::cout << "[ClientNetwork] Login - Heartbeat sent.\n";
+                        session.sendCache.push_back(new sHearbeat());
+                        SendOne();
                     }
                 }
 

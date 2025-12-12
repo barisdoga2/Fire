@@ -24,6 +24,9 @@ FireServer::~FireServer()
 
 void FireServer::Update(double dt)
 {
+    if (!IsRunning())
+        return;
+
     BaseServer::Update(dt);
 
     ServerCache_t& send = GetSendCache();
@@ -59,6 +62,7 @@ void FireServer::Update(double dt)
                     std::cout << "[FireServer] Update - Game boot sent.\n";
                 }
 
+                fSession->recv = Clock::now();
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
@@ -69,6 +73,7 @@ void FireServer::Update(double dt)
 
                 DestroySession(fSession->sid);
 
+                fSession->recv = Clock::now();
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
@@ -76,6 +81,8 @@ void FireServer::Update(double dt)
             {
                 GetSendCache()[fSession->sid].push_back(new sHearbeat());
                 std::cout << "[FireServer] Update - Heartbeat received and sent!\n";
+
+                fSession->recv = Clock::now();
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
@@ -83,6 +90,8 @@ void FireServer::Update(double dt)
             {
                 //messages.push_back(new sChatMessage(chatMessage->message, fSession->username, Clock::now().time_since_epoch().count()));
                 std::cout << "[FireServer] Update - Chat message received!\n";
+
+                fSession->recv = Clock::now();
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
@@ -96,6 +105,8 @@ void FireServer::Update(double dt)
                     //fSession->direction = playerMovement->direction;
                     //fSession->moveTimestamp = playerMovement->timestamp;
                 }
+
+                fSession->recv = Clock::now();
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
@@ -106,6 +117,11 @@ void FireServer::Update(double dt)
         }
         recvIt++;
     }
+}
+
+void FireServer::Broadcast(std::string broadcastMessage)
+{
+
 }
 
 bool FireServer::OnServerStart()

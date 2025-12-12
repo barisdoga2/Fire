@@ -46,7 +46,7 @@ public:
 
     bool Start();
 
-    void Stop();
+    void Stop(std::string shutdownMessage = "");
 
     virtual void Update(double dt);
 

@@ -146,7 +146,26 @@ unsigned int CreateCube3D(float size, unsigned int* vbo, float* positions_out)
     return 0;
 }
 
+std::string TimeNow_HHMMSS()
+{
+    using namespace std::chrono;
 
+    auto now = system_clock::now();
+    std::time_t t = system_clock::to_time_t(now);
+
+    std::tm tm{};
+#ifdef _WIN32
+    localtime_s(&tm, &t);
+#else
+    localtime_r(&t, &tm);
+#endif
+
+    char buf[9]; // HH:MM:SS
+    std::snprintf(buf, sizeof(buf), "%02d:%02d:%02d",
+        tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    return std::string(buf);
+}
 
 // IO
 bool LoadFileBinary(std::string file, std::vector<char>* out)

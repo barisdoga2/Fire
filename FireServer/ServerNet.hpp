@@ -16,7 +16,7 @@
 #define SERVER_URL "https://barisdoga.com/index.php"
 #else
 #define SERVER_IP "127.0.0.1"
-#define SERVER_URL "https://barisdoga.com/index.php"
+#define SERVER_URL "http://127.0.0.1/index.php"
 #endif
 
 #define FIRE_ENCRYPTION true

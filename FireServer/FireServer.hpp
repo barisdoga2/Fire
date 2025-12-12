@@ -32,6 +32,8 @@ public:
 
 	void Update(double dt) override;
 
+	void Broadcast(std::string broadcastMessage);
+
 	bool OnServerStart() override;
 	void OnServerStop() override;
 
@@ -41,5 +43,6 @@ public:
 	bool OnSessionKeyExpiry(const SessionBase& base) override;
 	bool OnSessionReconnect(const SessionBase& base, const SessionBase& reconnectingBase) override;
 
+	friend class ServerUI;
 };
 

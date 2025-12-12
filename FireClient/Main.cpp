@@ -8,8 +8,11 @@
 
 EasyBufferManager* bf = new EasyBufferManager(50U, 1472U);
 
-int main(int argc, char* argv[])
+#include <windows.h>
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+    EasyPlayground::ForwardStandartIO();
+
     bool running{};
 
     EasyUtils_Init();

@@ -5,13 +5,6 @@
 #include "EasySocket.hpp"
 #include "EasyIpAddress.hpp"
 
-
-
-EasySocket::EasySocket() : m_isBlocking(false), m_socket(INVALID_SOCKET)
-{
-	
-}
-
 static sockaddr_in makeSockAddr(const EasyIpAddress& ip, unsigned short port)
 {
 	sockaddr_in addr{};
@@ -21,6 +14,32 @@ static sockaddr_in makeSockAddr(const EasyIpAddress& ip, unsigned short port)
 	addr.sin_addr.s_addr = ip.toInteger() ? htonl(ip.toInteger()) : INADDR_ANY;
 	addr.sin_port = htons(port);
 	return addr;
+}
+
+
+
+EasySocket::EasySocket() : m_isBlocking(false), m_socket(INVALID_SOCKET)
+{
+	
+}
+
+std::string EasySocket::AddrToString(const Addr_t& addr)
+{
+	// Extract parts
+	uint32_t ip_net = static_cast<uint32_t>(addr >> 16);
+	uint16_t port_net = static_cast<uint16_t>(addr & 0xFFFF);
+
+	// Convert to host order
+	uint32_t ip_host = ntohl(ip_net);
+	uint16_t port_host = ntohs(port_net);
+
+	in_addr ipAddr{};
+	ipAddr.s_addr = htonl(ip_host);
+
+	char ipStr[INET_ADDRSTRLEN]{};
+	inet_ntop(AF_INET, &ipAddr, ipStr, sizeof(ipStr));
+
+	return std::string(ipStr) + ":" + std::to_string(port_host);
 }
 
 static uint64_t getErrorStatus()

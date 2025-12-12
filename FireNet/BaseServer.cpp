@@ -299,7 +299,7 @@ bool BaseServer::Start()
     return IsRunning();
 }
 
-void BaseServer::Stop()
+void BaseServer::Stop(std::string shutdownMessage)
 {
     if (!IsRunning())
         return;

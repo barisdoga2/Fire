@@ -12,6 +12,7 @@
 #include "../3rd_party/imgui_impl_glfw.h"
 
 #include <EasyDisplay.hpp>
+#include <EasyCamera.hpp>
 #include <EasyShader.hpp>
 #include <EasyModel.hpp>
 #include <EasyAnimation.hpp>
@@ -31,10 +32,25 @@
 
 #include "EasyPlayground_ImGUI.hpp"
 
-
 EasyPlayground::EasyPlayground(EasyDisplay* display, EasyBufferManager* bm) : display(display), bm(bm), network(new ClientNetwork(bm))
 {
+	model = EasyModel::LoadModel(
+		GetRelPath("res/models/Kachujin G Rosales Skin.fbx"), 
+		{ 
+			GetRelPath("res/models/Standing Idle on Kachujin G Rosales wo Skin.fbx"), 
+			GetRelPath("res/models/Running on Kachujin G Rosales wo Skin.fbx"),
+			GetRelPath("res/models/Standing Aim Idle 01 on Kachujin H Rosales wo Skin.fbx") 
+		}
+	);
 
+	cube_1x1x1 = EasyModel::LoadModel(GetRelPath("res/models/1x1cube.dae"));
+	items = EasyModel::LoadModel(GetRelPath("res/models/items.dae"));
+	buildings = EasyModel::LoadModel(GetRelPath("res/models/Buildings.dae"));
+	walls = EasyModel::LoadModel(GetRelPath("res/models/Walls.dae"));
+
+	shader = new EasyShader("model");
+	normalLinesShader = new EasyShader("NormalLines");
+	camera = new EasyCamera(display, { 1,4.4,5.8 }, { 1 - 0.15, 4.4 - 0.44,5.8 - 0.895 }, 74.f, 0.01f, 1000.f);
 }
 
 EasyPlayground::~EasyPlayground()
@@ -98,7 +114,7 @@ bool EasyPlayground::Init()
 		builder.AddText(u8"ğĞşŞıİüÜöÖçÇ");
 		builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
 		builder.BuildRanges(&ranges);
-		io.Fonts->AddFontFromFileTTF(GetRelPath("res/fonts/Arial.ttf").c_str(), 20.f, 0, ranges.Data);
+		io.Fonts->AddFontFromFileTTF(GetRelPath("res/fonts/Arial.ttf").c_str(), 14.f, 0, ranges.Data);
 		io.Fonts->Build();
 
 		// Setup Dear ImGui style
@@ -602,6 +618,13 @@ void EasyPlayground::ReGenerateMap()
 		c->LoadToGPU();
 }
 
+void EasyPlayground::ForwardStandartIO()
+{
+	using namespace UIConsole;
+	gImGuiCoutBuf = new ImGuiConsoleBuf(gConsoleLines);
+	gOldCoutBuf = std::cout.rdbuf(gImGuiCoutBuf);
+}
+
 void EasyPlayground::scroll_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	if (!camera->mode)
@@ -645,6 +668,12 @@ void EasyPlayground::mouse_callback(GLFWwindow* window, int button, int action, 
 
 void EasyPlayground::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_RELEASE)
+	{
+		isConsoleWindow = !isConsoleWindow;
+		return;
+	}
+
 	if (key == GLFW_KEY_F1 && action == GLFW_RELEASE)
 	{
 		isRender = true;
