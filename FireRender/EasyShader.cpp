@@ -1,7 +1,8 @@
 #include "pch.h"
 #include "EasyShader.hpp"
 #include "GL_Ext.hpp"
-#include "EasyUtility.hpp"
+#include "EasyUtils.hpp"
+#include "EasyUtils.hpp"
 
 #include <iostream>
 
@@ -11,15 +12,15 @@ EasyShader::EasyShader(const std::string& name)
 {
     prog = glCreateProgram();
 
-    std::string vertexShaderSource = LoadFile(GetPath("res/shaders/") + name + "V.glsl");
+    std::string vertexShaderSource = LoadFile(GetRelPath("res/shaders/") + name + "V.glsl");
     if (vertexShaderSource.length() > 0)
         AttachShader(GL_VERTEX_SHADER, vertexShaderSource.c_str());
 
-    std::string fragmentShaderSource = LoadFile(GetPath("res/shaders/") + name + "F.glsl");
+    std::string fragmentShaderSource = LoadFile(GetRelPath("res/shaders/") + name + "F.glsl");
     if (fragmentShaderSource.length() > 0)
         AttachShader(GL_FRAGMENT_SHADER, fragmentShaderSource.c_str());
 
-    std::string geometryShaderSource = LoadFile(GetPath("res/shaders/") + name + "G.glsl");
+    std::string geometryShaderSource = LoadFile(GetRelPath("res/shaders/") + name + "G.glsl");
     if (geometryShaderSource.length() > 0)
         AttachShader(GL_GEOMETRY_SHADER, geometryShaderSource.c_str());
 

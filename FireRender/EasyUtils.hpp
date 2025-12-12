@@ -3,14 +3,10 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include <glad/glad.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/noise.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/euler_angles.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <assimp/scene.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 
 
@@ -70,8 +66,12 @@ glm::mat4 CreateTransformMatrix(const glm::vec3& position, const glm::quat& rota
 
 glm::mat4 ConvertMatrixToGLMFormat(const aiMatrix4x4& from);
 
-GLuint CreateCube3D(float size, GLuint* vbo, float* positions_out);
-
-std::string GetPath(std::string = "");
+unsigned int CreateCube3D(float size, unsigned int* vbo, float* positions_out);
 
 std::string HashSHA256(const std::string& input);
+
+bool LoadFileBinary(std::string file, std::vector<char>* out);
+
+void EasyUtils_Init();
+
+std::string GetRelPath(std::string append);

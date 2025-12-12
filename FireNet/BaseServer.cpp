@@ -12,7 +12,6 @@
 #include <random>
 #include <optional>
 #include <filesystem>
-#include <windows.h>
 #include <ctime>
 
 #include "EasyIpAddress.hpp"
@@ -20,7 +19,7 @@
 #include "EasyBuffer.hpp"
 #include "EasySerializer.hpp"
 #include "EasyPacket.hpp"
-#include "FireNet.hpp"
+#include "EasyNet.hpp"
 
 class Session {
 public:
@@ -81,7 +80,7 @@ public:
 
     }
 
-    void Update()
+    void Update(double dt)
     {
 
     }
@@ -141,14 +140,20 @@ public:
 
     }
 
-    void Update()
+    void Update(double dt)
     {
         if (RawPacket* rcv = ReceiveOne(); rcv)
         {
             Session* session = cntx->sessionMan->GetSession(rcv->sid);
 
             if (!session)
+            {
                 session = cntx->sessionMan->CreateSession(rcv->sid, rcv->addr, rcv->recv);
+            }
+            else
+            {
+
+            }
 
             if (session)
                 ProcessReceived(session, rcv);
@@ -214,7 +219,7 @@ public:
 
     }
 
-    void Update()
+    void Update(double dt)
     {
         for (auto& [sid, cache] : cntx->sendCache)
             SendMultiple(sid, cache);
@@ -238,7 +243,6 @@ private:
                             {
                                 if (uint64_t res = cntx->sck->send(sendBuffer->begin(), sendBuffer->m_payload_size + EasyPacket::HeaderSize(), session->addr); res == WSAEISCONN)
                                 {
-
                                     session->seqid_out++;
                                 }
                             }
@@ -261,6 +265,11 @@ BaseServer::BaseServer(EasyBufferManager* bm, const unsigned short port, ServerC
 BaseServer::~BaseServer()
 {
     Stop();
+}
+
+void BaseServer::DestroySession(SessionID_t sid)
+{
+    cntx->sessionMan->DestroySession(sid);
 }
 
 bool BaseServer::Start()
@@ -305,15 +314,14 @@ void BaseServer::Stop()
     std::cout << "[BaseServer] Stopped.\n";
 }
 
-void BaseServer::Update()
+void BaseServer::Update(double dt)
 {
     if (!IsRunning())
         return;
 
-    cntx->receiveMan->Update();
-    cntx->sendMan->Update();
-    cntx->sessionMan->Update();
-
+    cntx->receiveMan->Update(dt);
+    cntx->sendMan->Update(dt);
+    cntx->sessionMan->Update(dt);
 }
 
 bool BaseServer::IsRunning()

@@ -2,6 +2,7 @@
 
 #include "EasyBuffer.hpp"
 #include "EasyNet.hpp"
+#include "EasyStatistics.hpp"
 
 #include <sstream>
 

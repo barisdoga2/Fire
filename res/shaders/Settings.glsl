@@ -20,9 +20,9 @@ const float shininess        = 32.0;
 // ============================
 //   FOG CALCULATION FUNCTION
 // ============================
-void FogCalculation(in out vec3 color, vec3 worldPos, vec3 cameraPos)
+vec3 FogCalculation(vec3 color, vec3 worldPos, vec3 cameraPos)
 {
     float dist = length(cameraPos - worldPos);
     float fogFactor = clamp((dist - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 0.0, 1.0);
-    color = mix(color, FOG_COLOR, fogFactor);
+    return mix(color, FOG_COLOR, fogFactor);
 }

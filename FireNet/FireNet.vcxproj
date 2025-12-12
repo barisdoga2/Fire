@@ -178,7 +178,7 @@
     <ClInclude Include="EasyStatistics.hpp" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="FireNet.hpp" />
+    <ClInclude Include="EasyNet.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BaseServer.cpp" />

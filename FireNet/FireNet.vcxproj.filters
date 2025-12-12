@@ -22,7 +22,7 @@
     <ClInclude Include="pch.h">
       <Filter>Etc</Filter>
     </ClInclude>
-    <ClInclude Include="FireNet.hpp" />
+    <ClInclude Include="EasyNet.hpp" />
     <ClInclude Include="EasyBuffer.hpp">
       <Filter>Net\Core</Filter>
     </ClInclude>

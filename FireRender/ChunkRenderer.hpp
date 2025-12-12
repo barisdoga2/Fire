@@ -8,7 +8,7 @@
 #include <glm/gtc/random.hpp>
 #include "EasyCamera.hpp"
 #include "EasyShader.hpp"
-#include "EasyUtility.hpp"
+#include "EasyUtils.hpp"
 
 
 class HDR;

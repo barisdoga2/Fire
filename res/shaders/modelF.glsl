@@ -31,7 +31,7 @@ void main()
     vec3 color = ambient + diffuse + specular;
 
     if(uIsFog > 0.0)
-        FogCalculation(color, pass_worldPos, uCameraPos);
+        color = FogCalculation(color, pass_worldPos, uCameraPos);
 
     FragColor = vec4(color, 1.0);
 }

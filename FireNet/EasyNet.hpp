@@ -1,67 +1,63 @@
 #pragma once
 
-#define KEY_SIZE 16U
-#define TAG_SIZE 12U
-#define IV_SIZE 8U
-#define SERVER_STATISTICS
-
-#define MAX_SESSIONS ((SessionID_t)(0b00000000'00001111'11111111'11111111))
-#define IS_SESSION(x) ((((SessionID_t)x) | ~MAX_SESSIONS) > 0U)
-
-#define LOGIN_RESPONSE ((PacketID_t)(110U))
-#define DISCONNECT_RESPONSE ((PacketID_t)(111U))
-#define CHAMPION_SELECT_REQUEST ((PacketID_t)(112U))
-#define CHAMPION_BUY_REQUEST ((PacketID_t)(113U))
-#define CHAMPION_SELECT_RESPONSE ((PacketID_t)(114U))
-#define CHAMPION_BUY_RESPONSE ((PacketID_t)(115U))
-#define PLAYER_BOOT_INFO ((PacketID_t)(116U))
-#define HEARTBEAT ((PacketID_t)(117U))
-#define LOGIN_REQUEST ((PacketID_t)(118U))
-#define LOGOUT_REQUEST ((PacketID_t)(119U))
-#define BROADCAST_MESSAGE ((PacketID_t)(120U))
-#define CHAT_MESSAGE ((PacketID_t)(121U))
-#define PLAYER_MOVEMENT ((PacketID_t)(122U))
-#define PLAYER_MOVEMENT_PACK ((PacketID_t)(123U))
-
-//#define INCLUDE_KEY
-//#define FIRE_ENCRYPTION
-//#define FIRE_COMPRESSION
-
-
-
 #include <iostream>
 #include <vector>
 #include <unordered_map>
 #include <chrono>
-#include <atomic>
+#include <thread>
 
-typedef uint64_t FireSignature_t;
-#define FIRE_SIGNATURE ((FireSignature_t)0x01234567ULL)
+// Time
+typedef std::chrono::high_resolution_clock  Clock;
+typedef std::chrono::system_clock           SysClock;
+typedef Clock::time_point                   Timestamp_t;
+typedef std::chrono::milliseconds           Millis_t;
+#define SLEEP_MS(x)                         (std::this_thread::sleep_for(std::chrono::milliseconds((x))))
 
-typedef uint64_t Addr_t;
-typedef uint32_t SessionID_t;
-typedef uint32_t UserID_t;
-typedef uint32_t SequenceID_t;
-typedef uint16_t PacketID_t;
-typedef std::chrono::high_resolution_clock::time_point Timestamp_t;
-typedef std::chrono::milliseconds Millis_t;
-typedef std::chrono::microseconds Micros_t;
-typedef std::vector<uint8_t> Payload_t;
+// Framework
+typedef uint64_t                  FireSignature_t;
+#define FIRE_SIGNATURE            ((FireSignature_t)0x01234567ULL)
 
-typedef std::vector<uint8_t> IV_t;
-typedef std::vector<uint8_t> Key_t;
-using StatisticsCounter_t = std::atomic<size_t>;
+// Packet
+typedef uint16_t                  PacketID_t;
 
-using Clock = std::chrono::high_resolution_clock;
+// Encryption
+#define KEY_SIZE                   16U
+#define TAG_SIZE                   12U
+#define IV_SIZE                    8U
+typedef std::vector<uint8_t>       Payload_t;
+typedef std::vector<uint8_t>       IV_t;
+typedef std::vector<uint8_t>       Key_t;
+typedef SysClock::time_point       Key_Expt_t;
+typedef uint32_t                   SequenceID_t;
 
-class EasySerializeable;
-using ObjCacheType_t = std::unordered_map<SessionID_t, std::vector<EasySerializeable*>>;
+// Session
+#define USERNAME_LEGTH             16U
+#define PASSWORD_LEGTH             16U
+typedef uint32_t                   SessionID_t;
+typedef uint64_t                   Addr_t;
+typedef uint32_t                   UserID_t;
+#define MAX_SESSIONS_1M            ((SessionID_t)(0b00000000'00010000'00000000'00000000)) // 1,048,576
+#define MAX_SESSIONS_64            ((SessionID_t)(0b00000000'00000000'00000000'01000000)) // 64
+#define MAX_SESSIONS               (MAX_SESSIONS_64)
+#define IS_SESSION(x)              ((((SessionID_t)x) | ~MAX_SESSIONS) > 0U)
+
+// Crypt
+class CryptData {
+public:
+    SessionID_t session_id;
+    Key_t key;
+    SequenceID_t sequence_id_in;
+    SequenceID_t sequence_id_out;
+	CryptData(const SessionID_t& session_id, const SequenceID_t& sequence_id_in, const SequenceID_t& sequence_id_out, const Key_t& key) : session_id(session_id), sequence_id_in(sequence_id_in), sequence_id_out(sequence_id_out), key(key)
+    { }
+	CryptData(const CryptData& crypt) : session_id(crypt.session_id), sequence_id_in(crypt.sequence_id_in), sequence_id_out(crypt.sequence_id_out), key(crypt.key)
+    { }
+};
 
 enum SessionStatus {
     UNSET,
     CONNECTING,
     CONNECTED,
-
     ADDR_MISMATCH,
     CRYPT_ERR,
     TIMED_OUT,
@@ -71,38 +67,30 @@ enum SessionStatus {
     CLIENT_LOGGED_OUT
 };
 
-class PeerSocketInfo {
-public:
-    Addr_t addr;
-
-    PeerSocketInfo() : addr(0U)
-    {
-
-    }
-
-    PeerSocketInfo(const PeerSocketInfo& sock) : addr(sock.addr)
-    {
-
-    }
-};
-
-class PeerCryptInfo {
-public:
-    SessionID_t session_id;
-    Key_t key;
-    SequenceID_t sequence_id_in;
-    SequenceID_t sequence_id_out;
-
-    PeerCryptInfo(const SessionID_t& session_id, const SequenceID_t& sequence_id_in, const SequenceID_t& sequence_id_out, const Key_t& key) : session_id(session_id), sequence_id_in(sequence_id_in), sequence_id_out(sequence_id_out), key(key)
-    {
-
-    }
-
-    PeerCryptInfo(const PeerCryptInfo& crypt) : session_id(crypt.session_id), sequence_id_in(crypt.sequence_id_in), sequence_id_out(crypt.sequence_id_out), key(crypt.key)
-    {
-
-    }
-
-};
-
-
+inline static std::string SessionStatus_Str(const SessionStatus& status)
+{
+    std::string str;
+    if (status == UNSET)
+        str = "UNSET";
+    else if (status == CONNECTING)
+        str = "CONNECTING";
+    else if (status == CONNECTED)
+        str = "CONNECTED";
+    else if (status == ADDR_MISMATCH)
+        str = "Connected from another client!";
+    else if (status == CRYPT_ERR)
+        str = "CRYPT_ERR";
+    else if (status == TIMED_OUT)
+        str = "TIMED_OUT";
+    else if (status == SERVER_TIMED_OUT)
+        str = "SERVER_TIMED_OUT";
+    else if (status == SEQUENCE_MISMATCH)
+        str = "SEQUENCE_MISMATCH";
+    else if (status == RECONNECTED)
+        str = "RECONNECTED";
+    else if (status == CLIENT_LOGGED_OUT)
+        str = "CLIENT_LOGGED_OUT";
+    else
+        str = "UNKNOWN";
+    return str;
+}

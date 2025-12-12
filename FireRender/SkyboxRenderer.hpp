@@ -14,7 +14,7 @@ private:
 public:
 	static void Init(char* skyboxShaderPtr = nullptr);
 
-	static void Render(EasyCamera& camera);
+	static void Render(EasyCamera* camera);
 
 
 };

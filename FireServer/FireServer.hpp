@@ -30,7 +30,7 @@ public:
 	FireServer(EasyBufferManager* bm, unsigned short port);
 	~FireServer();
 
-	void Update();
+	void Update(double dt) override;
 
 	bool OnServerStart() override;
 	void OnServerStop() override;

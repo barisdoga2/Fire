@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FireNet.hpp"
+#include "EasyNet.hpp"
 
 
 

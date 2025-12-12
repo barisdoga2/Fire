@@ -7,7 +7,7 @@
 
 #include <glm/glm.hpp>
 
-#include "EasyUtility.hpp"
+#include "EasyUtils.hpp"
 
 
 

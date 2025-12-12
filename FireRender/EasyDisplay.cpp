@@ -77,5 +77,5 @@ bool EasyDisplay::Init()
 
 bool EasyDisplay::ShouldClose()
 {
-	return glfwWindowShouldClose(window);
+	return exitRequested || glfwWindowShouldClose(window);
 }

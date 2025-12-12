@@ -6,7 +6,7 @@
 #include <box2d/box2d.h>
 
 #include <EasySerializer.hpp>
-#include "FireNet.hpp"
+#include "EasyNet.hpp"
 
 
 #define CIRCLE_DEF ((PacketID_t)(10U))

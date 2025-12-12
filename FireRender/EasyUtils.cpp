@@ -1,10 +1,17 @@
 #include "pch.h"
-#include "EasyUtility.hpp"
-#include <glm/gtx/quaternion.hpp>
+
+#include "EasyUtils.hpp"
+
 #include <glad/glad.h>
+#include <glm/gtc/noise.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#pragma comment(lib, "dbghelp.lib")
 
 
 
+// Maths
 float Noise2D(float x, float z, float scale, int seed)
 {
     return glm::perlin(glm::vec2(x, z) * scale + glm::vec2(seed * 0.1234f));
@@ -28,45 +35,9 @@ float FractalNoise2D(float x, float z, float scale, int octaves, float persisten
     return total / maxAmp; // normalize
 }
 
-std::string LoadFile(std::string file)
-{
-    std::string ret;
-
-    std::string line;
-    std::ifstream inFile(file);
-    if (inFile.good())
-    {
-        while (getline(inFile, line))
-        {
-            if (line.length() > 0)
-            {
-                if (line.find("$$INC$$:") != std::string::npos)
-                {
-                    std::ifstream inFile2(GetPath("res/shaders/") + line.substr(line.find("$$INC$$:") + std::string("$$INC$$:").length()));
-                    if (inFile2.good())
-                    {
-                        while (getline(inFile2, line))
-                        {
-                            ret.append(line + "\n");
-                        }
-                        inFile2.close();
-                    }
-                }
-                else
-                {
-                    ret.append(line + "\n");
-                }
-            }
-        }
-        inFile.close();
-    }
-
-    return ret;
-}
-
 glm::mat4 AiToGlm(const aiMatrix4x4& m)
 {
-    glm::mat4 result;
+    glm::mat4 result{};
     result[0][0] = m.a1; result[1][0] = m.a2; result[2][0] = m.a3; result[3][0] = m.a4;
     result[0][1] = m.b1; result[1][1] = m.b2; result[2][1] = m.b3; result[3][1] = m.b4;
     result[0][2] = m.c1; result[1][2] = m.c2; result[2][2] = m.c3; result[3][2] = m.c4;
@@ -76,7 +47,7 @@ glm::mat4 AiToGlm(const aiMatrix4x4& m)
 
 glm::vec3 AiToGlm(const aiVector3D& m)
 {
-    glm::vec3 result;
+    glm::vec3 result{};
     result.x = m.x;
     result.y = m.y;
     result.z = m.z;
@@ -104,9 +75,7 @@ glm::mat4 CreateTransformMatrix(const glm::vec3& position, const glm::vec3& rota
     return transform;
 }
 
-glm::mat4 CreateTransformMatrix(const glm::vec3& position,
-    const glm::quat& rotationQuat,
-    const glm::vec3& scale)
+glm::mat4 CreateTransformMatrix(const glm::vec3& position, const glm::quat& rotationQuat, const glm::vec3& scale)
 {
     glm::mat4 translation = glm::translate(glm::mat4(1.0f), position);
     glm::mat4 rotationMat = glm::toMat4(rotationQuat);
@@ -118,7 +87,7 @@ glm::mat4 CreateTransformMatrix(const glm::vec3& position,
 
 glm::mat4 ConvertMatrixToGLMFormat(const aiMatrix4x4& from)
 {
-    glm::mat4 to;
+    glm::mat4 to{};
     //the a,b,c,d in assimp is the row ; the 1,2,3,4 is the column
     to[0][0] = from.a1; to[1][0] = from.a2; to[2][0] = from.a3; to[3][0] = from.a4;
     to[0][1] = from.b1; to[1][1] = from.b2; to[2][1] = from.b3; to[3][1] = from.b4;
@@ -127,21 +96,23 @@ glm::mat4 ConvertMatrixToGLMFormat(const aiMatrix4x4& from)
     return to;
 }
 
-GLuint CreateCube3D(float size, GLuint* vbo, float* positions_out)
+
+
+// OpenGL
+unsigned int CreateCube3D(float size, unsigned int* vbo, float* positions_out)
 {
     static const float Cube3DPositions[108] = { -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f,-1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f };
     static const GLuint vertices = (GLuint)(sizeof(Cube3DPositions) / (sizeof(float) * 3.0f));
-
 
     GLuint vao;
     GLuint vbo_;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    float* positions = (float*)malloc(vertices * 3 * sizeof(float));
+    float* positions = (float*)malloc((size_t)vertices * 3 * sizeof(float));
     if (positions != nullptr)
     {
-        std::memcpy(positions, Cube3DPositions, vertices * 3 * sizeof(float));
+        std::memcpy(positions, Cube3DPositions, (size_t)vertices * 3 * sizeof(float));
         for (GLuint i = 0; i < vertices; i++)
         {
             positions[i * 3 + 0] *= size;
@@ -150,7 +121,7 @@ GLuint CreateCube3D(float size, GLuint* vbo, float* positions_out)
         }
 
         if(positions_out)
-            memcpy(positions_out, &positions, vertices * 3 * sizeof(float));
+            memcpy(positions_out, &positions, (size_t)vertices * 3 * sizeof(float));
 
         if (vbo == nullptr)
         {
@@ -163,7 +134,7 @@ GLuint CreateCube3D(float size, GLuint* vbo, float* positions_out)
             glBindBuffer(GL_ARRAY_BUFFER, *vbo);
         }
 
-        glBufferData(GL_ARRAY_BUFFER, vertices * 3 * sizeof(float), positions, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, (size_t)vertices * 3 * sizeof(float), positions, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -175,11 +146,153 @@ GLuint CreateCube3D(float size, GLuint* vbo, float* positions_out)
     return 0;
 }
 
-#include <windows.h>
+
+
+// IO
+bool LoadFileBinary(std::string file, std::vector<char>* out)
+{
+    // Create the stream
+    std::ifstream infile(file, std::ios::binary | std::ios::ate);
+
+    // Check if file opened
+    if (infile.good())
+    {
+        // Get length of the file
+        size_t length = (size_t)infile.tellg();
+
+        // Move to begining
+        infile.seekg(0, std::ios::beg);
+
+        // Resize the vector
+        out->resize(length * sizeof(char));
+
+        // Read into the buffer
+        infile.read(out->data(), length);
+
+        // Close the stream
+        infile.close();
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+std::string LoadFile(std::string file)
+{
+    std::string ret;
+
+    std::string line;
+    std::ifstream inFile(file);
+    if (inFile.good())
+    {
+        while (getline(inFile, line))
+        {
+            if (line.length() > 0)
+            {
+                if (line.find("$$INC$$:") != std::string::npos)
+                {
+                    std::ifstream inFile2(GetRelPath("res/shaders/") + line.substr(line.find("$$INC$$:") + std::string("$$INC$$:").length()));
+                    if (inFile2.good())
+                    {
+                        while (getline(inFile2, line))
+                        {
+                            ret.append(line + "\n");
+                        }
+                        inFile2.close();
+                    }
+                }
+                else
+                {
+                    ret.append(line + "\n");
+                }
+            }
+        }
+        inFile.close();
+    }
+
+    return ret;
+}
+
+
+
+// Crypt
+#include <cryptopp/sha.h>
+#include <cryptopp/hex.h>
+#include <cryptopp/filters.h>
+std::string HashSHA256(const std::string& input)
+{
+    using namespace CryptoPP;
+
+    SHA256 hash;
+    std::string digest;
+
+    StringSource ss(input, true,
+        new HashFilter(hash,
+            new HexEncoder(
+                new StringSink(digest), false // uppercase=false -> lowercase hex
+            )
+        )
+    );
+
+    return digest;
+}
+
 #include <iostream>
 #include <filesystem>
+#include <stdio.h>
+#undef APIENTRY
+#include <windows.h>
+#include <dbghelp.h>
 
-std::string GetPath(std::string append)
+
+
+void CreateMiniDump(EXCEPTION_POINTERS* e)
+{
+    SYSTEMTIME st;
+    GetSystemTime(&st);
+    char filename[MAX_PATH];
+    sprintf_s(filename, "Crash_%04d%02d%02d_%02d%02d%02d.dmp", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+
+    HANDLE hFile = CreateFileA(filename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL, nullptr);
+
+    if ((hFile != nullptr) && (hFile != INVALID_HANDLE_VALUE)) {
+        MINIDUMP_EXCEPTION_INFORMATION info{};
+        info.ThreadId = GetCurrentThreadId();
+        info.ExceptionPointers = e;
+        info.ClientPointers = FALSE;
+
+        MiniDumpWriteDump(
+            GetCurrentProcess(),
+            GetCurrentProcessId(),
+            hFile,
+            MiniDumpWithFullMemory, // or MiniDumpNormal
+            e ? &info : nullptr,
+            nullptr,
+            nullptr
+        );
+
+        CloseHandle(hFile);
+        std::cout << "Crash dump written: " << filename << std::endl;
+    }
+}
+
+LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* e)
+{
+    std::cerr << "Unhandled exception caught! Creating dump...\n";
+    CreateMiniDump(e);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+void EasyUtils_Init()
+{
+    SetUnhandledExceptionFilter(ExceptionHandler);
+}
+
+std::string GetRelPath(std::string append)
 {
     static std::string root;
     static bool i = true;
@@ -216,26 +329,4 @@ std::string GetPath(std::string append)
     }
 
     return root + append;
-}
-
-#include <cryptopp/sha.h>
-#include <cryptopp/hex.h>
-#include <cryptopp/filters.h>
-
-std::string HashSHA256(const std::string& input)
-{
-    using namespace CryptoPP;
-
-    SHA256 hash;
-    std::string digest;
-
-    StringSource ss(input, true,
-        new HashFilter(hash,
-            new HexEncoder(
-                new StringSink(digest), false // uppercase=false -> lowercase hex
-            )
-        )
-    );
-
-    return digest;
 }

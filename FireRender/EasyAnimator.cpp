@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "EasyAnimator.hpp"
 #include "EasyAnimation.hpp"
-#include "EasyUtility.hpp"
+#include "EasyUtils.hpp"
 
 #include <algorithm>
 #include <cmath>

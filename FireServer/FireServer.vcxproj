@@ -149,17 +149,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="imgui_impl_glfw.cpp" />
-    <ClCompile Include="imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\3rd_party\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\3rd_party\imgui_impl_opengl3.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="FireServer.cpp" />
     <ClCompile Include="ServerUI.cpp" />
     <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="imgui_impl_glfw.h" />
-    <ClInclude Include="imgui_impl_opengl3.h" />
-    <ClInclude Include="imgui_impl_opengl3_loader.h" />
     <ClInclude Include="ServerNet.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="FireServer.hpp" />

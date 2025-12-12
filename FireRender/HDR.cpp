@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "HDR.hpp"
-#include "EasyUtility.hpp"
+#include "EasyUtils.hpp"
+#include "EasyUtils.hpp"
 
 
 #include <stb_image.h>
@@ -49,7 +50,7 @@ HDR::HDR(std::string name)
 	// pbr: load the HDR environment map
 	// ---------------------------------
 	int width, height, nrComponents;
-	float* data = stbi_loadf(std::string(GetPath("res/images/") + name + ".hdr").c_str(), &width, &height, &nrComponents, 0);
+	float* data = stbi_loadf(std::string(GetRelPath("res/images/") + name + ".hdr").c_str(), &width, &height, &nrComponents, 0);
 	
 	if (data)
 	{

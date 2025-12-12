@@ -118,77 +118,47 @@ void LUAListen()
 int main(int argc, char* argv[])
 {
     FireServer* server = new FireServer(bm, SERVER_PORT);
-    server->Start();
-    while (server->IsRunning())
-    {
-        server->Update();
-        SLEEP_MS(1U);
-    }
-    delete server;
-    return 0;
-
-    bool running{};
-
-    if (server->Start())
+    if (bool running = server->Start(); running)
     {
         if (EasyDisplay display({ 400, 600 }, { 1,2 }); display.Init())
         {
-            if (running = true; running)
+            if (ServerUI serverUI(&display); serverUI.Init())
             {
-                if (ServerUI serverUI(display); serverUI.Init())
+                std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+                std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
+
+                const double fps_constant = 1000.0 / 24.0;
+                const double ups_constant = 1000.0 / 10.0;
+
+                double fps_timer = 0.0;
+                double ups_timer = 0.0;
+
+                while (running)
                 {
-                    std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
-                    std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
+                    currentTime = std::chrono::high_resolution_clock::now();
+                    double elapsed_ms = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
+                    lastTime = currentTime;
 
-                    const double fps_constant = 1000.0 / 24.0;
-                    const double ups_constant = 1000.0 / 1.0;
-                    const double debug_constant = 1000.0 / 1.0;
+                    fps_timer += elapsed_ms;
+                    ups_timer += elapsed_ms;
 
-                    double debug_timer = 0.0;
-                    double fps_timer = 0.0;
-                    double ups_timer = 0.0;
-
-                    running = true;
-                    while (running)
+                    if (fps_timer >= fps_constant)
                     {
-                        currentTime = std::chrono::high_resolution_clock::now();
-                        double elapsed_ms = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
-                        lastTime = currentTime;
-
-                        fps_timer += elapsed_ms;
-                        ups_timer += elapsed_ms;
-                        debug_timer += elapsed_ms;
-
-                        if (fps_timer >= fps_constant)
-                        {
-                            serverUI.StartRender(fps_timer / 1000.0);
-                            running &= serverUI.Render(fps_timer / 1000.0);
-                            serverUI.EndRender();
-                            fps_timer = 0.0;
-                        }
-
-                        if (ups_timer >= ups_constant)
-                        {
-                            running &= serverUI.Update(ups_timer / 1000.0);
-                            ups_timer = 0.0;
-                        }
-
-                        if (debug_timer >= debug_constant)
-                        {
-                            //if(server->m->sessionsMutex.try_lock())
-                            {
-                                //std::vector<Session*> sessions;
-                                //for (auto& sid : server->m->sessionIDs)
-                                //    sessions.push_back(server->m->sessions[sid]);
-                                //serverUI.OnSessionListUpdated(sessions);
-                                //server->m->sessionsMutex.unlock();
-
-                                debug_timer = 0.0;
-                            }
-                        }
-
-                        running &= !display.ShouldClose();
+                        serverUI.StartRender(fps_timer / 1000.0);
+                        running &= serverUI.Render(fps_timer / 1000.0);
+                        serverUI.EndRender();
+                        fps_timer = 0.0;
                     }
+
+                    if (ups_timer >= ups_constant)
+                    {
+                        server->Update(ups_timer / 1000.0);
+                        running &= server->IsRunning();
+                        running &= serverUI.Update(ups_timer / 1000.0);
+                        ups_timer = 0.0;
+                    }
+
+                    running &= !display.ShouldClose();
                 }
             }
         }

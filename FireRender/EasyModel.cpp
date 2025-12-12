@@ -3,6 +3,7 @@
 #include "EasyTexture.hpp"
 #include "EasyAnimation.hpp"
 #include "EasyAnimator.hpp"
+#include "EasyUtils.hpp"
 
 #include <thread>
 #include <iostream>
@@ -205,7 +206,7 @@ EasyModel::EasyMesh* EasyModel::ProcessMesh(EasyModel* model, aiMesh* aiMesh, co
         }
         else
         {
-            NewTexture(textureCache, std::string(GetPath("res/images/") + path.C_Str()), nullptr, mesh->textures);
+            NewTexture(textureCache, std::string(GetRelPath("res/images/") + path.C_Str()), nullptr, mesh->textures);
         }
     }
     

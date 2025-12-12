@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
     <Filter Include="Core">
       <UniqueIdentifier>{d9516b4f-3cac-4a27-8d04-60686fb12982}</UniqueIdentifier>
     </Filter>
@@ -19,18 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ImGUI_Fun.hpp">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_glfw.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_opengl3.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_opengl3_loader.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="ChunkRenderer.hpp">
       <Filter>Render</Filter>
     </ClInclude>
@@ -64,9 +48,6 @@
     <ClInclude Include="EasyShader.hpp">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="EasyUtility.hpp">
-      <Filter>Core</Filter>
-    </ClInclude>
     <ClInclude Include="GL_Ext.hpp">
       <Filter>Core</Filter>
     </ClInclude>
@@ -76,17 +57,11 @@
     <ClInclude Include="pch.h">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="WinUtils.hpp">
+    <ClInclude Include="EasyUtils.hpp">
       <Filter>Util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="imgui_impl_glfw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_impl_opengl3.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ChunkRenderer.cpp">
       <Filter>Render</Filter>
     </ClCompile>
@@ -120,16 +95,10 @@
     <ClCompile Include="EasyShader.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="EasyUtility.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
-    <ClCompile Include="FireRender.cpp">
-      <Filter>Util</Filter>
-    </ClCompile>
     <ClCompile Include="pch.cpp">
       <Filter>Util</Filter>
     </ClCompile>
-    <ClCompile Include="WinUtils.cpp">
+    <ClCompile Include="EasyUtils.cpp">
       <Filter>Util</Filter>
     </ClCompile>
   </ItemGroup>

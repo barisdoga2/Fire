@@ -10,13 +10,15 @@
 #include <unordered_map>
 
 #include <glm/gtc/type_ptr.hpp>
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 //#include <EasyServer.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
-#include "imgui_impl_opengl3.h"
-#include "imgui_impl_glfw.h"
-#include "EasyUtility.hpp"
+#include "../3rd_party/imgui_impl_opengl3.h"
+#include "../3rd_party/imgui_impl_glfw.h"
+#include <EasyDisplay.hpp>
+#include "EasyUtils.hpp"
 
 struct SessionDebugInfo
 {
@@ -70,7 +72,8 @@ public:
 static SessionDebugger gDebugger;
 
 
-ServerUI::ServerUI(const EasyDisplay& display) : display_(display)
+
+ServerUI::ServerUI(EasyDisplay* display) : display(display)
 {
 
 }
@@ -89,11 +92,11 @@ bool ServerUI::Init()
 {
 	// Callbacks
 	static ServerUI* instance = this;
-	glfwSetKeyCallback(display_.window, [](GLFWwindow* w, int k, int s, int a, int m) { instance->key_callback(w, k, s, a, m); });
-	glfwSetCursorPosCallback(display_.window, [](GLFWwindow* w, double x, double y) { instance->cursor_callback(w, x, y); });
-	glfwSetMouseButtonCallback(display_.window, [](GLFWwindow* window, int button, int action, int mods) { instance->mouse_callback(window, button, action, mods); });
-	glfwSetScrollCallback(display_.window, [](GLFWwindow* w, double x, double y) { instance->scroll_callback(w, x, y); });
-	glfwSetCharCallback(display_.window, [](GLFWwindow* w, unsigned int x) { instance->char_callback(w, x); });
+	glfwSetKeyCallback(display->window, [](GLFWwindow* w, int k, int s, int a, int m) { instance->key_callback(w, k, s, a, m); });
+	glfwSetCursorPosCallback(display->window, [](GLFWwindow* w, double x, double y) { instance->cursor_callback(w, x, y); });
+	glfwSetMouseButtonCallback(display->window, [](GLFWwindow* window, int button, int action, int mods) { instance->mouse_callback(window, button, action, mods); });
+	glfwSetScrollCallback(display->window, [](GLFWwindow* w, double x, double y) { instance->scroll_callback(w, x, y); });
+	glfwSetCharCallback(display->window, [](GLFWwindow* w, unsigned int x) { instance->char_callback(w, x); });
 
 	// ImGUI
 	const char* glsl_version = "#version 130";
@@ -104,14 +107,14 @@ bool ServerUI::Init()
 
 	ImVector<ImWchar> ranges;
 	ImFontGlyphRangesBuilder builder;
-	builder.AddText(u8"ğĞşŞıİüÜöÖçÇ");
+	//builder.AddText(u8"ğĞşŞıİüÜöÖçÇ");
 	builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
 	builder.BuildRanges(&ranges);
-	io.Fonts->AddFontFromFileTTF(GetPath("res/fonts/Arial.ttf").c_str(), 20.f, 0, ranges.Data);
+	io.Fonts->AddFontFromFileTTF(GetRelPath("res/fonts/Arial.ttf").c_str(), 20.f, 0, ranges.Data);
 	io.Fonts->Build();
 	ImGui::StyleColorsDark();
 	//ImGui::StyleColorsLight();
-	ImGui_ImplGlfw_InitForOpenGL(display_.window, false);
+	ImGui_ImplGlfw_InitForOpenGL(display->window, false);
 	ImGui_ImplOpenGL3_Init(glsl_version);
 
 	return true;
@@ -239,7 +242,7 @@ bool ServerUI::Update(double _dt)
 	}
 
 
-	return !exitRequested;
+	return !display->ShouldClose();
 }
 
 void ServerUI::StartRender(double _dt)
@@ -267,7 +270,7 @@ void ServerUI::StartRender(double _dt)
 		fps = 1.0 / avgDt;
 	}
 
-	glViewport(0, 0, display_.windowSize.x, display_.windowSize.y);
+	glViewport(0, 0, display->windowSize.x, display->windowSize.y);
 	GL(ClearDepth(1.f));
 	GL(ClearColor(0.5f, 0.7f, 1.0f, 1));
 	GL(Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
@@ -283,8 +286,8 @@ void ServerUI::StartRender(double _dt)
 
 void ServerUI::EndRender()
 {
-	glfwSetWindowTitle(display_.window, (std::ostringstream() << std::fixed << std::setprecision(3) << "FPS: " << fps << " | UPS: " << ups).str().c_str());
-	glfwSwapBuffers(display_.window);
+	glfwSetWindowTitle(display->window, (std::ostringstream() << std::fixed << std::setprecision(3) << "FPS: " << fps << " | UPS: " << ups).str().c_str());
+	glfwSwapBuffers(display->window);
 	glfwPollEvents();
 }
 

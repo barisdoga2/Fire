@@ -1,51 +1,11 @@
 #include <filesystem>
 #include <sstream>
 #include <random>
-#include <Windows.h>
 
 #include "FireServer.hpp"
 #include "ServerNet.hpp"
 #include <EasySerializer.hpp>
-
-inline std::string GetPath(std::string append)
-{
-    static std::string root;
-    static bool i = true;
-    if (i)
-    {
-        i = false;
-        char buffer[128];
-        GetModuleFileNameA(NULL, buffer, 128);
-        std::string fullPath(buffer);
-        for (auto& c : fullPath)
-            if (c == '\\')
-                c = '/';
-        size_t pos = fullPath.find_last_of("\\/");
-        root = fullPath.substr(0, pos) + '/';
-
-        bool resFolder = std::filesystem::exists(root + "res") && std::filesystem::is_directory(root + "res");
-        if (!resFolder)
-        {
-            root = root + "../";
-            resFolder = std::filesystem::exists(root + "res") && std::filesystem::is_directory(root + "res");
-        }
-
-        if (!resFolder)
-        {
-            root = root + "../";
-            resFolder = std::filesystem::exists(root + "res") && std::filesystem::is_directory(root + "res");
-        }
-
-        if (!resFolder)
-        {
-            root = root + "../";
-            resFolder = std::filesystem::exists(root + "res") && std::filesystem::is_directory(root + "res");
-        }
-    }
-
-    return root + append;
-}
-
+#include <EasyUtils.hpp>
 
 FireServer::FireSession::FireSession(std::string username, SessionID_t sid, UserID_t uid, Addr_t addr, UserStats stats, Timestamp_t recv) : username(username), sid(sid), uid(uid), addr(addr), stats(stats), recv(recv), logoutRequested(false)
 {
@@ -62,9 +22,9 @@ FireServer::~FireServer()
 
 }
 
-void FireServer::Update()
+void FireServer::Update(double dt)
 {
-    BaseServer::Update();
+    BaseServer::Update(dt);
 
     ServerCache_t& send = GetSendCache();
     ServerCache_t& recv = GetReceiveCache();
@@ -84,7 +44,7 @@ void FireServer::Update()
         {
             if (sChampionSelectRequest* championSelectRequest = dynamic_cast<sChampionSelectRequest*>(*objIt); championSelectRequest)
             {
-                std::cout << "[FireServer] Update - Champion select request received.\n";
+                std::cout << "[FireServer] Update - Champion select request received, response sent.\n";
                 bool response = std::find(fSession->stats.champions_owned.begin(), fSession->stats.champions_owned.end(), championSelectRequest->championID) != fSession->stats.champions_owned.end();
                 std::string message{};
                 if (!response)
@@ -92,7 +52,13 @@ void FireServer::Update()
                 else
                     message = "Champion selected.";
                 send[recvIt->first].push_back(new sChampionSelectResponse(response, message));
-                std::cout << "[FireServer] Update - Champion select response sent.\n";
+
+                if (response)
+                {
+                    send[recvIt->first].push_back(new sGameBoot());
+                    std::cout << "[FireServer] Update - Game boot sent.\n";
+                }
+
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
@@ -100,6 +66,9 @@ void FireServer::Update()
             {
                 std::cout << "[FireServer] Update - Logout request received.\n";
                 fSession->logoutRequested = true;
+
+                DestroySession(fSession->sid);
+
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
@@ -107,13 +76,6 @@ void FireServer::Update()
             {
                 GetSendCache()[fSession->sid].push_back(new sHearbeat());
                 std::cout << "[FireServer] Update - Heartbeat received and sent!\n";
-                delete* objIt;
-                objIt = recvIt->second.erase(objIt);
-            }
-            else if (sLogoutRequest* logoutRequest = dynamic_cast<sLogoutRequest*>(*objIt); logoutRequest)
-            {
-                std::cout << "[FireServer] Update - Logout request received!\n";
-                fSession->logoutRequested = true;
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
@@ -150,7 +112,7 @@ bool FireServer::OnServerStart()
 {
     std::cout << "[FireServer] Starting...\n";
 
-    if (!sqlite.Init(GetPath("res/db/fire.db")))
+    if (!sqlite.Init(GetRelPath("res/db/fire.db")))
     {
         std::cout << "[FireServer] Failed to start. Failed to open database!\n";
         return false;

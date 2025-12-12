@@ -10,6 +10,7 @@ public:
     glm::tvec2<int> windowSize = { 1920, 1080 };
     glm::tvec2<int> position = { 0, 0 };
     GLFWwindow* window = nullptr;
+    bool exitRequested{};
 
     EasyDisplay(glm::tvec2<int> windowSize = { 800, 600 }, glm::tvec2<int> position = { 0, 0 });
     ~EasyDisplay();

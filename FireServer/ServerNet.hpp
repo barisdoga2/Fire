@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 #include <vector>
-#include <FireNet.hpp>
+#include <EasyNet.hpp>
 #include <EasySerializer.hpp>
 
 #ifndef _DEBUG
@@ -16,7 +16,7 @@
 #define SERVER_URL "https://barisdoga.com/index.php"
 #else
 #define SERVER_IP "127.0.0.1"
-#define SERVER_URL "http://127.0.0.1/index.php"
+#define SERVER_URL "https://barisdoga.com/index.php"
 #endif
 
 #define FIRE_ENCRYPTION true
@@ -36,6 +36,7 @@
 #define CHAT_MESSAGE                                            ((PacketID_t)(205U))
 #define PLAYER_MOVEMENT                                         ((PacketID_t)(206U))
 #define PLAYER_MOVEMENT_PACK                                    ((PacketID_t)(207U))
+#define GAME_BOOT                                               ((PacketID_t)(208U))
 
 
 
@@ -428,3 +429,23 @@ public:
     }
 };
 REGISTER_PACKET(sPlayerMovementPack, PLAYER_MOVEMENT_PACK);
+
+class sGameBoot : public EasySerializeable {
+public:
+
+    sGameBoot() : EasySerializeable(static_cast<PacketID_t>(GAME_BOOT))
+    {
+
+    }
+
+    ~sGameBoot()
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        
+    }
+};
+REGISTER_PACKET(sGameBoot, GAME_BOOT);

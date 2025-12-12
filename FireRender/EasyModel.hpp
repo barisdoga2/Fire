@@ -7,7 +7,7 @@
 
 #include <glad/glad.h>
 
-#include "EasyUtility.hpp"
+#include "EasyUtils.hpp"
 
 
 

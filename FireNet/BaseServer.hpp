@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FireNet.hpp"
+#include "EasyNet.hpp"
 
 class EasySerializeable;
 using ServerCache_t = std::unordered_map<SessionID_t, std::vector<EasySerializeable*>>;
@@ -42,11 +42,13 @@ public:
 
     ~BaseServer();
 
+    void DestroySession(SessionID_t sid);
+
     bool Start();
 
     void Stop();
 
-    void Update();
+    virtual void Update(double dt);
 
     bool IsRunning();
 

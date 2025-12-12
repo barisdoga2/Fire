@@ -1,7 +1,9 @@
 ﻿#include <iostream>
 #include <chrono>
 
-#include "WinUtils.hpp"
+#include <EasyUtils.hpp>
+#include <EasyDisplay.hpp>
+#include <EasyBuffer.hpp>
 #include "EasyPlayground.hpp"
 
 EasyBufferManager* bf = new EasyBufferManager(50U, 1472U);
@@ -10,11 +12,11 @@ int main(int argc, char* argv[])
 {
     bool running{};
 
-    WinUtils::Init();
+    EasyUtils_Init();
 
     if (EasyDisplay display({ 1536 * 0.8,864 * 0.8 }); display.Init())
     {
-        if (EasyPlayground playground(display, bf); playground.Init())
+        if (EasyPlayground playground(&display, bf); playground.Init())
         {
             std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
             std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();

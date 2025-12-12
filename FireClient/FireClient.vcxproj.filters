@@ -18,12 +18,13 @@
     <ClCompile Include="ClientTest.cpp">
       <Filter>Etc</Filter>
     </ClCompile>
-    <ClCompile Include="imgui_impl_opengl3.cpp">
+    <ClCompile Include="..\3rd_party\imgui_impl_glfw.cpp">
       <Filter>Etc</Filter>
     </ClCompile>
-    <ClCompile Include="imgui_impl_glfw.cpp">
+    <ClCompile Include="..\3rd_party\imgui_impl_opengl3.cpp">
       <Filter>Etc</Filter>
     </ClCompile>
+    <ClCompile Include="ClientNetwork.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.hpp">
@@ -38,16 +39,7 @@
     <ClInclude Include="resource.h">
       <Filter>Etc</Filter>
     </ClInclude>
-    <ClInclude Include="imgui_impl_opengl3.h">
-      <Filter>Etc</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_opengl3_loader.h">
-      <Filter>Etc</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_glfw.h">
-      <Filter>Etc</Filter>
-    </ClInclude>
-    <ClInclude Include="ImGUI_Fun.hpp">
+    <ClInclude Include="EasyPlayground_ImGUI.hpp">
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="ClientNetwork.hpp" />

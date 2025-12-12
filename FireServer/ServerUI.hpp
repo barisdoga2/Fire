@@ -1,16 +1,16 @@
 #pragma once
 
 #include <vector>
-#include <EasyDisplay.hpp>
 
+class EasyDisplay;
+struct GLFWwindow;
 class ServerUI {
 private:
 public:
-    int exitRequested = 0;
-    const EasyDisplay& display_;
+    EasyDisplay* display;
     double fps = 0.0, ups = 0.0;
 
-    ServerUI(const EasyDisplay& display);
+    ServerUI(EasyDisplay* display);
     ~ServerUI();
 
     bool Init();

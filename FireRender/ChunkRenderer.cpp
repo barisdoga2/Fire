@@ -4,6 +4,7 @@
 #include "HDR.hpp"
 
 #include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtc/noise.hpp>
 
 Chunk::Chunk()
 {
@@ -164,8 +165,8 @@ void Chunk::GenerateFlat(const glm::ivec2& inCoord)
     verts.clear();
     indices.clear();
 
-    const int quadsX = CHUNK_STEPS - 1;
-    const int quadsZ = CHUNK_STEPS - 1;
+    const unsigned int quadsX = CHUNK_STEPS - 1;
+    const unsigned int quadsZ = CHUNK_STEPS - 1;
 
     verts.reserve(quadsX * quadsZ * 6);
     indices.reserve(quadsX * quadsZ * 6);

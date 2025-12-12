@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "SkyboxRenderer.hpp"
-#include "EasyUtility.hpp"
+#include "EasyUtils.hpp"
 
 EasyShader* SkyboxRenderer::skyboxShader = nullptr;
 GLuint SkyboxRenderer::vao = 0;
@@ -26,9 +26,9 @@ void SkyboxRenderer::Init(char* skyboxShaderPtr)
 	}
 }
 
-void SkyboxRenderer::Render(EasyCamera& camera)
+void SkyboxRenderer::Render(EasyCamera* camera)
 {
-	const glm::mat4x4 proj = glm::perspective(glm::radians(camera.fov), camera.aspect, camera.near, 1250.0f);
+	const glm::mat4x4 proj = glm::perspective(glm::radians(camera->fov), camera->aspect, camera->near, 1250.0f);
 
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
@@ -38,7 +38,7 @@ void SkyboxRenderer::Render(EasyCamera& camera)
 	glBindVertexArray(vao);
 	glEnableVertexAttribArray(0);
 
-	glm::mat4x4 view = camera.view_;
+	glm::mat4x4 view = camera->view_;
 	view[3][0] = 0;
 	view[3][1] = 0;
 	view[3][2] = 0;

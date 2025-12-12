@@ -3,7 +3,8 @@
 #include <tinyxml2.h>
 #include <stb_image.h>
 #include "EasyMaterial.hpp"
-#include "EasyUtility.hpp"
+#include "EasyUtils.hpp"
+#include "EasyUtils.hpp"
 
 GLuint EasyMaterial::GetTexture(TextureTypes type) const
 {
@@ -12,7 +13,7 @@ GLuint EasyMaterial::GetTexture(TextureTypes type) const
 
 EasyMaterial::EasyMaterial(std::string materialName)
 {
-	std::string pathToMaterialFolder = GetPath("res/materials/");
+	std::string pathToMaterialFolder = GetRelPath("res/materials/");
 	tinyxml2::XMLDocument* currentXMLDoc = new tinyxml2::XMLDocument;
 	currentXMLDoc->LoadFile(std::string(pathToMaterialFolder + materialName + ".xml").c_str());
 	tinyxml2::XMLElement* pbr = currentXMLDoc->FirstChildElement("pbr");

@@ -1,8 +1,20 @@
-#include "ClientTest.hpp"
+#include "pch.h"
+
+#include "EasyPlayground.hpp"
+
+#include <EasyUtils.hpp>
 #include <EasySerializer.hpp>
 #include "../FireServer/ServerNet.hpp"
 #include <EasySocket.hpp>
-#include <curl/curl.h>
+#include <imgui.h>
+#include <imgui_internal.h>
+#include "../3rd_party/imgui_impl_opengl3.h"
+#include "../3rd_party/imgui_impl_glfw.h"
+#include <glad/glad.h>
+#include <stb_image.h>
+
+#include "ClientNetwork.hpp"
+
 
 inline ImTextureID LoadTextureSTB(const char* filename, int* outW = nullptr, int* outH = nullptr)
 {
@@ -73,9 +85,6 @@ public:
 
 void EasyPlayground::ImGUI_DrawChatWindow()
 {
-    if (!network.isInGame)
-        return;
-
     static char inputBuf[256] = { 0 };
 
     const ImVec2 winSize(400, 160);
@@ -144,7 +153,7 @@ void EasyPlayground::ImGUI_DrawChatWindow()
         if (!text.empty())
         {
             // Send
-            network.GetSendCache().push_back(new sChatMessage(text, "", 0));
+            network->GetSendCache().push_back(new sChatMessage(text, "", 0));
             inputBuf[0] = '\0';
         }
     }
@@ -154,9 +163,6 @@ void EasyPlayground::ImGUI_DrawChatWindow()
 
 void EasyPlayground::ImGUI_PlayerInfoWindow()
 {
-    if (!(network.isInGame || network.isLoggedIn || network.isBoot || network.isChampionSelect || network.isAuth))
-        return;
-
     // Position: TOP RIGHT
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     ImVec2 pos = ImVec2(vp->WorkPos.x + vp->WorkSize.x - 10,  // right - 10px
@@ -176,16 +182,16 @@ void EasyPlayground::ImGUI_PlayerInfoWindow()
         ImGuiWindowFlags_NoSavedSettings);
 
     // ---- Header ----
-    ImGui::Text("Username:   %s", network.session.username.c_str());
-    ImGui::Text("User ID:    %u", network.session.stats.uid);
-    ImGui::Text("Session ID: %u", network.session.sid);
+    ImGui::Text("Username:   %s", network->session.username.c_str());
+    ImGui::Text("User ID:    %u", network->session.stats.uid);
+    ImGui::Text("Session ID: %u", network->session.sid);
     ImGui::Separator();
 
     // ---- Stats ----
-    ImGui::Text("Gold:       %u", network.session.stats.golds);
-    ImGui::Text("Diamond:    %u", network.session.stats.diamonds);
-    ImGui::Text("Game Time:  %.1f hours", network.session.stats.gametime);
-    ImGui::Text("Champions Owned: %d", (int)network.session.stats.champions_owned.size());
+    ImGui::Text("Gold:       %u", network->session.stats.golds);
+    ImGui::Text("Diamond:    %u", network->session.stats.diamonds);
+    ImGui::Text("Game Time:  %.1f hours", network->session.stats.gametime);
+    ImGui::Text("Champions Owned: %d", (int)network->session.stats.champions_owned.size());
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -197,7 +203,7 @@ void EasyPlayground::ImGUI_PlayerInfoWindow()
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.70f, 0.15f, 0.15f, 1));
 
     if (ImGui::Button("Logout", ImVec2(120, 28)))
-        network.Stop();
+        network->Stop();
 
     ImGui::PopStyleColor(3);
     ImGui::End();
@@ -210,11 +216,11 @@ void EasyPlayground::ImGUI_ChampionSelectWindow()
 
 	if (!loaded)
 	{
-		icons.push_back(LoadTextureSTB(GetPath("res/images/champions/1.png").c_str()));
-		icons.push_back(LoadTextureSTB(GetPath("res/images/champions/2.png").c_str()));
-		icons.push_back(LoadTextureSTB(GetPath("res/images/champions/3.png").c_str()));
-		icons.push_back(LoadTextureSTB(GetPath("res/images/champions/4.png").c_str()));
-		icons.push_back(LoadTextureSTB(GetPath("res/images/champions/5.png").c_str()));
+		icons.push_back(LoadTextureSTB(GetRelPath("res/images/champions/1.png").c_str()));
+		icons.push_back(LoadTextureSTB(GetRelPath("res/images/champions/2.png").c_str()));
+		icons.push_back(LoadTextureSTB(GetRelPath("res/images/champions/3.png").c_str()));
+		icons.push_back(LoadTextureSTB(GetRelPath("res/images/champions/4.png").c_str()));
+		icons.push_back(LoadTextureSTB(GetRelPath("res/images/champions/5.png").c_str()));
 		loaded = true;
 	}
 
@@ -241,7 +247,7 @@ void EasyPlayground::ImGUI_ChampionSelectWindow()
         ImGui::Spacing();
         for (int i = 0; i < N; i++)
         {
-            bool owned = std::find(network.session.stats.champions_owned.begin(), network.session.stats.champions_owned.end(),i + 1) != network.session.stats.champions_owned.end();
+            bool owned = std::find(network->session.stats.champions_owned.begin(), network->session.stats.champions_owned.end(),i + 1) != network->session.stats.champions_owned.end();
             ImGui::PushID(i);
             if (!owned)
             {
@@ -266,10 +272,7 @@ void EasyPlayground::ImGUI_ChampionSelectWindow()
 
     if (clicked >= 0)
     {
-        loginStatusText = "Selecting champion...";
-        network.GetSendCache().push_back(new sChampionSelectRequest(clicked));
-        std::cout << "[EasyPlayground] ImGUI_ChampionSelectWindow - Champion select request sent.\n";
-        network.isChampionSelected = true;
+        network->ChampionSelect(clicked + 1);
     }
 }
 
@@ -308,10 +311,10 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 	ImGui::Spacing();
 
 	// Text
-	float textWidth = ImGui::CalcTextSize(loginStatusText.c_str()).x;
+	float textWidth = ImGui::CalcTextSize(network->StatusText().c_str()).x;
 
 	CenterItem(textWidth);
-	ImGui::Text("%s", loginStatusText.c_str());
+	ImGui::Text("%s", network->StatusText().c_str());
 
 	ImGui::Spacing();
 	ImGui::Spacing();
@@ -320,18 +323,18 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 	float btnWidth = 100.0f;
 	CenterItem(btnWidth);
 
-	if (!network.isLoginFailed)
+	if (!network->IsLoginFailed())
 	{
 		if (ImGui::Button("Cancel", ImVec2(btnWidth, 28)))
 		{
-            network.Stop();
+            network->Stop();
 		}
 	}
 	else
 	{
 		if (ImGui::Button("OK", ImVec2(btnWidth, 28)))
 		{
-            network.Stop();
+            network->Stop();
 		}
 	}
 
@@ -398,9 +401,6 @@ void EasyPlayground::ImGUI_BroadcastMessageWindow()
 
 void EasyPlayground::ImGUI_LoginWindow()
 {
-    if (network.isChampionSelect || network.isLoggedIn || network.isBoot)
-        return;
-    
 	ImVec2 winSize = ImVec2(420, 252);
 	ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);
 	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(),
@@ -432,17 +432,17 @@ void EasyPlayground::ImGUI_LoginWindow()
 	ImGui::Spacing();
 
 	// Username
-    network.session.username.resize(USERNAME_LEGTH, '\0');
+    network->session.username.resize(USERNAME_LEGTH, '\0');
 	CenteredText("Username");
 	CenteredItem(240);
-	ImGui::InputText("##username", network.session.username.data(), network.session.username.size());
+	ImGui::InputText("##username", network->session.username.data(), network->session.username.size());
 	ImGui::Spacing();
 
 	// Password
-    network.session.password.resize(PASSWORD_LEGTH, '\0');
+    network->session.password.resize(PASSWORD_LEGTH, '\0');
 	CenteredText("Password");
 	CenteredItem(240);
-	ImGui::InputText("##password", network.session.password.data(), network.session.password.size(), ImGuiInputTextFlags_Password);
+	ImGui::InputText("##password", network->session.password.data(), network->session.password.size(), ImGuiInputTextFlags_Password);
 	ImGui::Spacing();
 
 	// Remember me
@@ -459,11 +459,9 @@ void EasyPlayground::ImGUI_LoginWindow()
 	if (ImGui::Button("Login", ImVec2(btnWidth, 32)))
 	{
 		// Save config on click
-        static std::atomic<bool> loginThreadRunning{};
-		if (!loginThreadRunning)
+		if (!network->IsLoggingIn())
 		{
-			loginThreadRunning = true;
-			loginThread = std::thread([this]() {network.Login(SERVER_URL, loginStatusText, rememberMe, loginThreadRunning); });
+			loginThread = std::thread([this]() {network->Login(SERVER_URL); });
 			loginThread.detach();
 		}
 	}
@@ -471,7 +469,7 @@ void EasyPlayground::ImGUI_LoginWindow()
 	ImGui::End();
 }
 
-void EasyPlayground::ImGUI_InGameWindow()
+void EasyPlayground::ImGUI_DebugWindow()
 {
     ImGui::SetNextWindowPos({ 0,0 });
     ImGui::Begin("ImGUI Settings");
@@ -480,10 +478,6 @@ void EasyPlayground::ImGUI_InGameWindow()
     ImGui::Checkbox("Normals Enabled", &imgui_showNormalLines);
     ImGui::InputFloat("Normal Length", &imgui_showNormalLength);
     ImGui::End();
-
-    ImGUI_PlayerInfoWindow();
-    ImGUI_BroadcastMessageWindow();
-    ImGUI_DrawChatWindow();
 }
 
 void EasyPlayground::ImGUIRender()
@@ -492,36 +486,30 @@ void EasyPlayground::ImGUIRender()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-    if (!network.isAuth && !network.isLoginFailed)
+    if(network->IsInGame())
     {
-        ImGUI_LoginWindow();
-    }
-    else if (network.isAuth && !network.isLoginFailed)
-    {
-        ImGUI_LoginStatusWindow();
-    }
-    else if (!network.isAuth && network.isLoginFailed)
-    {
-        ImGUI_LoginStatusWindow();
-    }
-    else if (network.isInGame)
-    {
-        ImGUI_InGameWindow();
-    }
-    else if(network.isAuth && network.isBoot && network.isLoggedIn && !network.isChampionSelect && !network.isChampionSelected)
-    {
-        ImGUI_ChampionSelectWindow();
+        ImGUI_DebugWindow();
         ImGUI_PlayerInfoWindow();
+        ImGUI_BroadcastMessageWindow();
+        ImGUI_DrawChatWindow();
     }
-    else if(network.isAuth && network.isBoot && network.isLoggedIn && !network.isChampionSelect && network.isChampionSelected)
+    else
     {
-        ImGUI_LoginStatusWindow();
-        ImGUI_PlayerInfoWindow();
+        if (network->IsChampionSelect())
+        {
+            ImGUI_ChampionSelectWindow();
+        }
+        else if (network->IsLoginFailed() || network->IsLoggingIn())
+        {
+            ImGUI_LoginStatusWindow();
+        }
+        else
+        {
+            ImGUI_LoginWindow();
+        }
+        
     }
-    else if(network.isAuth && network.isBoot && network.isLoggedIn && network.isChampionSelected && network.isChampionSelect)
-    {
 
-    }
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
