@@ -5,7 +5,7 @@
 #include <EasyIO.hpp>
 
 class EasyBufferManager;
-class FireServer;
+class GameServer;
 class EasyDisplay;
 struct GLFWwindow;
 class ServerUI : public MouseListener, KeyboardListener {
@@ -22,10 +22,10 @@ public:
 
     EasyBufferManager* bm;
     EasyDisplay* display;
-    FireServer* server;
+    GameServer* server;
     double fps = 0.0, ups = 0.0;
 
-    ServerUI(EasyDisplay* display, EasyBufferManager* bm, FireServer* server);
+    ServerUI(EasyDisplay* display, EasyBufferManager* bm, GameServer* server);
     ~ServerUI();
 
     bool Init();

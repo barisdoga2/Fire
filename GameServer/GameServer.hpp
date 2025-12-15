@@ -7,14 +7,14 @@
 #include "ServerNet.hpp"
 #include <BaseServer.hpp>
 
-class FireServer : public BaseServer, ServerCallback {
+class GameServer : public BaseServer, ServerCallback {
 	std::unordered_map<SessionID_t, FireSession*> sessions;
 	
 	SqLite3 sqlite;
 
 public:
-	FireServer();
-	~FireServer();
+	GameServer();
+	~GameServer();
 
 	bool Start(EasyBufferManager* bm);
 	void Stop(std::string shutdownMessage = "");

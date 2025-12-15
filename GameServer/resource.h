@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by FireServer.rc
+// Used by GameServer.rc
 //
 #define IDI_ICON1                       101
 

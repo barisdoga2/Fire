@@ -24,11 +24,11 @@
 #include <EasyDisplay.hpp>
 
 #include "ServerNet.hpp"
-#include "FireServer.hpp"
+#include "GameServer.hpp"
 #include "ServerUI.hpp"
 
 EasyBufferManager* bm = new EasyBufferManager(50U, 1472U);
-FireServer* server = new FireServer();
+GameServer* server = new GameServer();
 
 bool running{};
 bool stop{};

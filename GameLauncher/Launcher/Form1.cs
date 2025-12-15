@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Windows.Forms;
 
-namespace FireLauncher
+namespace GameLauncher
 {
     public partial class Form1 : Form
     {

@@ -3,10 +3,10 @@
 
 
 
-FireLauncher/bin/*
-FireLauncher/obj/*
-publish/FireLauncher/FireLauncher.exe
-publish/FireLauncher/*.pdb
+GameLauncher/bin/*
+GameLauncher/obj/*
+publish/GameLauncher/GameLauncher.exe
+publish/GameLauncher/*.pdb
 
 
 
@@ -21,10 +21,10 @@ x86/Release/*
 !*/*/libssl-1_1-x64.dll
 
 
-FireClient/x64/Debug/*
-FireClient/x64/Release/*
-FireClient/Debug/*
-FireClient/Release/*
+GameClient/x64/Debug/*
+GameClient/x64/Release/*
+GameClient/Debug/*
+GameClient/Release/*
 
 FireRender/x64/Debug/*
 FireRender/x64/Release/*
@@ -39,10 +39,10 @@ FireNet/Release/*
 
 
 
-FireServer/x64/Debug/*
-FireServer/x64/Release/*
-FireServer/Debug/*
-FireServer/Release/*
-publish/FireServer/*.pdb
+GameServer/x64/Debug/*
+GameServer/x64/Release/*
+GameServer/Debug/*
+GameServer/Release/*
+publish/GameServer/*.pdb
 
 

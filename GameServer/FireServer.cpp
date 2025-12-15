@@ -2,34 +2,34 @@
 #include <sstream>
 #include <random>
 
-#include "FireServer.hpp"
+#include "GameServer.hpp"
 #include "ServerNet.hpp"
 #include <EasySerializer.hpp>
 #include <EasyUtils.hpp>
 
 
 
-FireServer::FireServer() : BaseServer()
+GameServer::GameServer() : BaseServer()
 {
 
 }
 
-FireServer::~FireServer()
+GameServer::~GameServer()
 {
 
 }
 
-bool FireServer::Start(EasyBufferManager* bm)
+bool GameServer::Start(EasyBufferManager* bm)
 {
     return BaseServer::Start(bm, SERVER_PORT, this, FIRE_ENCRYPTION, FIRE_COMPRESSION);
 }
 
-void FireServer::Stop(std::string shutdownMessage)
+void GameServer::Stop(std::string shutdownMessage)
 {
-    BaseServer::Stop();
+    BaseServer::Stop(shutdownMessage);
 }
 
-void FireServer::Update(double dt)
+void GameServer::Update(double dt)
 {
     if (!IsRunning())
         return;
@@ -56,7 +56,7 @@ void FireServer::Update(double dt)
         {
             if (sChampionSelectRequest* championSelectRequest = dynamic_cast<sChampionSelectRequest*>(*objIt); championSelectRequest)
             {
-                std::cout << "[FireServer] Update - Champion select request received, response sent.\n";
+                std::cout << "[GameServer] Update - Champion select request received, response sent.\n";
                 bool response = std::find(fSession->stats.champions_owned.begin(), fSession->stats.champions_owned.end(), championSelectRequest->championID) != fSession->stats.champions_owned.end();
                 std::string message{};
                 if (!response)
@@ -68,7 +68,7 @@ void FireServer::Update(double dt)
                 if (response)
                 {
                     send[recvIt->first].push_back(new sGameBoot(sessions));
-                    std::cout << "[FireServer] Update - Game boot sent.\n";
+                    std::cout << "[GameServer] Update - Game boot sent.\n";
                 }
 
                 fSession->recv = Clock::now();
@@ -77,7 +77,7 @@ void FireServer::Update(double dt)
             }
             else if (sLogoutRequest* logoutRequest = dynamic_cast<sLogoutRequest*>(*objIt); logoutRequest)
             {
-                std::cout << "[FireServer] Update - Logout request received.\n";
+                std::cout << "[GameServer] Update - Logout request received.\n";
                 fSession->logoutRequested = true;
 
                 fSession->recv = Clock::now();
@@ -87,7 +87,7 @@ void FireServer::Update(double dt)
             else if (sHearbeat* heartbeat = dynamic_cast<sHearbeat*>(*objIt); heartbeat)
             {
                 send[fSession->sid].push_back(new sHearbeat());
-                std::cout << "[FireServer] Update - Heartbeat received and sent.\n";
+                std::cout << "[GameServer] Update - Heartbeat received and sent.\n";
 
                 fSession->recv = Clock::now();
                 delete* objIt;
@@ -99,7 +99,7 @@ void FireServer::Update(double dt)
                     if(fs)
                         send[fs->sid].push_back(new sChatMessage(fSession->username, chatMessage->message, Clock::now().time_since_epoch().count()));
 
-                std::cout << "[FireServer] Update - Chat message received and distributed.\n";
+                std::cout << "[GameServer] Update - Chat message received and distributed.\n";
 
                 fSession->recv = Clock::now();
                 delete* objIt;
@@ -107,7 +107,7 @@ void FireServer::Update(double dt)
             }
             else if (sMoveInput* moveInput = dynamic_cast<sMoveInput*>(*objIt); moveInput)
             {
-                std::cout << "[FireServer] Update - Player input received.\n";
+                std::cout << "[GameServer] Update - Player input received.\n";
                 
                 playerInputs[fSession->sid].push_back(moveInput);
 
@@ -165,55 +165,55 @@ void FireServer::Update(double dt)
     }
     for (SessionID_t& sid : sessionsToTimeout)
     {
-        std::cout << "[FireServer] Update - Session timed out.\n";
+        std::cout << "[GameServer] Update - Session timed out.\n";
         DestroySession(sid, "Session timed out.");
     }
 }
 
-void FireServer::BroadcastMessage(std::string broadcastMessage)
+void GameServer::BroadcastMessage(std::string broadcastMessage)
 {
     ServerCache_t& send = GetSendCache();
     for (auto& [sid, fs] : sessions)
         send[sid].push_back(new sBroadcastMessage(broadcastMessage));
 }
 
-bool FireServer::OnServerStart()
+bool GameServer::OnServerStart()
 {
-    std::cout << "[FireServer] OnServerStart - Starting...\n";
+    std::cout << "[GameServer] OnServerStart - Starting...\n";
 
     if (!sqlite.Init(GetRelPath("res/db/fire.db")))
     {
-        std::cout << "[FireServer] OnServerStart - Failed to start. Failed to open database!\n";
+        std::cout << "[GameServer] OnServerStart - Failed to start. Failed to open database!\n";
         return false;
     }
     else
     {
-        std::cout << "[FireServer] OnServerStart - Opened databased.\n";
+        std::cout << "[GameServer] OnServerStart - Opened databased.\n";
     }
-    std::cout << "[FireServer] OnServerStart - Started.\n";
+    std::cout << "[GameServer] OnServerStart - Started.\n";
 
     return true;
 }
 
-void FireServer::OnServerStop(std::string shutdownMessage)
+void GameServer::OnServerStop(std::string shutdownMessage)
 {
-    std::cout << "[FireServer] OnServerStart - Stopping...\n";
+    std::cout << "[GameServer] OnServerStart - Stopping...\n";
 
     ServerCache_t& send = GetSendCache();
     for (auto& [sid, fs] : sessions)
         send[sid].push_back(new sDisconnectResponse(shutdownMessage));
-    FireServer::Update(0.0); // Send
+    GameServer::Update(0.0); // Send
     for (auto& [sid, fs] : sessions)
         delete fs;
     sessions.clear();
 
     sqlite.Close();
-    std::cout << "[FireServer] OnServerStart - Stopped.\n";
+    std::cout << "[GameServer] OnServerStart - Stopped.\n";
 }
 
-bool FireServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
+bool GameServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
 {
-    std::cout << "[FireServer] OnSessionCreate - Creating session.\n";
+    std::cout << "[GameServer] OnSessionCreate - Creating session.\n";
 
     std::string username;
     UserStats stats;
@@ -241,7 +241,7 @@ bool FireServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
                 {
                     if (sLoginRequest* loginRequest = dynamic_cast<sLoginRequest*>(*it); loginRequest)
                     {
-                        std::cout << "[FireServer] OnSessionCreate - Login request received.\n";
+                        std::cout << "[GameServer] OnSessionCreate - Login request received.\n";
                         status = true;
                     }
                     delete* it;
@@ -250,13 +250,13 @@ bool FireServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
             }
             else
             {
-                std::cout << "[FireServer] OnSessionCreate - Expected login request but something else received.\n";
+                std::cout << "[GameServer] OnSessionCreate - Expected login request but something else received.\n";
                 status = false;
             }
         }
         else
         {
-            std::cout << "[FireServer] OnSessionCreate - SELECT from 'sessions' failed.\n";
+            std::cout << "[GameServer] OnSessionCreate - SELECT from 'sessions' failed.\n";
             status = false;
         }
     }
@@ -270,7 +270,7 @@ bool FireServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
         }
         else
         {
-            std::cout << "[FireServer] OnSessionCreate - SELECT from 'users' failed.\n";
+            std::cout << "[GameServer] OnSessionCreate - SELECT from 'users' failed.\n";
             status = false;
         }
     }
@@ -297,17 +297,17 @@ bool FireServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
         }
         else
         {
-            std::cout << "[FireServer] OnSessionCreate - SELECT from 'user_stats' failed.\n";
+            std::cout << "[GameServer] OnSessionCreate - SELECT from 'user_stats' failed.\n";
             status = false;
         }
     }
 
-    std::cout << "[FireServer] OnSessionCreate - Login response sent.\n";
-    GetSendCache()[*base.sid].push_back(new sLoginResponse(status, "FireServer"));
+    std::cout << "[GameServer] OnSessionCreate - Login response sent.\n";
+    GetSendCache()[*base.sid].push_back(new sLoginResponse(status, "GameServer"));
 
     if (status)
     {
-        std::cout << "[FireServer] OnSessionCreate - New Session Created.\n";
+        std::cout << "[GameServer] OnSessionCreate - New Session Created.\n";
 
         auto& send = GetSendCache();
         for (auto& [sid, fs] : sessions)
@@ -317,20 +317,20 @@ bool FireServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
         FireSession* fSession = new FireSession(username, *base.sid, stats.uid, *base.addr, stats, *base.recv);
         sessions[*base.sid] = fSession;
 
-        std::cout << "[FireServer] OnSessionCreate - Player boot info sent.\n";
+        std::cout << "[GameServer] OnSessionCreate - Player boot info sent.\n";
         send[*base.sid].push_back(new sPlayerBootInfo(fSession->uid, fSession->stats.diamonds, fSession->stats.golds, fSession->stats.gametime, fSession->stats.tutorial_done, fSession->stats.champions_owned));
     }
     else
     {
-        std::cout << "[FireServer] OnSessionCreate - Session Create Failed!\n";
+        std::cout << "[GameServer] OnSessionCreate - Session Create Failed!\n";
     }
 
     return status;
 }
 
-void FireServer::OnSessionDestroy(const SessionBase& base, std::string disconnectMessage)
+void GameServer::OnSessionDestroy(const SessionBase& base, std::string disconnectMessage)
 {
-    std::cout << "[FireServer] OnSessionDestroy - Session Destroyed.\n";
+    std::cout << "[GameServer] OnSessionDestroy - Session Destroyed.\n";
 
     SessionID_t sid = *base.sid;
 
@@ -351,18 +351,18 @@ void FireServer::OnSessionDestroy(const SessionBase& base, std::string disconnec
     sessions.erase(sessions.find(sid));
 }
 
-bool FireServer::OnSessionKeyExpiry(const SessionBase& base)
+bool GameServer::OnSessionKeyExpiry(const SessionBase& base)
 {
-    std::cout << "[FireServer] OnSessionKeyExpiry - Session Key Expired.\n";
+    std::cout << "[GameServer] OnSessionKeyExpiry - Session Key Expired.\n";
     
     // ...
 
     return false;
 }
 
-bool FireServer::OnSessionReconnect(const SessionBase& base, const SessionBase& reconnectingBase)
+bool GameServer::OnSessionReconnect(const SessionBase& base, const SessionBase& reconnectingBase)
 {
-    std::cout << "[FireServer] OnSessionReconnect - Session reconnected.\n";
+    std::cout << "[GameServer] OnSessionReconnect - Session reconnected.\n";
 
     SessionID_t sid = *base.sid;
 

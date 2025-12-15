@@ -2,7 +2,7 @@
 
 #include <EasyModel.hpp>
 #include <EasyIO.hpp>
-#include <../FireServer/FireServer.hpp>
+#include <../GameServer/GameServer.hpp>
 
 class Player : public EasyEntity, MouseListener, KeyboardListener {
 public:

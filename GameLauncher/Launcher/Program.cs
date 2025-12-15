@@ -1,4 +1,4 @@
-using FireLauncher;
+using GameLauncher;
 using Microsoft.VisualBasic.ApplicationServices;
 using Microsoft.VisualBasic.Logging;
 using System;
@@ -315,7 +315,7 @@ namespace Fire_Launcher.Launcher
             string exe = exePath.Replace("\\", "\\\\");
             string workDir = Path.GetDirectoryName(exePath)?.Replace("\\", "\\\\") ?? "";
 
-            // ICON = exe’nin kendi ikonu
+            // ICON = exeï¿½nin kendi ikonu
             string icon = exe;
 
             string vbs = $@"

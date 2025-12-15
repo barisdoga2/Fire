@@ -22,7 +22,7 @@
 #include <EasyDisplay.hpp>
 #include <EasySocket.hpp>
 #include <EasyUtils.hpp>
-#include "FireServer.hpp"
+#include "GameServer.hpp"
 
 namespace UISnapshot {
 	struct UISession
@@ -152,7 +152,7 @@ namespace UIConsole {
 	static ImGuiConsoleBuf* gImGuiCoutBuf = nullptr;
 }
 
-ServerUI::ServerUI(EasyDisplay* display, EasyBufferManager* bm, FireServer* server) : display(display), bm(bm), server(server)
+ServerUI::ServerUI(EasyDisplay* display, EasyBufferManager* bm, GameServer* server) : display(display), bm(bm), server(server)
 {
 
 }

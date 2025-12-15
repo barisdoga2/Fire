@@ -1,6 +1,6 @@
 ﻿using Fire_Launcher.Launcher;
 
-namespace FireLauncher
+namespace GameLauncher
 {
     partial class Form1
     {

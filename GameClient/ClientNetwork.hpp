@@ -7,7 +7,7 @@
 #include <EasyBuffer.hpp>
 #include "EasyNet.hpp"
 #include "Config.hpp"
-#include <../FireServer/ServerNet.hpp>
+#include <../GameServer/ServerNet.hpp>
 #include <EasyIpAddress.hpp>
 
 class ClientSession {
