@@ -1,9 +1,10 @@
 #pragma once
 
-#include <EasyModel.hpp>
 #include <EasyIO.hpp>
+#include <EasyEntity.hpp>
 #include <../GameServer/GameServer.hpp>
 
+class EasyModel;
 class Player : public EasyEntity, MouseListener, KeyboardListener {
 public:
 	const bool isMainPlayer;

@@ -1,196 +1,89 @@
-#include <EasyDB.hpp>
-#include "Server.hpp"
-#include "World.hpp"
+/* ########################### TODO ###########################
+*
+* Session Management
+* Addr Checks
+* Session ID Checks
+* Sequence ID Checks
+* Key Expiry
+* Alive Checks
+* EasySerializeable Leak Check
+* Advanced Resource Sharing and Threading
+* Server Graphical UI
+* Handshake/Ack System
+* Packet Loss Handling
+* Ping Measurement System
+* Character Reading/Saving using Database
+* Simple World Share
+* Simple World Sync
+* Simple Movement
+*
+* ########################################################## */
+#include <iostream>
+#include <conio.h>
+#include <chrono>
+#include <EasyDisplay.hpp>
 
+#include "ServerNet.hpp"
+#include "GameServer.hpp"
+#include "ServerUI.hpp"
 
-#include "HeartbeatManager.hpp"
-#include "LoginManager.hpp"
-#include "ChatManager.hpp"
-#include "PlayerManager.hpp"
+EasyBufferManager* bm = new EasyBufferManager(50U, 1472U);
+GameServer* server = new GameServer();
 
-std::vector<TickSession*> lateCreate{};
-std::vector<std::pair<SessionID_t, SessionStatus>> lateDestroy{};
+bool running{};
+bool stop{};
 
-std::unordered_map<SessionManagers, SessionManager*> all_managers{};
-
-TickSession::TickSession(Session* session) : sessionID(session->sessionID), userID(session->userID), addr(session->addr), lastReceive(session->lastReceive), logoutRequested(false)
+#include <windows.h>
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+    ServerUI::ForwardStandartIO();
 
-}
-
-void TickSession::Destroy(ObjCacheType_t& out_cache, SessionStatus status)
-{
-    for (auto& [mid, manager] : this->managers)
-        manager->OnSessionDestroy(out_cache, this, status);
-}
-
-void TickSession::RegisterToManager(ObjCacheType_t& out_cache, SessionManagers sessionManager)
-{
-    this->managers.emplace(sessionManager, all_managers[sessionManager]);
-    all_managers[sessionManager]->OnSessionCreate(out_cache, this);
-}
-
-Server::Server(EasyBufferManager* bf, unsigned short port) : EasyServer(bf, port), world(nullptr)
-{
-
-}
-
-Server::~Server()
-{
-    EasyServer::~EasyServer();
-}
-
-void Server::DoProcess(ObjCacheType_t& in_cache, ObjCacheType_t& out_cache)
-{
-    using Clock = std::chrono::steady_clock;
-    using TimePoint = Clock::time_point;
-
-    // Iterate receive cache
+    if (bool running = server->Start(bm); running)
     {
-        sessionsMutex.lock();
-        for (TickSession* session : lateCreate)
+        if (EasyDisplay display({ 800, 600 }, { 1,2 }); display.Init())
         {
-            session->RegisterToManager(out_cache, LOGIN_MANAGER);
-            sessions[session->sessionID] = session;
-        }
-        lateCreate.clear();
-        for (auto& [sid, disconnectReason] : lateDestroy)
-        {
-            auto res = sessions.find(sid);
-            res->second->Destroy(out_cache, disconnectReason);
-            delete res->second;
-            sessions.erase(res);
-        }
-        lateDestroy.clear();
-
-        auto now = Clock::now();
-        for (auto& [sid, session] : in_cache)
-        {
-            if(auto s = sessions.find(sid); s != sessions.end())
-                s->second->lastReceive = Clock::now();
-        }
-        for (auto& [mid, manager] : all_managers)
-        {
-            manager->Update(in_cache, out_cache, 0.0);
-        }
-
-        sessionsMutex.unlock();
-    }
-
-    // Iterate for timeouts
-    {
-        static TimePoint nextTimeoutCheck = Clock::now() + std::chrono::seconds(1);
-        const TimePoint now = Clock::now();
-
-        static std::vector<TickSession*> destroyCache{};
-        if (now >= nextTimeoutCheck)
-        {
-            if (sessionsMutex.try_lock())
+            if (ServerUI serverUI(&display, bm, server); serverUI.Init())
             {
-                nextTimeoutCheck = now + std::chrono::seconds(1);
-                for (auto& [sid, session] : sessions)
-                {
-                    const bool timeout = std::chrono::duration_cast<std::chrono::milliseconds>(now - session->lastReceive) < std::chrono::milliseconds(TickSession::sessionTimeout);
-                    if (!timeout || session->logoutRequested)
-                    {
-                        if (std::find(destroyCache.begin(), destroyCache.end(), session) == destroyCache.end())
-                            destroyCache.push_back(session);
-                    }
-                }
+                std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+                std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
 
-                sessionsMutex.unlock();
-            }
-            if (destroyCache.size() > 0U)
-            {
-                if (m->sessionsMutex.try_lock())
+                const double fps_constant = 1000.0 / 24.0;
+                const double ups_constant = 1000.0 / 10.0;
+
+                double fps_timer = 0.0;
+                double ups_timer = 0.0;
+
+                while (running)
                 {
-                    for (auto it = destroyCache.begin(); it != destroyCache.end(); )
+                    currentTime = std::chrono::high_resolution_clock::now();
+                    double elapsed_ms = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
+                    lastTime = currentTime;
+
+                    fps_timer += elapsed_ms;
+                    ups_timer += elapsed_ms;
+
+                    if (ups_timer >= ups_constant)
                     {
-                        if (DestroySession_external((*it)->sessionID, (*it)->logoutRequested ? CLIENT_LOGGED_OUT : TIMED_OUT))
-                        {
-                            it = destroyCache.erase(it);
-                        }
-                        else
-                        {
-                            it++;
-                        }
+                        server->Update(ups_timer / 1000.0);
+                        running &= serverUI.Update(ups_timer / 1000.0);
+                        ups_timer = 0.0;
                     }
-                    m->sessionsMutex.unlock();
+
+                    if (fps_timer >= fps_constant)
+                    {
+                        serverUI.StartRender(fps_timer / 1000.0);
+                        running &= serverUI.Render(fps_timer / 1000.0);
+                        serverUI.EndRender();
+                        fps_timer = 0.0;
+                    }
+
+                    running &= !display.ShouldClose();
                 }
             }
         }
     }
-}
 
-bool Server::Start()
-{
-    bool ret = EasyServer::Start();
-    if (ret)
-    {
-        all_managers[LOGIN_MANAGER] = new LoginManager(this);
-        all_managers[HEARTBEAT_MANAGER] = new HeartbeatManager(this);
-        all_managers[CHAT_MANAGER] = new ChatManager(this);
-        all_managers[PLAYER_MANAGER] = new PlayerManager(this);
-    }
-    return ret;
-}
+    server->Stop();
 
-void Server::Tick(double _dt)
-{
-
-}
-
-void Server::OnDestroy()
-{
-    sessionsMutex.lock();
-    for (auto& [sid, session] : sessions)
-        Broadcast({ new sDisconnectResponse("Server shutting down!") });
-    sessionsMutex.unlock();
-	if (world)
-	{
-		delete world;
-		world = nullptr;
-	}
-}
-
-void Server::OnInit()
-{
-	if (!world)
-	{
-		world = new World();
-	}
-}
-
-bool Server::OnSessionCreate(Session* session)
-{
-    sessionsMutex.lock();
-
-    bool status = true;
-    
-    if (status)
-    {
-        TickSession* tSession = new TickSession(session);
-        lateCreate.push_back(tSession);
-        
-        sLoginResponse acceptResponse = sLoginResponse(true, "Server welcomes you!");
-        SendInstantPacket(session, { &acceptResponse });
-
-    }
-
-    sessionsMutex.unlock();
-
-    return status;
-}
-
-void Server::OnSessionDestroy(Session* session, SessionStatus disconnectReason)
-{
-    sessionsMutex.lock();
-
-    lateDestroy.push_back({session->sessionID, disconnectReason});
-
-    sDisconnectResponse disconnectResponse = sDisconnectResponse("Disconnect reason: '" + SessionStatus_Str(disconnectReason) + "'!");
-    SendInstantPacket(session, { &disconnectResponse });
-
-
-    sessionsMutex.unlock();
+    return 0;
 }

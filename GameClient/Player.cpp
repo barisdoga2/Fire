@@ -1,4 +1,5 @@
 #include "Player.hpp"
+#include <EasyModel.hpp>
 #include <EasyAnimator.hpp>
 #include <EasyAnimation.hpp>
 

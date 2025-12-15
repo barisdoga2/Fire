@@ -6,7 +6,8 @@ layout (location = 2) in vec3 normal;
 layout (location = 5) in ivec4 boneIds;
 layout (location = 6) in vec4 weights;
 
-uniform mat4 model;
+uniform mat4 modelTrans;
+uniform mat4 meshTrans;
 uniform mat4 view;
 uniform mat4 proj;
 uniform mat4 boneMatrices[200];
@@ -44,11 +45,11 @@ void main()
         skinnedPos  = vec4(position, 1.0);
         skinnedNorm = normal;
     }
-
-    vec4 worldPos = model * skinnedPos;
+    mat4 finalTrans = modelTrans * meshTrans;
+    vec4 worldPos = finalTrans * skinnedPos;
     pass_worldPos = worldPos.xyz;
 
-    pass_normal = normalize(mat3(model) * skinnedNorm);
+    pass_normal = normalize(mat3(finalTrans) * skinnedNorm);
 
     gl_Position = proj * view * worldPos;
 }

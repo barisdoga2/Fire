@@ -159,10 +159,11 @@
     <ClInclude Include="EasyAnimator.hpp" />
     <ClInclude Include="EasyCamera.hpp" />
     <ClInclude Include="EasyDisplay.hpp" />
+    <ClInclude Include="EasyEntity.hpp" />
     <ClInclude Include="EasyIO.hpp" />
     <ClInclude Include="EasyMaterial.hpp" />
     <ClInclude Include="EasyModel.hpp" />
-    <ClInclude Include="EasyRenderer.hpp" />
+    <ClInclude Include="EasyRender.hpp" />
     <ClInclude Include="EasyShader.hpp" />
     <ClInclude Include="EasyTexture.hpp" />
     <ClInclude Include="EasyUtils.hpp" />
@@ -180,6 +181,7 @@
     <ClCompile Include="EasyAnimator.cpp" />
     <ClCompile Include="EasyCamera.cpp" />
     <ClCompile Include="EasyDisplay.cpp" />
+    <ClCompile Include="EasyEntity.cpp" />
     <ClCompile Include="EasyIO.cpp" />
     <ClCompile Include="EasyMaterial.cpp" />
     <ClCompile Include="EasyModel.cpp" />

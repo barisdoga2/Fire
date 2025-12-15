@@ -2,7 +2,8 @@
 
 #include <EasyNet.hpp>
 #include <EasyIO.hpp>
-#include <EasyRenderer.hpp>
+#include <EasyRender.hpp>
+#include <EasyEntity.hpp>
 #include "ClientNetwork.hpp"
 #include "Player.hpp"
 
@@ -17,7 +18,6 @@ class Chunk;
 class EasyBufferManager;
 class EasyEntity;
 struct GLFWwindow;
-
 class EasyPlayground : public ClientCallback, KeyboardListener, MouseListener {
 private:
 public:

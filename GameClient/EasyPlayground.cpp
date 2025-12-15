@@ -21,7 +21,7 @@
 #include <EasyBuffer.hpp>
 #include <EasyTexture.hpp>
 #include <HDR.hpp>
-#include <EasyRenderer.hpp>
+#include <EasyRender.hpp>
 #include <SkyboxRenderer.hpp>
 #include <ChunkRenderer.hpp>
 #include <ModelRenderer.hpp>
@@ -105,14 +105,6 @@ bool EasyPlayground::Render(double _dt)
 	camera->Update(_dt);
 
 	bool success = true;
-	static bool srcReady{};
-	if (!srcReady && model->LoadToGPU())
-	{
-		for (const auto& kv : model->instances)
-			for (auto& kv2 : kv.second)
-				kv2->scale = glm::vec3(0.0082f); // Y = 1.70m
-		srcReady = true;
-	}
 
 	// Render
 	if (isRender || isTestRender)
@@ -175,6 +167,9 @@ bool EasyPlayground::Update(double _dt)
 		// calculate FPS
 		ups = 1.0 / avgDt;
 	}
+
+	// Try load everything until done
+	static bool srcReady{}; if (!srcReady && model->LoadToGPU()) srcReady = true;
 
 	if(player)
 		player->Update(_dt);

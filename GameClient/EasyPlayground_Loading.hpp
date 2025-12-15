@@ -10,7 +10,7 @@ void EasyPlayground::ReloadAssets()
 			GetRelPath("res/models/Standing Idle on Kachujin G Rosales wo Skin.fbx"),
 			GetRelPath("res/models/Running on Kachujin G Rosales wo Skin.fbx"),
 			GetRelPath("res/models/Standing Aim Idle 01 on Kachujin H Rosales wo Skin.fbx")
-		}
+		}, glm::vec3(0.0082f) // Y = 1.70m
 	);
 
 	if (cube_1x1x1) delete cube_1x1x1;

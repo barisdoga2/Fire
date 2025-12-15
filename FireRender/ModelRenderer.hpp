@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "EasyRenderer.hpp"
+#include "EasyRender.hpp"
 
 
 

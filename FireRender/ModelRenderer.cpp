@@ -9,6 +9,7 @@
 
 #include "EasyUtils.hpp"
 #include "EasyModel.hpp"
+#include "EasyEntity.hpp"
 #include "GL_Ext.hpp"
 
 EasyShader* ModelRenderer::modelShader = nullptr;
@@ -21,7 +22,7 @@ void ModelRenderer::Init(char* modelShaderPtr)
 	modelShader->Start();
 	modelShader->BindAttribs({ "position", "uv", "normal", "tangent", "bitangent", "boneIds", "weights" });
 	modelShader->BindUniforms(GENERAL_UNIFORMS);
-	modelShader->BindUniforms({ "diffuse", "view", "proj", "model", "animated" });
+	modelShader->BindUniforms({ "diffuse", "view", "proj", "modelTrans", "meshTrans", "animated"});
 	modelShader->BindUniformArray("boneMatrices", 200);
 	modelShader->Stop();
 }
@@ -43,6 +44,7 @@ void ModelRenderer::Render(EasyCamera* camera, const std::vector<EasyEntity*>& e
 
 	for (const EasyEntity* entity : entities)
 	{
+		modelShader->LoadUniform("modelTrans", CreateTransformMatrix(entity->transform.position, entity->transform.rotationQuat, entity->transform.scale));
 		if (entity->animator)
 			modelShader->LoadUniform("boneMatrices", entity->animator->GetFinalBoneMatrices());
 
@@ -72,7 +74,7 @@ void ModelRenderer::Render(EasyCamera* camera, const std::vector<EasyEntity*>& e
 
 			for (EasyTransform* t : kv.second)
 			{
-				modelShader->LoadUniform("model", CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
+				modelShader->LoadUniform("meshTrans", CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
 				glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
 			}
 

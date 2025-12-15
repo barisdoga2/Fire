@@ -88,11 +88,11 @@ bool EasyModel::LoadToGPU()
 }
 
 // STATIC
-EasyModel* EasyModel::LoadModel(const std::string& file, const std::vector<std::string> animFiles)
+EasyModel* EasyModel::LoadModel(const std::string& file, const std::vector<std::string> animFiles, glm::vec3 scale)
 {
     EasyModel* model = new EasyModel();
 
-    std::thread([model, file, animFiles]() {
+    std::thread([model, file, animFiles, scale]() {
         std::cout << "[EasyModel] LoadModel - Loading model '" << file << "'\n";
         const aiScene* scene = aiImportFile(file.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
         assert(scene != nullptr);
@@ -109,6 +109,10 @@ EasyModel* EasyModel::LoadModel(const std::string& file, const std::vector<std::
             model->animations.push_back(new EasyAnimation(animScene, animScene->mAnimations[0], model->m_BoneInfoMap, model->m_BoneCounter));
             aiReleaseImport(animScene);
         }
+
+        for (const auto& kv : model->instances)
+            for (auto& kv2 : kv.second)
+                kv2->scale *= scale;
         
         model->isRawDataLoaded.store(true, std::memory_order_release);
     }).detach();
@@ -224,11 +228,11 @@ void EasyModel::ProcessNode(EasyModel* model, const aiNode* node, const aiScene*
         rotationEuler = glm::degrees(glm::eulerAngles(rotation));
         if (found)
         {
-            model->instances[found].push_back(new EasyTransform(position, scale, rotation));
+            model->instances[found].push_back(new EasyTransform(position, rotation, scale));
         }
         else
         {
-            model->instances.insert({ ProcessMesh(model, mesh, scene) , { new EasyTransform(position, scale, rotation) } });
+            model->instances.insert({ ProcessMesh(model, mesh, scene) , { new EasyTransform(position, rotation, scale) } });
         }
     }
     for (unsigned int i = 0; i < node->mNumChildren; i++)
@@ -293,21 +297,3 @@ void EasyModel::ExtractBoneWeightForVertices(EasyModel* model, aiMesh* aiMesh, E
         assert(idx < mesh->vertices.size());
 }
 
-EasyEntity::EasyEntity(EasyModel* model, EasyTransform transform) : model(model), transform(transform)
-{
-    
-}
-
-EasyEntity::EasyEntity(EasyModel* model, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale) : model(model), transform({position,rotation,scale})
-{
-    
-}
-
-bool EasyEntity::Update(double _dt)
-{
-    if (animator)
-        animator->UpdateAnimation(_dt);
-    else if (!animator && model->isRawDataLoadedToGPU && model->animations.size() > 0u)
-        animator = new EasyAnimator(model->animations.at(0));
-    return true;
-}

@@ -1,19 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Game">
-      <UniqueIdentifier>{22a92313-6422-4e98-9dbc-7036df69324c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Etc">
       <UniqueIdentifier>{ec208068-f55c-4a2a-ba78-c1e6edf4f215}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Game\Core">
+    <Filter Include="Client">
+      <UniqueIdentifier>{22a92313-6422-4e98-9dbc-7036df69324c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Core">
       <UniqueIdentifier>{70d922c9-4b62-4f7d-b8bc-934d05a512e4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Game\Scene">
+    <Filter Include="Client\Scene">
       <UniqueIdentifier>{2ba8df1c-9bb2-483d-aecd-9bf9495d419a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Game\Net">
+    <Filter Include="Client\Net">
       <UniqueIdentifier>{d153b6bc-be86-48a3-ab3c-8fbc8072ca6e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -25,13 +25,13 @@
       <Filter>Etc</Filter>
     </ClCompile>
     <ClCompile Include="Player.cpp">
-      <Filter>Game\Core</Filter>
+      <Filter>Client\Core</Filter>
     </ClCompile>
     <ClCompile Include="EasyPlayground.cpp">
-      <Filter>Game\Scene</Filter>
+      <Filter>Client\Scene</Filter>
     </ClCompile>
     <ClCompile Include="ClientNetwork.cpp">
-      <Filter>Game\Net</Filter>
+      <Filter>Client\Net</Filter>
     </ClCompile>
     <ClCompile Include="Client.cpp" />
   </ItemGroup>
@@ -40,22 +40,22 @@
       <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="Player.hpp">
-      <Filter>Game\Core</Filter>
+      <Filter>Client\Core</Filter>
     </ClInclude>
     <ClInclude Include="EasyPlayground.hpp">
-      <Filter>Game\Scene</Filter>
+      <Filter>Client\Scene</Filter>
     </ClInclude>
     <ClInclude Include="EasyPlayground_ImGUI.hpp">
-      <Filter>Game\Scene</Filter>
+      <Filter>Client\Scene</Filter>
     </ClInclude>
     <ClInclude Include="EasyPlayground_Loading.hpp">
-      <Filter>Game\Scene</Filter>
+      <Filter>Client\Scene</Filter>
     </ClInclude>
     <ClInclude Include="EasyPlayground_Network.hpp">
-      <Filter>Game\Scene</Filter>
+      <Filter>Client\Scene</Filter>
     </ClInclude>
     <ClInclude Include="ClientNetwork.hpp">
-      <Filter>Game\Net</Filter>
+      <Filter>Client\Net</Filter>
     </ClInclude>
     <ClInclude Include="Config.hpp">
       <Filter>Etc</Filter>

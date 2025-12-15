@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
-      <Filter>Server</Filter>
-    </ClCompile>
     <ClCompile Include="GameServer.cpp">
       <Filter>Server\Internal</Filter>
     </ClCompile>
@@ -33,6 +30,7 @@
     <ClCompile Include="..\3rd_party\imgui_impl_opengl3.cpp">
       <Filter>Etc</Filter>
     </ClCompile>
+    <ClCompile Include="Server.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ServerNet.hpp">
@@ -55,12 +53,12 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\res\images\GameServer.ico">
+    <Image Include="..\res\images\FireServer.ico">
       <Filter>Etc</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="GameServer.rc">
+    <ResourceCompile Include="FireServer.rc">
       <Filter>Etc</Filter>
     </ResourceCompile>
   </ItemGroup>

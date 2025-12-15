@@ -70,7 +70,6 @@ namespace Fire_Launcher.Launcher
     {
         static Form1? form;
         public static bool fast = true;
-        static UpdateResult updateResult = UpdateResult.IN_PROGRESS;
         public static Dictionary<string, (FileStream Stream, string Md5)> LockedFiles = new Dictionary<string, (FileStream, string)>(StringComparer.OrdinalIgnoreCase);
 
         static async Task<UpdateResult> Update()
@@ -80,10 +79,11 @@ namespace Fire_Launcher.Launcher
             if (content.Length == 0)
                 return UpdateResult.SERVER_ERROR;
 
-            form.progressBar1.Invoke(() =>
-            {
-                form.progressBar1.Value = 25;
-            });
+            if (form != null)
+                form.progressBar1.Invoke(() =>
+                {
+                    form.progressBar1.Value = 25;
+                });
 
             var files = ParseIndexHtml(content);
             if (files.Count == 0)
@@ -93,10 +93,11 @@ namespace Fire_Launcher.Launcher
             if (mismatches.Count == 0)
                 return UpdateResult.DONE;
 
-            form.progressBar1.Invoke(() =>
-            {
-                form.progressBar1.Value = 50;
-            });
+            if (form != null)
+                form.progressBar1.Invoke(() =>
+                {
+                    form.progressBar1.Value = 50;
+                });
 
             var down = await DownloadMismatchedFiles(mismatches, Config.Game, Config.Server + "/" + Config.RemoteDir + "/");
             if (!down)
@@ -106,10 +107,11 @@ namespace Fire_Launcher.Launcher
             if (content.Length == 0)
                 return UpdateResult.SERVER_ERROR;
 
-            form.progressBar1.Invoke(() =>
-            {
-                form.progressBar1.Value = 75;
-            });
+            if (form != null)
+                form.progressBar1.Invoke(() =>
+                {
+                    form.progressBar1.Value = 75;
+                });
 
             files = ParseIndexHtml(content);
             if (files.Count == 0)
@@ -119,10 +121,11 @@ namespace Fire_Launcher.Launcher
             if (mismatches.Count == 0)
                 return UpdateResult.DONE;
 
-            form.progressBar1.Invoke(() =>
-            {
-                form.progressBar1.Value = 100;
-            });
+            if (form != null)
+                form.progressBar1.Invoke(() =>
+                {
+                    form.progressBar1.Value = 100;
+                });
 
             return UpdateResult.SERVER_ERROR;
         }
@@ -227,10 +230,11 @@ namespace Fire_Launcher.Launcher
 
                 int percent = (int)(read * 100 / total);
 
-                form.progressBar.Invoke(() =>
-                {
-                    form.progressBar.Value = percent;
-                });
+                if(form != null)
+                    form.progressBar.Invoke(() =>
+                    {
+                        form.progressBar.Value = percent;
+                    });
             }
 
             if (!fast)
@@ -344,7 +348,7 @@ oLink.Save
             if (!System.IO.File.Exists(filePath))
                 return (false, "");
 
-            FileStream fs = null;
+            FileStream? fs = null;
 
             try
             {

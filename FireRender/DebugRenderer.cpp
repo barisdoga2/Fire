@@ -8,6 +8,7 @@
 
 #include "EasyUtils.hpp"
 #include "EasyModel.hpp"
+#include "EasyEntity.hpp"
 #include "GL_Ext.hpp"
 
 EasyShader* DebugRenderer::debugShader = nullptr;

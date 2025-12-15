@@ -7,6 +7,7 @@
 
 #include <glad/glad.h>
 
+#include "EasyRender.hpp"
 #include "EasyUtils.hpp"
 
 
@@ -18,22 +19,6 @@ class EasyTexture;
 class EasyAnimation;
 class EasyAnimator;
 
-class EasyTransform {
-public:
-    glm::vec3 position = glm::vec3(0, 0, 0);
-    glm::vec3 scale = glm::vec3(1, 1, 1);
-    glm::vec3 rotation = glm::vec3(0, 0, 0);
-    glm::quat rotationQuat = glm::quat(1, 0, 0, 0);
-    EasyTransform(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation) : position(position), scale(scale), rotation(rotation)
-    {
-    }
-    EasyTransform(glm::vec3 position, glm::vec3 scale, glm::quat rotationQuat) : position(position), scale(scale), rotationQuat(rotationQuat)
-    {
-    }
-    EasyTransform()
-    {
-    }
-};
 
 class EasyModel {
 public:
@@ -59,7 +44,7 @@ public:
     std::unordered_map<EasyMesh*, std::vector<EasyTransform*>> instances;
     bool LoadToGPU();
 
-    static EasyModel* LoadModel(const std::string& file, const std::vector<std::string> animFiles = {});
+    static EasyModel* LoadModel(const std::string& file, const std::vector<std::string> animFiles = {}, glm::vec3 scale = glm::vec3(1,1,1));
 
 private:
     EasyModel();
@@ -69,16 +54,3 @@ private:
     static void ExtractBoneWeightForVertices(EasyModel* model, aiMesh* aiMesh, EasyMesh* mesh, const aiScene* scene);
 };
 
-class EasyEntity {
-public:
-    EasyModel* model;
-    EasyAnimator* animator{};
-
-    EasyTransform transform;
-
-    EasyEntity(EasyModel* model, EasyTransform transform = {});
-    EasyEntity(EasyModel* model,glm::vec3 position, glm::vec3 rotation = glm::vec3(0.f), glm::vec3 scale = glm::vec3(1.f));
-
-    virtual bool Update(double _dt);
-
-};
