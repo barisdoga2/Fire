@@ -54,7 +54,7 @@ bool EasyTexture::LoadToGPU()
 {
     if (isDataReady.load() && !isReady)
     {
-        std::cout << "Loading texture '" << path << "'\n";
+        std::cout << "[EasyShader] AttachShader - Loading texture '" << path << "'\n";
 
         glGenTextures(1, &textureID);
         glBindTexture(GL_TEXTURE_2D, textureID);

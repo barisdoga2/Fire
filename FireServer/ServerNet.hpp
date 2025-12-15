@@ -29,17 +29,19 @@
 #define DISCONNECT_RESPONSE                                     ((PacketID_t)(103U))
 #define HEARTBEAT                                               ((PacketID_t)(104U))
 #define BROADCAST_MESSAGE                                       ((PacketID_t)(105U))
+
 #define CHAMPION_SELECT_REQUEST                                 ((PacketID_t)(200U))
 #define CHAMPION_BUY_REQUEST                                    ((PacketID_t)(201U))
 #define CHAMPION_SELECT_RESPONSE                                ((PacketID_t)(202U))
 #define CHAMPION_BUY_RESPONSE                                   ((PacketID_t)(203U))
 #define PLAYER_BOOT_INFO                                        ((PacketID_t)(204U))
 #define CHAT_MESSAGE                                            ((PacketID_t)(205U))
-#define PLAYER_MOVEMENT                                         ((PacketID_t)(206U))
-#define PLAYER_MOVEMENT_PACK                                    ((PacketID_t)(207U))
-#define GAME_BOOT                                               ((PacketID_t)(208U))
+#define GAME_BOOT                                               ((PacketID_t)(206U))
 
-
+#define MOVE_INPUT                                              ((PacketID_t)(300U))
+#define PLAYER_STATE                                            ((PacketID_t)(301U))
+#define WORLD_STATE                                             ((PacketID_t)(302U))
+#define PLAYER_INFO                                             ((PacketID_t)(303U))
 
 class UserStats {
 public:
@@ -49,6 +51,29 @@ public:
     unsigned int diamonds{};
     bool tutorial_done{};
     std::vector<unsigned int> champions_owned{};
+};
+
+class FireSession {
+public:
+    std::string username;
+    SessionID_t sid;
+    UserID_t uid;
+    Addr_t addr;
+    UserStats stats;
+    Timestamp_t recv;
+
+    glm::vec3 position{};
+    glm::vec3 velocity{};
+    uint64_t lastInputSequence{};
+    unsigned long long serverTimestamp{};
+
+    bool logoutRequested{};
+
+    FireSession(std::string username, SessionID_t sid, UserID_t uid, Addr_t addr, UserStats stats, Timestamp_t recv) : username(username), sid(sid), uid(uid), addr(addr), stats(stats), recv(recv), logoutRequested(false)
+    {
+
+    }
+
 };
 
 class sLogoutRequest : public EasySerializeable {
@@ -361,82 +386,115 @@ public:
 };
 REGISTER_PACKET(sChatMessage, CHAT_MESSAGE);
 
-class sPlayerMovement : public EasySerializeable {
+class sMoveInput : public EasySerializeable
+{
 public:
-    UserID_t userID;
+    UserID_t  uid{};
+    SequenceID_t  inputSeq{};
+    uint32_t  dtMs{};
+    glm::vec3 moveDir{};;
+    uint64_t  clientTimeMs{};
+
+    sMoveInput() : EasySerializeable(static_cast<PacketID_t>(MOVE_INPUT))
+    {
+
+    }
+
+    sMoveInput(UserID_t uid_, SequenceID_t seq_, uint32_t dtMs_, glm::vec3 dir_, uint64_t ctm_) : EasySerializeable(static_cast<PacketID_t>(MOVE_INPUT)), uid(uid_), inputSeq(seq_), dtMs(dtMs_), moveDir(dir_), clientTimeMs(ctm_)
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(uid);
+        ser->Put(inputSeq);
+        ser->Put(dtMs);
+        ser->Put(moveDir);
+        ser->Put(clientTimeMs);
+    }
+};
+REGISTER_PACKET(sMoveInput, MOVE_INPUT);
+
+class sPlayerState : public EasySerializeable {
+public:
+    UserID_t uid;
     glm::vec3 position;
-    glm::vec3 rotation;
-    glm::vec3 direction;
-    unsigned long long timestamp;
+    glm::vec3 velocity;
+    uint64_t lastInputSequence;
+    unsigned long long serverTimestamp;
 
-    sPlayerMovement() : userID(), position(), rotation(), direction(), timestamp(), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT))
+    sPlayerState() : uid(), position(), velocity(), lastInputSequence(), serverTimestamp(), EasySerializeable(static_cast<PacketID_t>(PLAYER_STATE))
     {
 
     }
 
-    sPlayerMovement(const sPlayerMovement& playerMovement) : userID(playerMovement.userID), position(playerMovement.position), rotation(playerMovement.rotation), direction(playerMovement.direction), timestamp(playerMovement.timestamp), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT))
+    sPlayerState(UserID_t uid, glm::vec3 position, glm::vec3 velocity, uint64_t lastInputSequence, unsigned long long serverTimestamp) : uid(uid), position(position), velocity(velocity), lastInputSequence(lastInputSequence), serverTimestamp(serverTimestamp), EasySerializeable(static_cast<PacketID_t>(PLAYER_STATE))
     {
 
     }
 
-    sPlayerMovement(UserID_t userID, glm::vec3 position, glm::vec3 rotation, glm::vec3 direction, unsigned long long timestamp) : userID(userID), position(position), rotation(rotation), direction(direction), timestamp(timestamp), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT))
+    ~sPlayerState()
     {
 
-    }
-
-    ~sPlayerMovement()
-    {
-        
     }
 
     void Serialize(EasySerializer* ser) override
     {
-        ser->Put(userID);
+        ser->Put(uid);
         ser->Put(position);
-        ser->Put(rotation);
-        ser->Put(direction);
-        ser->Put(timestamp);
+        ser->Put(velocity);
+        ser->Put(lastInputSequence);
+        ser->Put(serverTimestamp);
     }
 };
-REGISTER_PACKET(sPlayerMovement, PLAYER_MOVEMENT);
+REGISTER_PACKET(sPlayerState, PLAYER_STATE);
 
-class sPlayerMovementPack : public EasySerializeable {
+class sPlayerInfo : public EasySerializeable {
 public:
-    std::vector<sPlayerMovement> movements;
+    UserID_t uid;
+    std::string username;
 
-    sPlayerMovementPack() : movements(), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT_PACK))
+    sPlayerInfo() : uid(), username(), EasySerializeable(static_cast<PacketID_t>(PLAYER_INFO))
     {
 
     }
 
-    sPlayerMovementPack(const sPlayerMovementPack& playerMovementPack) : movements(playerMovementPack.movements), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT_PACK))
+    sPlayerInfo(UserID_t uid, std::string username) : uid(uid), username(username), EasySerializeable(static_cast<PacketID_t>(PLAYER_INFO))
     {
 
     }
 
-    sPlayerMovementPack(const std::vector<sPlayerMovement>& movements) : movements(movements), EasySerializeable(static_cast<PacketID_t>(PLAYER_MOVEMENT_PACK))
+    ~sPlayerInfo()
     {
 
-    }
-
-    ~sPlayerMovementPack()
-    {
-        
     }
 
     void Serialize(EasySerializer* ser) override
     {
-        ser->Put(movements);
+        ser->Put(uid);
+        ser->Put(username);
     }
 };
-REGISTER_PACKET(sPlayerMovementPack, PLAYER_MOVEMENT_PACK);
+REGISTER_PACKET(sPlayerInfo, PLAYER_INFO);
 
 class sGameBoot : public EasySerializeable {
 public:
+    std::vector<sPlayerInfo> playerInfo;
+    std::vector<sPlayerState> playerState;
 
-    sGameBoot() : EasySerializeable(static_cast<PacketID_t>(GAME_BOOT))
+    sGameBoot() : playerInfo(), playerState(), EasySerializeable(static_cast<PacketID_t>(GAME_BOOT))
     {
 
+    }
+
+    sGameBoot(const std::unordered_map<SessionID_t, FireSession*> sessions) : playerInfo(), playerState(), EasySerializeable(static_cast<PacketID_t>(GAME_BOOT))
+    {
+        for (auto& [sid, fs] : sessions)
+        {
+            playerInfo.emplace_back(fs->stats.uid, fs->username);
+            playerState.emplace_back(fs->stats.uid, fs->position, fs->velocity, fs->lastInputSequence, fs->serverTimestamp);
+        }
     }
 
     ~sGameBoot()
@@ -446,7 +504,32 @@ public:
 
     void Serialize(EasySerializer* ser) override
     {
-        
+        ser->Put(playerInfo);
+        ser->Put(playerState);
     }
 };
 REGISTER_PACKET(sGameBoot, GAME_BOOT);
+
+class sWorldState : public EasySerializeable {
+public:
+    std::vector<sPlayerState> playerState;
+
+    sWorldState() : playerState(), EasySerializeable(static_cast<PacketID_t>(WORLD_STATE))
+    {
+
+    }
+
+    sWorldState(const std::unordered_map<SessionID_t, FireSession*> sessions) : playerState(), EasySerializeable(static_cast<PacketID_t>(WORLD_STATE))
+    {
+        for (auto& [sid, fs] : sessions)
+        {
+            playerState.emplace_back(fs->stats.uid, fs->position, fs->velocity, fs->lastInputSequence, fs->serverTimestamp);
+        }
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(playerState);
+    }
+};
+REGISTER_PACKET(sWorldState, WORLD_STATE);

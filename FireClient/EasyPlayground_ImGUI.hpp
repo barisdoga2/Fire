@@ -1,22 +1,4 @@
-#include "pch.h"
-
-#include "EasyPlayground.hpp"
-
-#include <EasyUtils.hpp>
-#include <EasySerializer.hpp>
-#include "../FireServer/ServerNet.hpp"
-#include <EasySocket.hpp>
-#include <imgui.h>
-#include <imgui_internal.h>
-#include "../3rd_party/imgui_impl_opengl3.h"
-#include "../3rd_party/imgui_impl_glfw.h"
-#include <glad/glad.h>
-#include <stb_image.h>
-#include <string>
-#include <chrono>
-
-#include "ClientNetwork.hpp"
-
+﻿
 static bool isConsoleWindow = true;
 
 namespace UIConsole {
@@ -187,7 +169,48 @@ public:
                 ++it;
         }
     }
+
+    static void Clear()
+    {
+        for (auto it = messages.begin(); it != messages.end(); )
+        {
+            it = messages.erase(it);
+        }
+    }
 };
+
+void EasyPlayground::ImGUI_Init()
+{
+    const char* glsl_version = "#version 130";
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+
+    ImVector<ImWchar> ranges;
+    ImFontGlyphRangesBuilder builder;
+    builder.AddText(u8"ğĞşŞıİüÜöÖçÇ");
+    builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+    builder.BuildRanges(&ranges);
+    io.Fonts->AddFontFromFileTTF(GetRelPath("res/fonts/Arial.ttf").c_str(), 14.f, 0, ranges.Data);
+    io.Fonts->Build();
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(display->window, false);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    char usernameArr[16] = "";
+    char passwordArr[32] = "";
+    LoadConfig(rememberMe, usernameArr, passwordArr);
+    network->session.username = usernameArr;
+    network->session.password = passwordArr;
+}
 
 void EasyPlayground::ImGUI_DrawConsoleWindow()
 {
@@ -665,8 +688,20 @@ void EasyPlayground::ImGUI_DebugWindow()
     ImGui::End();
 }
 
+void EasyPlayground::ImGUI_TestRender()
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 
-void EasyPlayground::ImGUIRender()
+    ImGUI_DebugWindow();
+    ImGUI_DrawConsoleWindow();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void EasyPlayground::ImGUI_Render()
 {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();

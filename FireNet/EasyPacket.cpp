@@ -110,13 +110,13 @@ bool EasyPacket::MakeEncrypted(const CryptData& crypt, EasyBuffer* buffer)
         }
         else
         {
-            std::cout << "Error MakeDecrypted SizeCheck: " << (buffer->m_payload_size > 0U) << "\n";
+            std::cout << "[EasyPacket] MakeEncrypted - SizeCheck: " << (buffer->m_payload_size > 0U) << "\n";
             ret = false;
         }
     }
     catch (...)
     {
-        std::cout << "Error MakeEncrypted Exception!\n";
+        std::cout << "[EasyPacket] MakeEncrypted - Exception!\n";
         ret = false;
     }
 #endif
@@ -162,19 +162,19 @@ bool EasyPacket::MakeDecrypted(const CryptData& crypt, EasyBuffer* buffer)
             }
             else
             {
-                std::cout << "Error MakeDecrypted SequenceInCheck: " /*<< (crypt.sequence_id_in <= *(SequenceID()))*/ << "\n";
+                std::cout << "[EasyPacket] MakeDecrypted - SequenceInCheck: " /*<< (crypt.sequence_id_in <= *(SequenceID()))*/ << "\n";
                 ret = false;
             }
         }
         else
         {
-            std::cout << "Error MakeDecrypted SessionCheck: " << ((*source.SessionID() == crypt.session_id)) << ", SizeCheck: " << (buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE) << "\n";
+            std::cout << "[EasyPacket] MakeDecrypted - SessionCheck: " << ((*source.SessionID() == crypt.session_id)) << ", SizeCheck: " << (buffer->m_payload_size > sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + TAG_SIZE) << "\n";
             ret = false;
         }
     }
     catch (Exception e)
     {
-        std::cout << "Error MakeDecrypted Exception!\n";
+        std::cout << "[EasyPacket] MakeDecrypted - Exception!\n";
         ret = false;
     }
 #endif
@@ -207,7 +207,7 @@ bool EasyPacket::MakeCompressed(EasyBuffer* in, EasyBuffer* out)
     }
     else
     {
-        std::cerr << "Error BZ2Compress | Compression failed: " << result << "\n";
+        std::cout << "[EasyPacket] MakeCompressed - BZ2 compression failed: " << result << "\n";
     }
 #endif
     return ret;
@@ -240,7 +240,7 @@ bool EasyPacket::MakeDecompressed(EasyBuffer* in, EasyBuffer* out)
     }
     else
     {
-        std::cerr << "Error BZ2Decompress | Decompression failed: " << result << "\n";
+        std::cout << "[EasyPacket] MakeDecompressed - BZ2 decompression failed: " << result << "\n";
     }
 #endif
     return ret;

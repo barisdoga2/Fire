@@ -21,7 +21,7 @@ bool EasyModel::EasyMesh::LoadToGPU()
 {
     if (vao == 0U)
     {
-        std::cout << "Loading mesh '" << name << "'\n";
+        std::cout << "[EasyMesh] LoadToGPU - Loading mesh '" << name << "'\n";
 
         glGenVertexArrays(1, &vao);
         glGenBuffers(1, &vbo);
@@ -73,18 +73,6 @@ EasyModel::EasyModel()
 
 }
 
-bool EasyModel::Update(double _dt, bool mb1_pressed)
-{
-    if (animator)
-    {
-        EasyAnimation* runAnim = animations.at(1);   // running anim
-        EasyAnimation* aimAnim = animations.at(2);   // aiming anim
-        animator->UpdateLayered(runAnim, aimAnim, mb1_pressed, _dt);
-    }
-
-    return true;
-}
-
 bool EasyModel::LoadToGPU()
 {
     bool loaded = true;
@@ -105,7 +93,7 @@ EasyModel* EasyModel::LoadModel(const std::string& file, const std::vector<std::
     EasyModel* model = new EasyModel();
 
     std::thread([model, file, animFiles]() {
-        std::cout << "Loading file '" << file << "'\n";
+        std::cout << "[EasyModel] LoadModel - Loading model '" << file << "'\n";
         const aiScene* scene = aiImportFile(file.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
         assert(scene != nullptr);
 
@@ -115,15 +103,13 @@ EasyModel* EasyModel::LoadModel(const std::string& file, const std::vector<std::
 
         for (const std::string& anfile : animFiles)
         {
-            std::cout << "Loading animation '" << anfile << "'\n";
+            std::cout << "[EasyModel] LoadModel - Loading animation '" << anfile << "'\n";
             const aiScene* animScene = aiImportFile(anfile.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
             assert(animScene != nullptr && animScene->mNumAnimations == 1);
             model->animations.push_back(new EasyAnimation(animScene, animScene->mAnimations[0], model->m_BoneInfoMap, model->m_BoneCounter));
             aiReleaseImport(animScene);
         }
-        if (model->animations.size() > 0u)
-            model->animator = new EasyAnimator(model->animations.at(1));
-
+        
         model->isRawDataLoaded.store(true, std::memory_order_release);
     }).detach();
 
@@ -165,7 +151,7 @@ EasyModel::EasyMesh* EasyModel::ProcessMesh(EasyModel* model, aiMesh* aiMesh, co
     EasyMesh* mesh = new EasyMesh();
 
     mesh->name = aiMesh->mName.C_Str();
-    std::cout << "Processing mesh '" << mesh->name << "'\n";
+    std::cout << "[EasyModel] ProcessMesh - Processing mesh '" << mesh->name << "'\n";
 
     mesh->vertices.reserve(aiMesh->mNumVertices);
     for (size_t v = 0; v < aiMesh->mNumVertices; v++)
@@ -238,11 +224,11 @@ void EasyModel::ProcessNode(EasyModel* model, const aiNode* node, const aiScene*
         rotationEuler = glm::degrees(glm::eulerAngles(rotation));
         if (found)
         {
-            model->instances[found].push_back(new EasyModel::EasyTransform(position, scale, rotation));
+            model->instances[found].push_back(new EasyTransform(position, scale, rotation));
         }
         else
         {
-            model->instances.insert({ ProcessMesh(model, mesh, scene) , { new EasyModel::EasyTransform(position, scale, rotation) } });
+            model->instances.insert({ ProcessMesh(model, mesh, scene) , { new EasyTransform(position, scale, rotation) } });
         }
     }
     for (unsigned int i = 0; i < node->mNumChildren; i++)
@@ -305,4 +291,23 @@ void EasyModel::ExtractBoneWeightForVertices(EasyModel* model, aiMesh* aiMesh, E
 
     for (auto idx : mesh->indices)
         assert(idx < mesh->vertices.size());
+}
+
+EasyEntity::EasyEntity(EasyModel* model, EasyTransform transform) : model(model), transform(transform)
+{
+    
+}
+
+EasyEntity::EasyEntity(EasyModel* model, uint32_t uid, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale) : model(model), uid(uid), transform({position,rotation,scale})
+{
+    
+}
+
+bool EasyEntity::Update(double _dt, bool mb1_pressed)
+{
+    if (animator)
+        animator->UpdateAnimation(_dt);
+    else if (!animator && model->isRawDataLoadedToGPU && model->animations.size() > 0u)
+        animator = new EasyAnimator(model->animations.at(0));
+    return true;
 }

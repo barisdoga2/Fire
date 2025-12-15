@@ -26,6 +26,12 @@ void SkyboxRenderer::Init(char* skyboxShaderPtr)
 	}
 }
 
+void SkyboxRenderer::DeInit()
+{
+	if (skyboxShader) delete skyboxShader;
+	skyboxShader = nullptr;
+}
+
 void SkyboxRenderer::Render(EasyCamera* camera)
 {
 	const glm::mat4x4 proj = glm::perspective(glm::radians(camera->fov), camera->aspect, camera->near, 1250.0f);

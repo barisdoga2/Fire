@@ -18,6 +18,8 @@ public:
 
     EasyShader(const std::string& name);
     EasyShader(const char* VSs, const char* FSs, const char* GSs = nullptr);
+    ~EasyShader();
+
     void Start();
     void Stop();
 

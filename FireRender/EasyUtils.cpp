@@ -295,13 +295,13 @@ void CreateMiniDump(EXCEPTION_POINTERS* e)
         );
 
         CloseHandle(hFile);
-        std::cout << "Crash dump written: " << filename << std::endl;
+        std::cout << "[EasyUtils] CreateMiniDump - Crash dump written: " << filename << std::endl;
     }
 }
 
 LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* e)
 {
-    std::cerr << "Unhandled exception caught! Creating dump...\n";
+    std::cout << "[EasyUtils] ExceptionHandler - Unhandled exception caught! Creating dump...\n";
     CreateMiniDump(e);
     return EXCEPTION_EXECUTE_HANDLER;
 }

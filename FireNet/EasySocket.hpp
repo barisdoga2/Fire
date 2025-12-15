@@ -84,7 +84,7 @@ public:
 	static std::string AddrToString(const Addr_t& addr);
 
 private:
-	void create();
+	void Create();
 
 	void close();
 

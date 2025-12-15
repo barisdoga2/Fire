@@ -26,31 +26,16 @@
 #include <ChunkRenderer.hpp>
 #include <GL_Ext.hpp>
 
-#include "ClientNetwork.hpp"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
 #include "EasyPlayground_ImGUI.hpp"
+#include "EasyPlayground_Network.hpp"
+#include "EasyPlayground_Loading.hpp"
 
-EasyPlayground::EasyPlayground(EasyDisplay* display, EasyBufferManager* bm) : display(display), bm(bm), network(new ClientNetwork(bm))
+EasyPlayground::EasyPlayground(EasyDisplay* display, EasyBufferManager* bm) : display(display), bm(bm), network(new ClientNetwork(bm, this))
 {
-	model = EasyModel::LoadModel(
-		GetRelPath("res/models/Kachujin G Rosales Skin.fbx"), 
-		{ 
-			GetRelPath("res/models/Standing Idle on Kachujin G Rosales wo Skin.fbx"), 
-			GetRelPath("res/models/Running on Kachujin G Rosales wo Skin.fbx"),
-			GetRelPath("res/models/Standing Aim Idle 01 on Kachujin H Rosales wo Skin.fbx") 
-		}
-	);
-
-	cube_1x1x1 = EasyModel::LoadModel(GetRelPath("res/models/1x1cube.dae"));
-	items = EasyModel::LoadModel(GetRelPath("res/models/items.dae"));
-	buildings = EasyModel::LoadModel(GetRelPath("res/models/Buildings.dae"));
-	walls = EasyModel::LoadModel(GetRelPath("res/models/Walls.dae"));
-
-	shader = new EasyShader("model");
-	normalLinesShader = new EasyShader("NormalLines");
-	camera = new EasyCamera(display, { 1,4.4,5.8 }, { 1 - 0.15, 4.4 - 0.44,5.8 - 0.895 }, 74.f, 0.01f, 1000.f);
+	
 }
 
 EasyPlayground::~EasyPlayground()
@@ -63,6 +48,22 @@ EasyPlayground::~EasyPlayground()
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
 	}
+
+	delete shader;
+	delete normalLinesShader;
+	delete camera;
+	delete hdr;
+	delete network;
+	delete model;
+	delete cube_1x1x1;
+	delete buildings;
+	delete walls;
+	for (auto& c : chunks)
+		delete c;
+
+	HDR::DeInit();
+	SkyboxRenderer::DeInit();
+	ChunkRenderer::DeInit();
 }
 
 bool EasyPlayground::Init()
@@ -77,76 +78,29 @@ bool EasyPlayground::Init()
 		glfwSetCharCallback(display->window, [](GLFWwindow* w, unsigned int x) { instance->char_callback(w, x); });
 	}
 
-	// Asset
+	// Assets
 	{
-		mapObjects.push_back(walls);
+		ReloadAssets();
 	}
 
-	// Shader
+	// Shaders
 	{
 		ReloadShaders();
-
-		//EasyMaterial* back = new EasyMaterial("terrainGrass");
-		//EasyMaterial* r = new EasyMaterial("terrainMud");
-		//EasyMaterial* g = new EasyMaterial("terrainPath");
-		//EasyMaterial* b = new EasyMaterial("terrainBrick");
-
-		//std::vector<char> blend, height;
-		//LoadFileBinary(GetRelPath("res/images/blend.png"), &blend);
-		//LoadFileBinary(GetRelPath("res/images/height.png"), &height);
-
-
-		ReGenerateMap();
 	}
 
 	// ImGUI
 	{
-		const char* glsl_version = "#version 130";
-
-		// Setup Dear ImGui context
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-
-		ImVector<ImWchar> ranges;
-		ImFontGlyphRangesBuilder builder;
-		builder.AddText(u8"ğĞşŞıİüÜöÖçÇ");
-		builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
-		builder.BuildRanges(&ranges);
-		io.Fonts->AddFontFromFileTTF(GetRelPath("res/fonts/Arial.ttf").c_str(), 14.f, 0, ranges.Data);
-		io.Fonts->Build();
-
-		// Setup Dear ImGui style
-		ImGui::StyleColorsDark();
-		//ImGui::StyleColorsLight();
-
-		// Setup Platform/Renderer backends
-		ImGui_ImplGlfw_InitForOpenGL(display->window, false);
-		ImGui_ImplOpenGL3_Init(glsl_version);
+		ImGUI_Init();
 	}
-
-	char usernameArr[16] = "";
-	char passwordArr[32] = "";
-	LoadConfig(rememberMe, usernameArr, passwordArr);
-	network->session.username = usernameArr;
-	network->session.password = passwordArr;
 
 	return true;
 }
 
 bool EasyPlayground::Render(double _dt)
 {
-	//if (model->animator)
-	//	model->animator->BlendTo(model->animations.at(animation ? 1 : 0), 1.0);
-
-	model->Update(_dt, mb1_pressed);
-	cube_1x1x1->Update(_dt);
-
 	camera->Update(_dt);
 
 	bool success = true;
-
 	static bool srcReady{};
 	if (!srcReady && model->LoadToGPU())
 	{
@@ -157,360 +111,196 @@ bool EasyPlayground::Render(double _dt)
 	}
 
 	// Render
-	if (isRender)
+	if (isRender || isTestRender)
 	{
+		std::vector<EasyModel*> objs = { walls };
+
+
+		// Skybox
+		SkyboxRenderer::Render(camera);
+
+		// Normal Lines
+		if (imgui_showNormalLines)
 		{
-			std::vector<EasyModel*> objs = { model };
-			objs.insert(objs.end(), mapObjects.begin(), mapObjects.end());
+			normalLinesShader->Start();
 
-			SkyboxRenderer::Render(camera);
+			normalLinesShader->LoadUniform("view", camera->view_);
+			normalLinesShader->LoadUniform("proj", camera->projection_);
+			normalLinesShader->LoadUniform("normalLength", imgui_showNormalLength);
 
-			if (imgui_showNormalLines)
+			// Objects
+			for (EasyModel* model : objs)
 			{
-				normalLinesShader->Start();
-
-				normalLinesShader->LoadUniform("view", camera->view_);
-				normalLinesShader->LoadUniform("proj", camera->projection_);
-				normalLinesShader->LoadUniform("normalLength", imgui_showNormalLength);
-
-				for (EasyModel* model : objs)
+				for (const auto& kv : model->instances)
 				{
-					for (const auto& kv : model->instances)
+					EasyModel::EasyMesh* mesh = kv.first;
+
+					if (!mesh->LoadToGPU())
+						continue;
+
+					GL(BindVertexArray(mesh->vao));
+					GL(EnableVertexAttribArray(0));
+					GL(EnableVertexAttribArray(2));
+
+					for (EasyTransform* t : kv.second)
 					{
-						EasyModel::EasyMesh* mesh = kv.first;
+						normalLinesShader->LoadUniform("model",
+							CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
 
-						if (!mesh->LoadToGPU())
-							continue;
-
-						GL(BindVertexArray(mesh->vao));
-						GL(EnableVertexAttribArray(0));
-						GL(EnableVertexAttribArray(2));
-
-						for (EasyModel::EasyTransform* t : kv.second)
-						{
-							normalLinesShader->LoadUniform("model",
-								CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
-
-							glDrawElements(GL_TRIANGLES,
-								static_cast<unsigned int>(mesh->indices.size()),
-								GL_UNSIGNED_INT, 0);
-						}
-
-						GL(DisableVertexAttribArray(2));
-						GL(DisableVertexAttribArray(0));
-						GL(BindVertexArray(0));
+						glDrawElements(GL_TRIANGLES,
+							static_cast<unsigned int>(mesh->indices.size()),
+							GL_UNSIGNED_INT, 0);
 					}
+
+					GL(DisableVertexAttribArray(2));
+					GL(DisableVertexAttribArray(0));
+					GL(BindVertexArray(0));
 				}
-
-				for (Chunk* chunk : chunks)
-				{
-					glBindVertexArray(chunk->VAO);
-					glEnableVertexAttribArray(0);
-					normalLinesShader->LoadUniform("model", glm::translate(glm::mat4x4(1), glm::vec3(chunk->coord.x * Chunk::CHUNK_SIZE, 0, chunk->coord.y * Chunk::CHUNK_SIZE)));
-
-					glDrawElements(GL_TRIANGLES, (GLint)chunk->indices.size(), GL_UNSIGNED_INT, 0);
-
-					glDisableVertexAttribArray(0);
-					glBindVertexArray(0);
-				}
-
-				normalLinesShader->Stop();
-
 			}
 
-			if (imgui_triangles)
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
+			// Chunks
+			for (Chunk* chunk : chunks)
 			{
-				shader->Start();
+				glBindVertexArray(chunk->VAO);
+				glEnableVertexAttribArray(0);
+				normalLinesShader->LoadUniform("model", glm::translate(glm::mat4x4(1), glm::vec3(chunk->coord.x * Chunk::CHUNK_SIZE, 0, chunk->coord.y * Chunk::CHUNK_SIZE)));
 
-				shader->LoadUniform("view", camera->view_);
-				shader->LoadUniform("proj", camera->projection_);
-				shader->LoadUniform("uCameraPos", camera->position);
-				shader->LoadUniform("uIsFog", imgui_isFog ? 1.0f : 0.0f);
+				glDrawElements(GL_TRIANGLES, (GLint)chunk->indices.size(), GL_UNSIGNED_INT, 0);
 
-				// Render Players
-				{
-					if (model->animator)
-						shader->LoadUniform("boneMatrices", model->animator->GetFinalBoneMatrices());
-
-					//for (auto& [uid, networkPlayer] : networkPlayers)
-					//{
-					//	for (const auto& kv : model->instances)
-					//	{
-					//		EasyModel::EasyMesh* mesh = kv.first;
-
-					//		if (!mesh->LoadToGPU())
-					//			continue;
-
-					//		GL(BindVertexArray(mesh->vao));
-					//		GL(EnableVertexAttribArray(0));
-					//		GL(EnableVertexAttribArray(1));
-					//		GL(EnableVertexAttribArray(2));
-					//		GL(EnableVertexAttribArray(3));
-					//		GL(EnableVertexAttribArray(4));
-					//		GL(EnableVertexAttribArray(5));
-					//		GL(EnableVertexAttribArray(6));
-
-					//		glActiveTexture(GL_TEXTURE0);
-					//		glBindTexture(GL_TEXTURE_2D, mesh->texture);
-					//		shader->LoadUniform("diffuse", 0);
-
-					//		shader->LoadUniform("animated", mesh->animatable ? 1 : 0);
-
-					//		for (EasyModel::EasyTransform* t : kv.second)
-					//		{
-					//			shader->LoadUniform("model", CreateTransformMatrix(t->position + networkPlayer.transform.position, t->rotationQuat, t->scale));
-					//			glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
-					//		}
-
-					//		GL(DisableVertexAttribArray(6));
-					//		GL(DisableVertexAttribArray(5));
-					//		GL(DisableVertexAttribArray(4));
-					//		GL(DisableVertexAttribArray(3));
-					//		GL(DisableVertexAttribArray(2));
-					//		GL(DisableVertexAttribArray(1));
-					//		GL(DisableVertexAttribArray(0));
-					//		GL(BindVertexArray(0));
-					//	}
-					//}
-
-				}
-				
-				for (EasyModel* model : objs)
-				{
-					if (model->animator)
-						shader->LoadUniform("boneMatrices", model->animator->GetFinalBoneMatrices());
-
-					for (const auto& kv : model->instances)
-					{
-						EasyModel::EasyMesh* mesh = kv.first;
-
-						if (!mesh->LoadToGPU())
-							continue;
-
-						GL(BindVertexArray(mesh->vao));
-						GL(EnableVertexAttribArray(0));
-						GL(EnableVertexAttribArray(1));
-						GL(EnableVertexAttribArray(2));
-						GL(EnableVertexAttribArray(3));
-						GL(EnableVertexAttribArray(4));
-						GL(EnableVertexAttribArray(5));
-						GL(EnableVertexAttribArray(6));
-
-						glActiveTexture(GL_TEXTURE0);
-						glBindTexture(GL_TEXTURE_2D, mesh->texture);
-						shader->LoadUniform("diffuse", 0);
-
-						shader->LoadUniform("animated", mesh->animatable ? 1 : 0);
-
-						for (EasyModel::EasyTransform* t : kv.second)
-						{
-							shader->LoadUniform("model", CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
-							glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
-						}
-
-						GL(DisableVertexAttribArray(6));
-						GL(DisableVertexAttribArray(5));
-						GL(DisableVertexAttribArray(4));
-						GL(DisableVertexAttribArray(3));
-						GL(DisableVertexAttribArray(2));
-						GL(DisableVertexAttribArray(1));
-						GL(DisableVertexAttribArray(0));
-						GL(BindVertexArray(0));
-					}
-				}
-
-				shader->Stop();
+				glDisableVertexAttribArray(0);
+				glBindVertexArray(0);
 			}
 
-			if (imgui_triangles)
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			normalLinesShader->Stop();
+
 		}
 
+		if (imgui_triangles) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+		// Map
+		ChunkRenderer::Render(camera, chunks, hdr, imgui_isFog);
+
+		// Objects
 		{
-			if (imgui_triangles)
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			shader->Start();
+			shader->LoadUniform("view", camera->view_);
+			shader->LoadUniform("proj", camera->projection_);
+			shader->LoadUniform("uCameraPos", camera->position);
+			shader->LoadUniform("uIsFog", imgui_isFog ? 1.0f : 0.0f);
 
-			ChunkRenderer::Render(camera, chunks, hdr, imgui_isFog);
+			for (EasyModel* model : objs)
+			{
+				//if (model->animator)
+				//	shader->LoadUniform("boneMatrices", model->animator->GetFinalBoneMatrices());
 
-			if (imgui_triangles)
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+				for (const auto& kv : model->instances)
+				{
+					EasyModel::EasyMesh* mesh = kv.first;
+
+					if (!mesh->LoadToGPU())
+						continue;
+
+					GL(BindVertexArray(mesh->vao));
+					GL(EnableVertexAttribArray(0));
+					GL(EnableVertexAttribArray(1));
+					GL(EnableVertexAttribArray(2));
+					GL(EnableVertexAttribArray(3));
+					GL(EnableVertexAttribArray(4));
+					GL(EnableVertexAttribArray(5));
+					GL(EnableVertexAttribArray(6));
+
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, mesh->texture);
+					shader->LoadUniform("diffuse", 0);
+
+					//shader->LoadUniform("animated", mesh->animatable ? 1 : 0);
+					shader->LoadUniform("animated", 0);
+
+					for (EasyTransform* t : kv.second)
+					{
+						shader->LoadUniform("model", CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
+						glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
+					}
+
+					GL(DisableVertexAttribArray(6));
+					GL(DisableVertexAttribArray(5));
+					GL(DisableVertexAttribArray(4));
+					GL(DisableVertexAttribArray(3));
+					GL(DisableVertexAttribArray(2));
+					GL(DisableVertexAttribArray(1));
+					GL(DisableVertexAttribArray(0));
+					GL(BindVertexArray(0));
+				}
+			}
+
+			shader->Stop();
 		}
+
+		// Players
+		{
+			shader->Start();
+			shader->LoadUniform("view", camera->view_);
+			shader->LoadUniform("proj", camera->projection_);
+			shader->LoadUniform("uCameraPos", camera->position);
+			shader->LoadUniform("uIsFog", imgui_isFog ? 1.0f : 0.0f);
+
+			for (EasyEntity* entity : players)
+			{
+				if (entity->animator)
+					shader->LoadUniform("boneMatrices", entity->animator->GetFinalBoneMatrices());
+
+				for (const auto& kv : entity->model->instances)
+				{
+					EasyModel::EasyMesh* mesh = kv.first;
+
+					if (!mesh->LoadToGPU())
+						continue;
+
+					GL(BindVertexArray(mesh->vao));
+					GL(EnableVertexAttribArray(0));
+					GL(EnableVertexAttribArray(1));
+					GL(EnableVertexAttribArray(2));
+					GL(EnableVertexAttribArray(3));
+					GL(EnableVertexAttribArray(4));
+					GL(EnableVertexAttribArray(5));
+					GL(EnableVertexAttribArray(6));
+
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, mesh->texture);
+					shader->LoadUniform("diffuse", 0);
+
+					shader->LoadUniform("animated", entity->animator ? 1 : 0);
+
+					for (EasyTransform* t : kv.second)
+					{
+						shader->LoadUniform("model", CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
+						glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
+					}
+
+					GL(DisableVertexAttribArray(6));
+					GL(DisableVertexAttribArray(5));
+					GL(DisableVertexAttribArray(4));
+					GL(DisableVertexAttribArray(3));
+					GL(DisableVertexAttribArray(2));
+					GL(DisableVertexAttribArray(1));
+					GL(DisableVertexAttribArray(0));
+					GL(BindVertexArray(0));
+				}
+			}
+
+			shader->Stop();
+		}
+
+		if (imgui_triangles) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
-	EasyPlayground::ImGUIRender();
+	// ImGUI
+	if (!isTestRender)
+		EasyPlayground::ImGUI_Render();
+	else
+		EasyPlayground::ImGUI_TestRender();
 
 	return success;
-}
-
-void EasyPlayground::OnDisconnect(SessionStatus disconnectStatus)
-{
-	//network->isLogin = false;
-}
-
-void EasyPlayground::OnLogin()
-{
-	//network->isLogin = true;
-
-	//network->lastHeartbeatReceive = Clock::now();
-	//network->nextHeartbeatSend = Clock::now();
-	//network->nextPlayerMovementSend = Clock::now();
-}
-
-void EasyPlayground::NetworkUpdate(double _dt)
-{
-	if (!network->IsInGame())
-		return;
-
-	// Heartbeat
-	{
-		static Timestamp_t nextHeartbeat = Clock::now();
-		Millis_t heartbeatPeriod(1000U);
-		if (Clock::now() >= nextHeartbeat)
-		{
-			nextHeartbeat = Clock::now() + heartbeatPeriod;
-
-			std::cout << "[EasyPlayground] Update - Heartbeat sent.\n";
-			network->GetSendCache().push_back(new sHearbeat());
-		}
-	}
-
-	// Process Received
-	{
-		std::vector<EasySerializeable*>& receive_cache = network->GetReceiveCache();
-		for (auto it = receive_cache.begin(); it != receive_cache.end(); )
-		{
-			if (auto* disconnectResponse = dynamic_cast<sDisconnectResponse*>(*it); disconnectResponse)
-			{
-				std::cout << "[EasyPlayground] Update - Disconnect response received.\n";
-				network->Disconnect(disconnectResponse->message);
-				break; // Disconnect clears the cache already
-				//delete disconnectResponse;  // Disconnect clears the cache already
-				//it = receive_cache.erase(it);  // Disconnect clears the cache already
-			}
-			else if (auto* heartbeat = dynamic_cast<sHearbeat*>(*it); heartbeat)
-			{
-				std::cout << "[EasyPlayground] Update - Heartbeat received.\n";
-
-				delete heartbeat;
-				it = receive_cache.erase(it);
-			}
-			else if (auto* broadcastMessage = dynamic_cast<sBroadcastMessage*>(*it); broadcastMessage)
-			{
-				std::cout << "[EasyPlayground] Update - Broadcast message received.\n";
-
-				ChatMessage::isBroadcastMessage = true;
-				ChatMessage::broadcastMessage = broadcastMessage->message;
-
-				delete broadcastMessage;
-				it = receive_cache.erase(it);
-			}
-			else
-			{
-				it++;
-			}
-		}
-	}
-
-	network->Update();
-
-
-	//if (!network->isLogin)
-	//	return;
-	//for (auto it = network->in_cache.begin(); it != network->in_cache.end(); )
-	//{
-	//	if (auto* d = dynamic_cast<sDisconnectResponse*>(*it); d)
-	//	{
-	//		std::cout << "Disconnect response received!\n";
-	//		loggedIn = false;
-	//		loginFailed = true;
-	//		loginStatusText = d->message;
-	//		delete d;
-	//		it = network->in_cache.erase(it);
-	//	}
-	//	else if (auto* h = dynamic_cast<sHearbeat*>(*it); h)
-	//	{
-	//		std::cout << "Heartbeat received!\n";
-	//		network->lastHeartbeatReceive = Clock::now();
-	//		delete h;
-	//		it = network->in_cache.erase(it);
-	//	}
-	//	else if (auto* b = dynamic_cast<sBroadcastMessage*>(*it); b)
-	//	{
-	//		std::cout << "Broadcast message received!\n";
-	//		isBroadcastMessage = true;
-	//		broadcastMessage = b->message;
-	//		delete b;
-	//		it = network->in_cache.erase(it);
-	//	}
-	//	else if (auto* c = dynamic_cast<sChatMessage*>(*it); c)
-	//	{
-	//		std::cout << "Chat message received!\n";
-	//		OnChatMessageReceived(c->username, c->message, c->timestamp);
-	//		delete b;
-	//		it = network->in_cache.erase(it);
-	//	}
-	//	else if (auto* m = dynamic_cast<sPlayerMovementPack*>(*it); m)
-	//	{
-	//		std::cout << "Player movement pack received!\n";
-
-	//		// Handle Packet
-	//		for (sPlayerMovement& p : m->movements)
-	//		{
-	//			//p.userID; // user specifier
-	//			//p.position; // position at packet creation
-	//			//p.rotation; // rotation at packet creation
-	//			//p.direction; // direction at packet creation
-	//			//unsigned long long timestamp; // time on packet creation. Im working on lan, so now think the server and clients are perfectly time sync and this timestamp inserted when the packet is created. So server collects the sPlayerMovement packets and redirect to each other client with packing into one packet. 
-	//			if (p.userID != client.client.user_id)
-	//			{
-	//				// Other players data
-	//				if (auto res = networkPlayers.find(p.userID); res != networkPlayers.end())
-	//				{
-	//					res->second.transform.position = p.position;
-	//				}
-	//				else
-	//				{
-	//					networkPlayers.insert({ p.userID, {p.userID, "", {{p.position}, {0,0,0}, {1,1,1}}} });
-	//				}
-	//			}
-	//			else
-	//			{
-	//				// This players data, ignore
-	//			}
-	//		}
-	//		delete m;
-	//		it = network->in_cache.erase(it);
-	//	}
-	//	else
-	//	{
-	//		++it;
-	//	}
-	//}
-	//if (network->lastHeartbeatReceive + std::chrono::seconds(10) < Clock::now())
-	//{
-	//	std::cout << "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!" + "\n";
-	//	loggedIn = false;
-	//	loginFailed = true;
-	//	loginStatusText = "Disconnect reason: '" + SessionStatus_Str(SERVER_TIMED_OUT) + "'!";
-	//}
-	//if (network->nextHeartbeatSend < Clock::now())
-	//{
-	//	network->nextHeartbeatSend += std::chrono::seconds(1);
-	//	network->out_cache.push_back(new sHearbeat());
-	//	std::cout << "Heartbeat sent!\n";
-	//}
-	//if (network->nextPlayerMovementSend < Clock::now())
-	//{
-	//	network->nextPlayerMovementSend += std::chrono::seconds(1);
-	//	position.x += 0.01f;
-	//	rotation.x += 0.02f;
-	//	direction.x += 0.04f;
-	//	moveTimestamp += 1000;
-	//	network->out_cache.push_back(new sPlayerMovement(stats.uid, position, rotation, direction, moveTimestamp));
-	//	std::cout << "Player movement sent!\n";
-	//}
 }
 
 bool EasyPlayground::Update(double _dt)
@@ -537,6 +327,11 @@ bool EasyPlayground::Update(double _dt)
 		// calculate FPS
 		ups = 1.0 / avgDt;
 	}
+
+	if(player)
+		player->Update(_dt, mb1_pressed);
+	for(EasyEntity* e : players)
+		e->Update(_dt, e != player ? false : mb1_pressed);
 
 	isRender = network->IsInGame();
 
@@ -594,76 +389,6 @@ void EasyPlayground::EndRender()
 	glfwPollEvents();
 }
 
-void EasyPlayground::ReloadShaders()
-{
-	normalLinesShader = new EasyShader("NormalLines");
-	normalLinesShader->Start();
-	normalLinesShader->BindAttribs({ "aPos", "aUV", "aNormal" });
-	normalLinesShader->BindUniforms({ "model", "view", "proj", "normalLength" });
-	normalLinesShader->Stop();
-
-	shader = new EasyShader("model");
-	shader->Start();
-	shader->BindAttribs({ "position", "uv", "normal", "tangent", "bitangent", "boneIds", "weights" });
-	shader->BindUniforms(GENERAL_UNIFORMS);
-	shader->BindUniforms({ "diffuse", "view", "proj", "model", "animated" });
-	shader->BindUniformArray("boneMatrices", 200);
-	shader->Stop();
-
-	SkyboxRenderer::Init();
-	HDR::Init();
-	hdr = new HDR("defaultLightingHDR");
-	ChunkRenderer::Init();
-}
-
-void EasyPlayground::ReGenerateMap()
-{
-	// Cleanup
-	for (size_t i = 0u; i < chunks.size(); i++)
-		delete chunks.at(i);
-	chunks.clear();
-
-	// New Seed
-	seed = (int)(glm::linearRand(0.7f, 1.3f) * 10000u);
-
-	// Generate Center
-	Chunk::GenerateChunkAt(chunks, { 0,0 }, seed);
-
-	// Make 3x3
-	//Chunk::GenerateChunkAt(chunks, { 1,0 }, seed);
-	//Chunk::GenerateChunkAt(chunks, { -1,0 }, seed);
-	//Chunk::GenerateChunkAt(chunks, { 0,1 }, seed);
-	//Chunk::GenerateChunkAt(chunks, { 0,-1 }, seed);
-	//Chunk::GenerateChunkAt(chunks, { 1,1 }, seed);
-	//Chunk::GenerateChunkAt(chunks, { 1,-1 }, seed);
-	//Chunk::GenerateChunkAt(chunks, { -1,1 }, seed);
-	//Chunk::GenerateChunkAt(chunks, { -1,-1 }, seed);
-
-
-
-#if 1
-	// Generate some other
-
-#endif
-
-#if 0
-	// Add lake
-	Chunk::AddLake(chunks, glm::vec2(0.f, 0.f), 30.0f);   // small pond
-	Chunk::AddLake(chunks, glm::vec2(100.f, 0.f), 60.0f); // big lake
-#endif
-
-	// Load all to GPU
-	for (Chunk* c : chunks)
-		c->LoadToGPU();
-}
-
-void EasyPlayground::ForwardStandartIO()
-{
-	using namespace UIConsole;
-	gImGuiCoutBuf = new ImGuiConsoleBuf(gConsoleLines);
-	gOldCoutBuf = std::cout.rdbuf(gImGuiCoutBuf);
-}
-
 void EasyPlayground::scroll_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	if (!camera->mode)
@@ -715,7 +440,15 @@ void EasyPlayground::key_callback(GLFWwindow* window, int key, int scancode, int
 
 	if (key == GLFW_KEY_F1 && action == GLFW_RELEASE)
 	{
-		isRender = true;
+		isTestRender = !isTestRender;
+		if (isTestRender)
+		{
+			for (auto& p : players)
+				delete p;
+			players.clear();
+			player = new EasyEntity(model);
+			players.push_back(player);
+		}
 		return;
 	}
 
@@ -751,47 +484,20 @@ void EasyPlayground::key_callback(GLFWwindow* window, int key, int scancode, int
 		return;
 	}
 
-	static glm::ivec2 ps{};
-	if (key == GLFW_KEY_S && action == GLFW_RELEASE)
-	{
-		ps.y--;
-		if (Chunk* c = Chunk::GenerateChunkAt(chunks, ps, seed); c)
-			c->LoadToGPU();
-		return;
-	}
 	if (key == GLFW_KEY_W && action == GLFW_RELEASE)
 	{
-		ps.x--;
-		if (Chunk* c = Chunk::GenerateChunkAt(chunks, ps, seed); c)
-			c->LoadToGPU();
+		network->GetSendCache().push_back(new sMoveInput(network->session.uid, 0U, 0U, glm::vec3(0.0f), 0U));
 		return;
 	}
-	if (key == GLFW_KEY_N && action == GLFW_RELEASE)
-	{
-		ps.y++;
-		if (Chunk* c = Chunk::GenerateChunkAt(chunks, ps, seed); c)
-			c->LoadToGPU();
-		return;
-	}
-	if (key == GLFW_KEY_E && action == GLFW_RELEASE)
-	{
-		ps.x++;
-		if (Chunk* c = Chunk::GenerateChunkAt(chunks, ps, seed); c)
-			c->LoadToGPU();
-		return;
-	}
-
 
 	if (key == GLFW_KEY_R && action == GLFW_RELEASE)
 	{
-		std::cout << "Reloading shaders...\n";
 		ReloadShaders();
 		return;
 	}
 
 	if (key == GLFW_KEY_P && action == GLFW_RELEASE)
 	{
-		std::cout << "Regenerating map...\n";
 		ReGenerateMap();
 		return;
 	}
@@ -805,4 +511,11 @@ void EasyPlayground::char_callback(GLFWwindow* window, unsigned int codepoint) c
 		if (ImGui::GetIO().WantCaptureKeyboard)
 			return;
 	}
+}
+
+void EasyPlayground::ForwardStandartIO()
+{
+	using namespace UIConsole;
+	gImGuiCoutBuf = new ImGuiConsoleBuf(gConsoleLines);
+	gOldCoutBuf = std::cout.rdbuf(gImGuiCoutBuf);
 }

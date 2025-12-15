@@ -366,11 +366,11 @@ bool BaseServer::Start()
 {
     if (IsRunning())
         return false;
-    std::cout << "[BaseServer] Starting...\n";
+    std::cout << "[BaseServer] Start - Starting...\n";
     cntx->sck = new EasySocket();
     if (cntx->sck->bind(port, EasyIpAddress::Any) != WSAEISCONN)
     {
-        std::cout << "[BaseServer] Failed to bind the port!" << std::endl;
+        std::cout << "[BaseServer] Start - Failed to bind the port!" << std::endl;
         return IsRunning();
     }
 
@@ -384,7 +384,7 @@ bool BaseServer::Start()
     if (!cntx->cbk->OnServerStart())
         Stop();
     else
-        std::cout << "[BaseServer] Started.\n";
+        std::cout << "[BaseServer] Start - Started.\n";
 
     return IsRunning();
 }
@@ -393,7 +393,7 @@ void BaseServer::Stop(std::string shutdownMessage)
 {
     if (!IsRunning())
         return;
-    std::cout << "[BaseServer] Stopping...\n";
+    std::cout << "[BaseServer] Stop - Stopping...\n";
 
     cntx->cbk->OnServerStop(shutdownMessage);
 
@@ -401,7 +401,7 @@ void BaseServer::Stop(std::string shutdownMessage)
     BaseServer::instance = nullptr;
     delete cntx;
 
-    std::cout << "[BaseServer] Stopped.\n";
+    std::cout << "[BaseServer] Stop - Stopped.\n";
 }
 
 void BaseServer::Update(double dt)

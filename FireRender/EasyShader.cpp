@@ -30,7 +30,7 @@ EasyShader::EasyShader(const std::string& name)
     if (status != GL_TRUE)
     {
         glGetProgramInfoLog(prog, sizeof(log), nullptr, (GLchar*)log);
-        std::cout << (std::string((GLchar*)log).length() == 0 ? "Error Loading Shader!" : (GLchar*)log) << std::endl;
+        std::cout << "[EasyShader] EasyShader - " << (std::string((GLchar*)log).length() == 0 ? "Error Loading Shader!" : (GLchar*)log) << std::endl;
     }
     glUseProgram(prog);
 }
@@ -52,9 +52,22 @@ EasyShader::EasyShader(const char* VSs, const char* FSs, const char* GSs)
     if (status != GL_TRUE)
     {
         glGetProgramInfoLog(prog, sizeof(log), nullptr, (GLchar*)log);
-        std::cout << (std::string((GLchar*)log).length() == 0 ? "Error Loading Shader!" : (GLchar*)log) << std::endl;
+        std::cout << "[EasyShader] EasyShader - " << (std::string((GLchar*)log).length() == 0 ? "Error Loading Shader!" : (GLchar*)log) << std::endl;
     }
     glUseProgram(prog);
+}
+
+EasyShader::~EasyShader()
+{
+    if (prog != 0)
+    {
+        glUseProgram(0);
+        glDeleteProgram(prog);
+        prog = 0;
+    }
+
+    attribs.clear();
+    uniforms.clear();
 }
 
 void EasyShader::Start()
@@ -74,7 +87,7 @@ void EasyShader::BindAttribs(const std::vector<std::string>& attribs)
         GLint location = glGetAttribLocation(prog, attrib.c_str());
         if (glGetError() != GL_NO_ERROR || location == -1)
         {
-            std::cout << "Shader attrib not found! " << attrib.c_str() << std::endl;
+            std::cout << "[EasyShader] BindAttribs - Shader attrib not found! " << attrib.c_str() << std::endl;
         }
         else
         {
@@ -90,7 +103,7 @@ void EasyShader::BindUniforms(const std::vector<std::string>& uniforms)
         GLint location = glGetUniformLocation(prog, uniform.c_str());
         if (glGetError() != GL_NO_ERROR || location == -1)
         {
-            std::cout << "Shader uniform not found! " << uniform.c_str() << std::endl;
+            std::cout << "[EasyShader] BindUniforms - Shader uniform not found! " << uniform.c_str() << std::endl;
         }
         else
         {
@@ -117,7 +130,7 @@ void EasyShader::BindUniformArray(std::string name, int size)
         GLint location = glGetUniformLocation(prog, std::string(name + "[" + std::to_string(i) + "]").c_str());
         if (glGetError() != GL_NO_ERROR || location == -1)
         {
-            std::cout << "Shader uniform array not found! " << std::string(name + "[" + std::to_string(i) + "]") << std::endl;
+            std::cout << "[EasyShader] BindUniformArray - Shader uniform array not found! " << std::string(name + "[" + std::to_string(i) + "]") << std::endl;
         }
         else
         {
@@ -135,7 +148,7 @@ void EasyShader::LoadUniform(const std::string& uniform, const glm::vec3& value)
     }
     else
     {
-        std::cout << "Shader uniform to load not found! " << uniform << std::endl;
+        std::cout << "[EasyShader] LoadUniform - Shader uniform to load not found! " << uniform << std::endl;
     }
 }
 
@@ -148,7 +161,7 @@ void EasyShader::LoadUniform(const std::string& uniform, const glm::vec4& value)
     }
     else
     {
-        std::cout << "Shader uniform to load not found! " << uniform << std::endl;
+        std::cout << "[EasyShader] LoadUniform - Shader uniform to load not found! " << uniform << std::endl;
     }
 }
 
@@ -161,7 +174,7 @@ void EasyShader::LoadUniform(const std::string& uniform, const GLfloat& value)
     }
     else
     {
-        std::cout << "Shader uniform to load not found! " << uniform << std::endl;
+        std::cout << "[EasyShader] LoadUniform - Shader uniform to load not found! " << uniform << std::endl;
     }
 }
 
@@ -174,7 +187,7 @@ void EasyShader::LoadUniform(const std::string& uniform, const GLint& value)
     }
     else
     {
-        std::cout << "Shader uniform to load not found! " << uniform << std::endl;
+        std::cout << "[EasyShader] LoadUniform - Shader uniform to load not found! " << uniform << std::endl;
     }
 }
 
@@ -187,7 +200,7 @@ void EasyShader::LoadUniform(const std::string& uniform, const unsigned int& val
     }
     else
     {
-        std::cout << "Shader uniform to load not found! " << uniform << std::endl;
+        std::cout << "[EasyShader] LoadUniform - Shader uniform to load not found! " << uniform << std::endl;
     }
 }
 
@@ -200,7 +213,7 @@ void EasyShader::LoadUniform(const std::string& uniform, const glm::mat4x4& valu
     }
     else
     {
-        std::cout << "Shader uniform to load not found! " << uniform << std::endl;
+        std::cout << "[EasyShader] LoadUniform - Shader uniform to load not found! " << uniform << std::endl;
     }
 }
 
@@ -213,7 +226,7 @@ void EasyShader::LoadUniform(const std::string& uniform, const std::vector<glm::
     }
     else
     {
-        std::cout << "Shader uniform array to load not found! " << uniform << std::endl;
+        std::cout << "[EasyShader] LoadUniform - Shader uniform array to load not found! " << uniform << std::endl;
     }
 }
 
@@ -235,7 +248,7 @@ void EasyShader::AttachShader(GLenum type, const char* src, const GLint* length)
     if (status != GL_TRUE)
     {
         GL(GetShaderInfoLog(shader, sizeof(log), NULL, (GLchar*)log));
-        std::cout << (std::string((GLchar*)log).length() == 0 ? "Error Loading Shader!" : (GLchar*)log) << std::endl;
+        std::cout << "[EasyShader] AttachShader - " << (std::string((GLchar*)log).length() == 0 ? "Error Loading Shader!" : (GLchar*)log) << std::endl;
     }
 
     GL(AttachShader(prog, shader));

@@ -37,6 +37,12 @@
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="ClientNetwork.hpp" />
+    <ClInclude Include="EasyPlayground_Network.hpp">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyPlayground_Loading.hpp">
+      <Filter>Game</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="publish.bat">

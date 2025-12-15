@@ -8,20 +8,6 @@
 #include <BaseServer.hpp>
 
 class FireServer : public BaseServer, ServerCallback {
-	class FireSession {
-	public:
-		std::string username;
-		SessionID_t sid;
-		UserID_t uid;
-		Addr_t addr;
-		UserStats stats;
-		Timestamp_t recv;
-
-		bool logoutRequested;
-
-		FireSession(std::string username, SessionID_t sid, UserID_t uid, Addr_t addr, UserStats stats, Timestamp_t recv);
-
-	};
 	std::unordered_map<SessionID_t, FireSession*> sessions;
 	
 	SqLite3 sqlite;

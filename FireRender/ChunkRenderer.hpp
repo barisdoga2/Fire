@@ -59,6 +59,7 @@ private:
 
 public:
 	static void Init();
+	static void DeInit();
 
 	static void Render(EasyCamera* camera, std::vector<Chunk*> chunks, HDR* hdr, bool fog);
 

@@ -157,10 +157,12 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EasyPlayground_Loading.hpp" />
     <ClInclude Include="ClientNetwork.hpp" />
     <ClInclude Include="Config.hpp" />
     <ClInclude Include="EasyPlayground.hpp" />
     <ClInclude Include="EasyPlayground_ImGUI.hpp" />
+    <ClInclude Include="EasyPlayground_Network.hpp" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

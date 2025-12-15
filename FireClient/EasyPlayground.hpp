@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EasyNet.hpp"
+#include "ClientNetwork.hpp"
 
 
 
@@ -11,9 +12,10 @@ class EasyCamera;
 class HDR;
 class Chunk;
 class EasyBufferManager;
-class ClientNetwork;
+class EasyEntity;
 struct GLFWwindow;
-class EasyPlayground {
+
+class EasyPlayground : public ClientCallback {
 private:
 public:
     // Display
@@ -26,32 +28,36 @@ public:
     ClientNetwork* network;
     std::thread loginThread{};
 
-    // Shaders, Renderers
+    // Shaders
     EasyShader* shader{};
     EasyShader* normalLinesShader{};
     EasyCamera* camera{};
-    HDR* hdr{};
 
-    // Base Assets
+    // Assets
     EasyModel* model{};
     EasyModel* cube_1x1x1{};
     EasyModel* items{};
     EasyModel* buildings{};
     EasyModel* walls{};
-
-    // Asset Colections
     std::vector<Chunk*> chunks{};
-    std::vector<EasyModel*> mapObjects{};
+    HDR* hdr{};
 
-    // Flags
+    // Collections
+    EasyEntity* player{};
+    std::vector<EasyEntity*> players{};
+
+    // ImGUI
     bool mb1_pressed{};
     bool imgui_triangles{};
     bool imgui_isFog{};
     bool imgui_showNormalLines{};
     bool isRender{};
+    bool isTestRender{};
     bool rememberMe{};
-    int animation = 1;
     float imgui_showNormalLength = 2.2f;
+
+    // Etc
+    int animation = 1;
     int seed = 1337;
 
     EasyPlayground(EasyDisplay* display, EasyBufferManager* bm);
@@ -63,14 +69,18 @@ public:
     bool Render(double _dt);
     void StartRender(double _dt);
     void EndRender();
-    void ImGUIRender();
     void ReloadShaders();
+    void ReloadAssets();
     void ReGenerateMap();
 
+    void ProcesPlayer(const std::vector<sPlayerInfo>& infos, const std::vector<sPlayerState>& states);
     void NetworkUpdate(double _dt);
-    void OnLogin();
-    void OnDisconnect(SessionStatus disconnectStatus);
+    void OnLogin() override;
+    void OnDisconnect() override;
 
+    void ImGUI_Init();
+    void ImGUI_Render();
+    void ImGUI_TestRender();
     void ImGUI_DrawConsoleWindow();
     void ImGUI_BroadcastMessageWindow();
     void ImGUI_PlayerInfoWindow();

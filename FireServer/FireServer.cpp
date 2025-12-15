@@ -7,10 +7,7 @@
 #include <EasySerializer.hpp>
 #include <EasyUtils.hpp>
 
-FireServer::FireSession::FireSession(std::string username, SessionID_t sid, UserID_t uid, Addr_t addr, UserStats stats, Timestamp_t recv) : username(username), sid(sid), uid(uid), addr(addr), stats(stats), recv(recv), logoutRequested(false)
-{
 
-}
 
 FireServer::FireServer(EasyBufferManager* bm, unsigned short port) : BaseServer(bm, port, this, FIRE_ENCRYPTION, FIRE_COMPRESSION)
 {
@@ -21,13 +18,14 @@ FireServer::~FireServer()
 {
 
 }
-
 void FireServer::Update(double dt)
 {
     if (!IsRunning())
         return;
 
     BaseServer::Update(dt);
+
+    static std::unordered_map<SessionID_t, std::vector<sMoveInput*>> playerInputs;
 
     ServerCache_t& send = GetSendCache();
     ServerCache_t& recv = GetReceiveCache();
@@ -58,7 +56,7 @@ void FireServer::Update(double dt)
 
                 if (response)
                 {
-                    send[recvIt->first].push_back(new sGameBoot());
+                    send[recvIt->first].push_back(new sGameBoot(sessions));
                     std::cout << "[FireServer] Update - Game boot sent.\n";
                 }
 
@@ -77,8 +75,8 @@ void FireServer::Update(double dt)
             }
             else if (sHearbeat* heartbeat = dynamic_cast<sHearbeat*>(*objIt); heartbeat)
             {
-                GetSendCache()[fSession->sid].push_back(new sHearbeat());
-                std::cout << "[FireServer] Update - Heartbeat received and sent!\n";
+                send[fSession->sid].push_back(new sHearbeat());
+                std::cout << "[FireServer] Update - Heartbeat received and sent.\n";
 
                 fSession->recv = Clock::now();
                 delete* objIt;
@@ -86,26 +84,23 @@ void FireServer::Update(double dt)
             }
             else if (sChatMessage* chatMessage = dynamic_cast<sChatMessage*>(*objIt); chatMessage)
             {
-                //messages.push_back(new sChatMessage(chatMessage->message, fSession->username, Clock::now().time_since_epoch().count()));
-                std::cout << "[FireServer] Update - Chat message received!\n";
+                for(auto& [sid, fs] : sessions)
+                    if(fs)
+                        send[fs->sid].push_back(new sChatMessage(chatMessage->message, fSession->username, Clock::now().time_since_epoch().count()));
+
+                std::cout << "[FireServer] Update - Chat message received and distributed.\n";
 
                 fSession->recv = Clock::now();
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
-            else if (sPlayerMovement* playerMovement = dynamic_cast<sPlayerMovement*>(*objIt); playerMovement)
+            else if (sMoveInput* moveInput = dynamic_cast<sMoveInput*>(*objIt); moveInput)
             {
-                std::cout << "[FireServer] Update - Player movement message received!\n";
-                if (fSession->uid == playerMovement->userID)
-                {
-                    //fSession->position = playerMovement->position;
-                    //fSession->rotation = playerMovement->rotation;
-                    //fSession->direction = playerMovement->direction;
-                    //fSession->moveTimestamp = playerMovement->timestamp;
-                }
+                std::cout << "[FireServer] Update - Player input received.\n";
+                
+                playerInputs[fSession->sid].push_back(moveInput);
 
                 fSession->recv = Clock::now();
-                delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
             else
@@ -118,6 +113,32 @@ void FireServer::Update(double dt)
             recvIt = recv.erase(recvIt);
         else
             recvIt++;
+    }
+
+    static Timestamp_t nextInputProcessing = Clock::now();
+    if (nextInputProcessing <= Clock::now() )
+    {
+        nextInputProcessing = Clock::now() + std::chrono::milliseconds(100U);
+
+        for (auto& [sid, inputs] : playerInputs)
+        {
+            for (sMoveInput* input : inputs)
+            {
+                sessions[sid]->position.x += 1.0f;
+
+                delete input;
+            }
+        }
+        playerInputs.clear();
+    }
+
+    static Timestamp_t nextStateProcessing = Clock::now();
+    if (nextStateProcessing <= Clock::now())
+    {
+        nextStateProcessing = Clock::now() + std::chrono::milliseconds(100U);
+
+        for (auto& [sid, session] : sessions)
+            send[sid].push_back(new sWorldState(sessions));
     }
 
     std::vector<SessionID_t> sessionsToLogout;
@@ -149,25 +170,25 @@ void FireServer::BroadcastMessage(std::string broadcastMessage)
 
 bool FireServer::OnServerStart()
 {
-    std::cout << "[FireServer] Starting...\n";
+    std::cout << "[FireServer] OnServerStart - Starting...\n";
 
     if (!sqlite.Init(GetRelPath("res/db/fire.db")))
     {
-        std::cout << "[FireServer] Failed to start. Failed to open database!\n";
+        std::cout << "[FireServer] OnServerStart - Failed to start. Failed to open database!\n";
         return false;
     }
     else
     {
-        std::cout << "[FireServer] Opened databased.\n";
+        std::cout << "[FireServer] OnServerStart - Opened databased.\n";
     }
-    std::cout << "[FireServer] Started.\n";
+    std::cout << "[FireServer] OnServerStart - Started.\n";
 
     return true;
 }
 
 void FireServer::OnServerStop(std::string shutdownMessage)
 {
-    std::cout << "[FireServer] Stopping...\n";
+    std::cout << "[FireServer] OnServerStart - Stopping...\n";
 
     ServerCache_t& send = GetSendCache();
     for (auto& [sid, fs] : sessions)
@@ -175,12 +196,12 @@ void FireServer::OnServerStop(std::string shutdownMessage)
     FireServer::Update(0.0); // Send
 
     sqlite.Close();
-    std::cout << "[FireServer] Stopped.\n";
+    std::cout << "[FireServer] OnServerStart - Stopped.\n";
 }
 
 bool FireServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
 {
-    std::cout << "[FireServer] - OnSessionCreate.\n";
+    std::cout << "[FireServer] OnSessionCreate - Creating session.\n";
 
     std::string username;
     UserStats stats;
@@ -276,11 +297,16 @@ bool FireServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
     {
         std::cout << "[FireServer] OnSessionCreate - New Session Created.\n";
 
+        auto& send = GetSendCache();
+        for (auto& [sid, fs] : sessions)
+            if (fs)
+                send[fs->sid].push_back(new sChatMessage("[Server]", username + " logged in!", Clock::now().time_since_epoch().count()));
+
         FireSession* fSession = new FireSession(username, *base.sid, stats.uid, *base.addr, stats, *base.recv);
         sessions[*base.sid] = fSession;
 
         std::cout << "[FireServer] OnSessionCreate - Player boot info sent.\n";
-        GetSendCache()[*base.sid].push_back(new sPlayerBootInfo(fSession->uid, fSession->stats.diamonds, fSession->stats.golds, fSession->stats.gametime, fSession->stats.tutorial_done, fSession->stats.champions_owned));
+        send[*base.sid].push_back(new sPlayerBootInfo(fSession->uid, fSession->stats.diamonds, fSession->stats.golds, fSession->stats.gametime, fSession->stats.tutorial_done, fSession->stats.champions_owned));
     }
     else
     {
@@ -299,6 +325,11 @@ void FireServer::OnSessionDestroy(const SessionBase& base, std::string disconnec
     if(disconnectMessage.length() > 0U)
         Send(sid, { new sDisconnectResponse(disconnectMessage) });
 
+    auto& send = GetSendCache();
+    for (auto& [sid, fs] : sessions)
+        if (fs)
+            send[fs->sid].push_back(new sChatMessage("[Server]", sessions[sid]->username + " logged out!", Clock::now().time_since_epoch().count()));
+
     delete sessions[sid];
     sessions[sid] = nullptr;
     sessions.erase(sessions.find(sid));
@@ -307,51 +338,10 @@ void FireServer::OnSessionDestroy(const SessionBase& base, std::string disconnec
 bool FireServer::OnSessionKeyExpiry(const SessionBase& base)
 {
     std::cout << "[FireServer] OnSessionKeyExpiry - Session Key Expired.\n";
+    
+    // ...
 
-    delete sessions[*base.sid];
-    sessions[*base.sid] = nullptr;
     return false;
-
-
-
-    FireSession* fSession = sessions[*base.sid];
-    if (!fSession)
-        return false;
-
-    std::mt19937 gen(std::random_device{}());
-    std::uniform_int_distribution<int> dist(0, 255);
-    for (auto& b : *base.key)
-        b = static_cast<uint8_t>(dist(gen));
-
-    auto now = std::chrono::system_clock::now();
-    auto expiry_tp = now + std::chrono::hours(1);
-    std::time_t expiry_time_t = std::chrono::system_clock::to_time_t(expiry_tp);
-    std::tm tm_out{};
-#ifdef _WIN32
-    localtime_s(&tm_out, &expiry_time_t);
-#else
-    localtime_r(&expiry_time_t, &tm_out);
-#endif
-    std::string expiryStr = (std::ostringstream{} << std::put_time(&tm_out, "%Y-%m-%d %H:%M:%S")).str();
-    std::string keyStr(reinterpret_cast<const char*>(base.key->data()), KEY_SIZE);
-    std::string updateSql = "UPDATE sessions SET session_key='" + keyStr + "', valid_until='" + expiryStr + "' WHERE user_id=" + std::to_string(fSession->uid) + ";";
-    if (!sqlite.Execute(updateSql))
-        return false;
-
-    auto db_sessions = sqlite.Query("SELECT session_key, valid_until FROM sessions WHERE user_id=" + std::to_string(fSession->uid) + " LIMIT 1;");
-    if (db_sessions.empty())
-        return false;
-
-    const auto& db_session = db_sessions[0];
-
-    std::tm tm_parsed{};
-    (std::istringstream{ db_session[1] }) >> std::get_time(&tm_parsed, "%Y-%m-%d %H:%M:%S");
-    std::time_t parsed_time = std::mktime(&tm_parsed);
-    auto parsed_tp = std::chrono::system_clock::from_time_t(parsed_time);
-
-    *base.keyExpr = parsed_tp;
-
-    return true;
 }
 
 bool FireServer::OnSessionReconnect(const SessionBase& base, const SessionBase& reconnectingBase)

@@ -13,6 +13,7 @@ private:
 
 public:
 	static void Init(char* skyboxShaderPtr = nullptr);
+	static void DeInit();
 
 	static void Render(EasyCamera* camera);
 

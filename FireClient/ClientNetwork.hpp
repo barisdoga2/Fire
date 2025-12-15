@@ -56,8 +56,17 @@ public:
     }
 };
 
+class ClientCallback {
+public:
+    virtual void OnLogin() = 0U;
+    virtual void OnDisconnect() = 0U;
+
+};
+
 class ClientNetwork {
     EasyBufferManager* bufferMan;
+    ClientCallback* cbk;
+
     bool isInGame{};
     bool isLoggingIn{};
     bool isLoginFailed{};
@@ -67,7 +76,7 @@ class ClientNetwork {
 public:
     ClientSession session;
 
-    ClientNetwork(EasyBufferManager* bufferMan) : bufferMan(bufferMan), session()
+    ClientNetwork(EasyBufferManager* bufferMan, ClientCallback* cbk) : bufferMan(bufferMan), cbk(cbk), session()
     {
 
     }
@@ -85,11 +94,13 @@ public:
 
     void Stop()
     {
+        cbk->OnDisconnect();
+
         if (isInGame || isLoggingIn)
         {
             session.sendCache.push_back(new sLogoutRequest());
             SendOne();
-            std::cout << "Logout request sent!\n";
+            std::cout << "[ClientNetwork] Stop - Logout request sent!\n";
         }
         
         isInGame = false;
@@ -194,14 +205,10 @@ public:
                     {
                         end = Clock::now() + timeout;
                         timeoutStatus = "Heartbeat timed out!";
-                        isInGame = true;
 
                         std::cout << "[ClientNetwork] Login - sGameBoot received.\n";
-                        session.sendCache.push_back(new sHearbeat());
-                        SendOne();
-
-                        delete* objIt;
-                        objIt = cache.erase(objIt);
+                        isInGame = true;
+                        break;
                     }
                     else if (sHearbeat* heartbeat = dynamic_cast<sHearbeat*>(*objIt); heartbeat)
                     {
@@ -249,16 +256,19 @@ public:
                 loginStatus = timeoutStatus;
                 isLoggingIn = false;
                 isLoginFailed = true;
+                cbk->OnDisconnect();
             }
             else
             {
                // Login OK
+                cbk->OnLogin();
             }
         }
         else
         {
             isLoggingIn = false;
             isLoginFailed = true;
+            cbk->OnDisconnect();
         }
     }
 
@@ -372,7 +382,7 @@ public:
         isChampionSelect = false;
         loginStatus = "Selecting champion...";
         GetSendCache().push_back(new sChampionSelectRequest(cid));
-        std::cout << "[EasyPlayground] Champion select request sent.\n";
+        std::cout << "[ClientNetwork] ChampionSelect - Champion select request sent.\n";
         SendOne();
     }
 

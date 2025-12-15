@@ -56,7 +56,7 @@ uint64_t EasySocket::bind(unsigned short port, const EasyIpAddress& ip)
 {
 	close();
 
-	create();
+	Create();
 
 	sockaddr_in addr = makeSockAddr(ip, port);
 	if (::bind((SOCKET)m_socket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == -1)
@@ -72,7 +72,7 @@ void EasySocket::unbind()
 
 uint64_t EasySocket::send(const void* data, const std::size_t size, const EasyIpAddress& remoteAddress, const unsigned short& remotePort)
 {
-	create();
+	Create();
 
 	sockaddr_in addr = makeSockAddr(remoteAddress, remotePort);
 	const int sent = static_cast<int>(sendto((SOCKET)m_socket, static_cast<const char*>(data), static_cast<Size>(size), 0, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
@@ -85,7 +85,7 @@ uint64_t EasySocket::send(const void* data, const std::size_t size, const EasyIp
 
 uint64_t EasySocket::send(const void* data, const std::size_t size, uint64_t addrU64) // Server use only
 {
-	create();
+	Create();
 
 	sockaddr_in addr{};
 	addr.sin_family = AF_INET;
@@ -102,7 +102,7 @@ uint64_t EasySocket::send(const void* data, const std::size_t size, uint64_t add
 
 uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, EasyIpAddress& remoteAddress, unsigned short& remotePort)
 {
-	create();
+	Create();
 
 	received = 0;
 	remotePort = 0;
@@ -124,7 +124,7 @@ uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_
 
 uint64_t EasySocket::receive(void* data, const std::size_t& capacity, std::size_t& received, Addr_t& addr_in)  // Server use only
 {
-	create();
+	Create();
 
 	received = 0;
 
@@ -166,7 +166,7 @@ unsigned short EasySocket::getLocalPort()
 	return 0;
 }
 
-void EasySocket::create()
+void EasySocket::Create()
 {
 	if (m_socket == INVALID_SOCKET)
 	{
@@ -174,7 +174,7 @@ void EasySocket::create()
 
 		if (handle == INVALID_SOCKET)
 		{
-			std::cout << "Failed to create socket" << std::endl;
+			std::cout << "[EasySocket] Create - Failed to Create socket" << std::endl;
 			return;
 		}
 
@@ -185,7 +185,7 @@ void EasySocket::create()
 		int yes = 1;
 		if (setsockopt((SOCKET)m_socket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&yes), sizeof(yes)) == -1)
 		{
-			std::cout << "Failed to enable broadcast on UDP socket" << std::endl;
+			std::cout << "[EasySocket] Create - Failed to enable broadcast on UDP socket" << std::endl;
 		}
 	}
 }

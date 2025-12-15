@@ -45,7 +45,7 @@ bool EasyDisplay::Init()
 	// Check If OK
 	if (!window)
 	{
-		std::cout << "GLFW Window couldn't created" << std::endl;
+		std::cout << "[EasyDisplay] Init - GLFW Window couldn't created" << std::endl;
 		glfwTerminate();
 		return false;
 	}
@@ -68,7 +68,7 @@ bool EasyDisplay::Init()
 	// Final Check
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
-		std::cout << "Failed to initialize GLAD" << std::endl;
+		std::cout << "[EasyDisplay] Init - Failed to initialize GLAD" << std::endl;
 		return false;
 	}
 

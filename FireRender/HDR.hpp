@@ -28,8 +28,12 @@ public:
 	~HDR();
 
 	static void Init();
+	static void DeInit();
 
 private:
+	GLuint captureFBO;
+	GLuint captureRBO;
+
 	static EasyShader* equirectangularToCubemapShader;
 	static EasyShader* irradianceShader;
 	static EasyShader* prefilterShader;

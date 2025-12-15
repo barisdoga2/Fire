@@ -277,6 +277,12 @@ void ChunkRenderer::Init()
 	chunkShader->BindTextures({ "diffuseTexture"});
 }
 
+void ChunkRenderer::DeInit()
+{
+    if (chunkShader) delete chunkShader;
+    chunkShader = nullptr;
+}
+
 void ChunkRenderer::Render(EasyCamera* camera, std::vector<Chunk*> chunks, HDR* hdr, bool fog)
 {
 	glDisable(GL_CULL_FACE);
