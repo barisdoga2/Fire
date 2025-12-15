@@ -7,7 +7,7 @@
 #include <EasyBuffer.hpp>
 #include "EasyNet.hpp"
 #include "Config.hpp"
-#include "../FireServer/ServerNet.hpp"
+#include <../FireServer/ServerNet.hpp>
 #include <EasyIpAddress.hpp>
 
 class ClientSession {
@@ -69,341 +69,46 @@ class ClientNetwork {
 
     bool isInGame{};
     bool isLoggingIn{};
+    bool isAuthing{};
+    bool isAuth{};
     bool isLoginFailed{};
     bool isChampionSelect{};
     std::string loginStatus{};
+    std::thread authThread{};
+
+    bool Auth();
+
+    bool SendOne();
+
+    bool ReceiveOne();
 
 public:
     ClientSession session;
 
-    ClientNetwork(EasyBufferManager* bufferMan, ClientCallback* cbk) : bufferMan(bufferMan), cbk(cbk), session()
-    {
+    ClientNetwork(EasyBufferManager* bufferMan, ClientCallback* cbk);
 
-    }
+    void Disconnect(std::string serverMessage = "");
 
-    void Disconnect(std::string serverMessage = "")
-    {
-        isInGame = false;
-        isLoggingIn = false;
+    void Stop();
 
-        Stop();
+    void Update();
 
-        loginStatus = serverMessage;
-        isLoginFailed = true;
-    }
+    void Login();
 
-    void Stop()
-    {
-        cbk->OnDisconnect();
+    std::vector<EasySerializeable*>& GetReceiveCache();
 
-        if (isInGame || isLoggingIn)
-        {
-            session.sendCache.push_back(new sLogoutRequest());
-            SendOne();
-            std::cout << "[ClientNetwork] Stop - Logout request sent!\n";
-        }
-        
-        isInGame = false;
-        isLoggingIn = false;
-        isLoginFailed = false;
-        isChampionSelect = false;
-        loginStatus = "";
+    std::vector<EasySerializeable*>& GetSendCache();
 
-        session.Stop();
-    }
+    std::string StatusText();
 
-    void Update()
-    {
-        if (!isInGame)
-            return;
+    void ChampionSelect(uint8_t cid);
 
-        bool to = session.lastReceive + std::chrono::milliseconds(SESSION_TIMEOUT) < Clock::now();
-        if (to)
-        {
-            loginStatus = "Connection timed out!";
-            isInGame = false;
-            isLoginFailed = true;
-        }
-        else
-        {
-            ReceiveOne();
-            SendOne();
-        }
-    }
+    bool IsLoggingIn() const;
 
-    void Login(std::string url)
-    {
-        Stop();
+    bool IsLoginFailed() const;
 
-        isLoggingIn = true;
+    bool IsInGame() const;
 
-        if (Auth(url))
-        {
-            loginStatus = "Waiting game server...";
-            std::cout << "[ClientNetwork] Login - Login request sent.\n";
-            session.sendCache.push_back(new sLoginRequest());
-            SendOne();
-
-            bool to{};
-            Millis_t timeout = Millis_t(3000U);
-            Timestamp_t nextHeartbeat = Clock::now();
-            Timestamp_t end = Clock::now() + timeout;
-            std::string timeoutStatus = "Login response timed out!";
-            while (isLoggingIn && !isInGame && !to)
-            {
-                to = Clock::now() > end;
-                ReceiveOne();
-                std::vector<EasySerializeable*>& cache = GetReceiveCache();
-                for (std::vector<EasySerializeable*>::iterator objIt = cache.begin(); objIt != cache.end() && isLoggingIn && !isInGame; )
-                {
-                    if (sLoginResponse* loginResp = dynamic_cast<sLoginResponse*>(*objIt); loginResp)
-                    {
-                        end = Clock::now() + timeout;
-                        timeoutStatus = "Player boot info timed out!";
-
-                        std::cout << "[ClientNetwork] Login - sLoginResponse received.\n";
-                        loginStatus = loginResp->message;
-
-                        delete* objIt;
-                        objIt = cache.erase(objIt);
-                    }
-                    else if (sPlayerBootInfo* bootInfo = dynamic_cast<sPlayerBootInfo*>(*objIt); bootInfo)
-                    {
-                        end = Clock::now() + timeout;
-                        timeoutStatus = "Champion select response timed out!";
-
-                        std::cout << "[ClientNetwork] Login - sPlayerBootInfo received.\n";
-                        loginStatus = "PlayerBootInfo received.";
-                        isChampionSelect = true;
-
-                        session.stats.uid = bootInfo->userID;
-                        session.stats.gametime = bootInfo->gametime;
-                        session.stats.golds = bootInfo->golds;
-                        session.stats.diamonds = bootInfo->diamonds;
-                        session.stats.tutorial_done = bootInfo->tutorialDone;
-                        session.stats.champions_owned = bootInfo->championsOwned;
-
-                        delete* objIt;
-                        objIt = cache.erase(objIt);
-                    }
-                    else if (sChampionSelectResponse* championSelectResp = dynamic_cast<sChampionSelectResponse*>(*objIt); championSelectResp)
-                    {
-                        end = Clock::now() + timeout;
-                        timeoutStatus = "Game boot timed out!";
-
-                        std::cout << "[ClientNetwork] Login - sChampionSelectResponse received.\n";
-                        loginStatus = championSelectResp->message;
-                        isLoggingIn = championSelectResp->response;
-
-                        if (isLoggingIn)
-                            session.sendCache.push_back(new sHearbeat());
-
-                        delete* objIt;
-                        objIt = cache.erase(objIt);
-                    }
-                    else if (sGameBoot* gameBoot = dynamic_cast<sGameBoot*>(*objIt); gameBoot)
-                    {
-                        end = Clock::now() + timeout;
-                        timeoutStatus = "Heartbeat timed out!";
-
-                        std::cout << "[ClientNetwork] Login - sGameBoot received.\n";
-                        isInGame = true;
-                        break;
-                    }
-                    else if (sHearbeat* heartbeat = dynamic_cast<sHearbeat*>(*objIt); heartbeat)
-                    {
-                        end = Clock::now() + timeout;
-                        timeoutStatus = "Heartbeat timed out!";
-
-                        std::cout << "[ClientNetwork] Login - sHearbeat received.\n";
-
-                        delete* objIt;
-                        objIt = cache.erase(objIt);
-                    }
-                    else if (sDisconnectResponse* disconnectResp = dynamic_cast<sDisconnectResponse*>(*objIt); disconnectResp)
-                    {
-                        std::cout << "[ClientNetwork] Login - sDisconnectResponse received.\n";
-                        Disconnect(disconnectResp->message);
-                        break; // Disconnect clears the cache already
-                        //delete* objIt; // Disconnect clears the cache already
-                        //objIt = cache.erase(objIt); // Disconnect clears the cache already
-                    }
-                    else
-                    {
-                        objIt++;
-                    }
-                }
-
-                // Every 1 second do below
-                {
-                    Millis_t heartbeatPeriod(1000U);
-
-                    if (Clock::now() >= nextHeartbeat)
-                    {
-                        nextHeartbeat = Clock::now() + heartbeatPeriod;
-
-                        std::cout << "[ClientNetwork] Login - Heartbeat sent.\n";
-                        session.sendCache.push_back(new sHearbeat());
-                        SendOne();
-                    }
-                }
-
-                SLEEP_MS(1U);
-            }
-            
-            if (to)
-            {
-                loginStatus = timeoutStatus;
-                isLoggingIn = false;
-                isLoginFailed = true;
-                cbk->OnDisconnect();
-            }
-            else
-            {
-               // Login OK
-                cbk->OnLogin();
-            }
-        }
-        else
-        {
-            isLoggingIn = false;
-            isLoginFailed = true;
-            cbk->OnDisconnect();
-        }
-    }
-
-    bool Auth(std::string url);
-
-    bool SendOne()
-    {
-        if (session.sendCache.size() == 0U)
-            return false;
-
-        if(!session.cacheM.try_lock())
-            return false;
-
-        bool sent = false;
-        if (EasyBuffer* serializationBuffer = bufferMan->Get(); serializationBuffer)
-        {
-            if (MakeSerialized(serializationBuffer, session.sendCache))
-            {
-                if (EasyBuffer* sendBuffer = bufferMan->Get(); sendBuffer)
-                {
-                    if (EasyPacket::MakeCompressed(serializationBuffer, sendBuffer))
-                    {
-                        if (EasyPacket::MakeEncrypted({ session.sid, session.seqid_in, session.seqid_out, session.key }, sendBuffer))
-                        {
-                            if (uint64_t res = session.sck.send(sendBuffer->begin(), sizeof(SessionID_t) + sizeof(SequenceID_t) + IV_SIZE + sendBuffer->m_payload_size, EasyIpAddress::resolve(SERVER_IP), SERVER_PORT); res == WSAEISCONN)
-                            {
-                                sent = true;
-                                session.seqid_out++;
-                            }
-                        }
-                    }
-                    bufferMan->Free(sendBuffer);
-                }
-            }
-            for (EasySerializeable* obj : session.sendCache)
-                delete obj;
-            session.sendCache.clear();
-            bufferMan->Free(serializationBuffer);
-        }
-        session.cacheM.unlock();
-        return sent;
-    }
-
-    bool ReceiveOne()
-    {
-        if (!session.cacheM.try_lock())
-            return false;
-
-        bool recvd = false;
-        if (EasyBuffer* buff = bufferMan->Get(); buff)
-        {
-            uint64_t addr = 0U;
-            if (uint64_t ret = session.sck.receive(buff->begin(), buff->capacity(), buff->m_payload_size, addr); ret == WSAEISCONN)
-            {
-                if (buff->m_payload_size >= EasyPacket::MinimumSize())
-                {
-                    EasyPacket packet(buff);
-                    session.sid = *packet.SessionID();
-                    if (IS_SESSION(session.sid))
-                    {
-                        EasyPacket epck(buff);
-                        CryptData crypt(session.sid, session.seqid_in, session.seqid_out, session.key);
-                        if (epck.MakeDecrypted(crypt, buff))
-                        {
-                            if (EasyBuffer* outBuff = bufferMan->Get(); outBuff)
-                            {
-                                if (epck.MakeDecompressed(buff, outBuff))
-                                {
-                                    std::vector<EasySerializeable*> cache;
-                                    if (MakeDeserialized(outBuff, cache))
-                                    {
-                                        session.receiveCache.insert(session.receiveCache.end(), cache.begin(), cache.end());
-                                        session.seqid_in++;
-                                        session.lastReceive = Clock::now();
-                                        recvd = true;
-                                    }
-                                }
-                                bufferMan->Free(outBuff);
-                            }
-                        }
-                    }
-                }
-            }
-            bufferMan->Free(buff);
-        }
-        session.cacheM.unlock();
-        return recvd;
-    }
-
-    std::vector<EasySerializeable*>& GetReceiveCache()
-    {
-        if (session.cacheM.try_lock())
-        {
-            session.cacheM.unlock();
-        }
-        return session.receiveCache;
-    }
-
-    std::vector<EasySerializeable*>& GetSendCache()
-    {
-        return session.sendCache;
-    }
-
-    std::string StatusText()
-    {
-        return loginStatus;
-    }
-
-    void ChampionSelect(uint8_t cid)
-    {
-        isChampionSelect = false;
-        loginStatus = "Selecting champion...";
-        GetSendCache().push_back(new sChampionSelectRequest(cid));
-        std::cout << "[ClientNetwork] ChampionSelect - Champion select request sent.\n";
-        SendOne();
-    }
-
-    bool IsLoggingIn() const
-    {
-        return isLoggingIn;
-    }
-
-    bool IsLoginFailed() const
-    {
-        return isLoginFailed;
-    }
-
-    bool IsInGame() const
-    {
-        return isInGame;
-    }
-
-    bool IsChampionSelect() const
-    {
-        return isChampionSelect;
-    }
+    bool IsChampionSelect() const;
 
 };

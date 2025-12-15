@@ -71,15 +71,14 @@ private:
 
 class EasyEntity {
 public:
-    uint32_t uid{};
     EasyModel* model;
     EasyAnimator* animator{};
 
     EasyTransform transform;
 
     EasyEntity(EasyModel* model, EasyTransform transform = {});
-    EasyEntity(EasyModel* model, uint32_t uid, glm::vec3 position = glm::vec3(0.f), glm::vec3 rotation = glm::vec3(0.f), glm::vec3 scale = glm::vec3(1.f));
+    EasyEntity(EasyModel* model,glm::vec3 position, glm::vec3 rotation = glm::vec3(0.f), glm::vec3 scale = glm::vec3(1.f));
 
-    bool Update(double _dt, bool mb1_pressed);
+    virtual bool Update(double _dt);
 
 };

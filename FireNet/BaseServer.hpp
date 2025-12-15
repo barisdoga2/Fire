@@ -32,14 +32,12 @@ class EasyBufferManager;
 class BaseServer {
     static inline BaseServer* instance = nullptr;
 
-    const unsigned short port;
-
     bool running;
 
     ServerContext* cntx;
 
 public:
-    BaseServer(EasyBufferManager* bm, const unsigned short port, ServerCallback* cbk, bool encryption = true, bool compression = true);
+    BaseServer();
 
     ~BaseServer();
 
@@ -51,7 +49,7 @@ public:
 
     void DestroySession(SessionID_t sid, std::string disconnectMessage = "");
 
-    bool Start();
+    bool Start(EasyBufferManager* bm, const unsigned short port, ServerCallback* cbk, bool encryption = true, bool compression = true);
 
     void Stop(std::string shutdownMessage = "");
 

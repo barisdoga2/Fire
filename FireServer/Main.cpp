@@ -28,7 +28,7 @@
 #include "ServerUI.hpp"
 
 EasyBufferManager* bm = new EasyBufferManager(50U, 1472U);
-FireServer* server = new FireServer(bm, SERVER_PORT);
+FireServer* server = new FireServer();
 
 bool running{};
 bool stop{};
@@ -38,12 +38,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
     ServerUI::ForwardStandartIO();
 
-    FireServer* server = new FireServer(bm, SERVER_PORT);
-    if (bool running = server->Start(); running)
+    if (bool running = server->Start(bm); running)
     {
         if (EasyDisplay display({ 800, 600 }, { 1,2 }); display.Init())
         {
-            if (ServerUI serverUI(&display, server); serverUI.Init())
+            if (ServerUI serverUI(&display, bm, server); serverUI.Init())
             {
                 std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
                 std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();

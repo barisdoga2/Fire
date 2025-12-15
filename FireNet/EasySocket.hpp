@@ -64,6 +64,7 @@ private:
 
 public:
 	EasySocket();
+	~EasySocket();
 
 	uint64_t bind(unsigned short port, const EasyIpAddress& ip);
 

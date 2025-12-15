@@ -37,11 +37,21 @@ class EasyBufferManager {
     std::vector<EasyBuffer*> busy_buffers;
 
 public:
+    struct BMStats {
+        unsigned long long total{};
+        unsigned long long frees{};
+        unsigned long long busys{};
+        unsigned long long total_gets{};
+        unsigned long long total_frees{};
+    };
+
     EasyBufferManager(size_t bufferCount = 50U, size_t bufferLength = 1472U);
     ~EasyBufferManager();
 
     EasyBuffer* Get();
     bool Free(EasyBuffer* buffer);
     [[nodiscard]] std::string Stats() const;
+    [[nodiscard]] BMStats StatsV2();
+
 
 };

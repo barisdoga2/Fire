@@ -28,7 +28,7 @@ void EasyPlayground::ProcesPlayer(const std::vector<sPlayerInfo>& infos, const s
 				it++;
 		if (it == players.end())
 		{
-			EasyEntity* newPlayer = new EasyEntity(model, info.uid);
+			Player* newPlayer = new Player(model, info.uid, (network->session.uid == info.uid), glm::vec3(0,0,0));
 			if (network->session.uid == info.uid)
 			{
 				std::cout << "[EasyPlayground] ProcesPlayer - Initialized own player.\n";
@@ -66,6 +66,8 @@ void EasyPlayground::ProcesPlayer(const std::vector<sPlayerInfo>& infos, const s
 
 void EasyPlayground::NetworkUpdate(double _dt)
 {
+	network->Update();
+
 	if (!network->IsInGame())
 		return;
 
@@ -116,7 +118,7 @@ void EasyPlayground::NetworkUpdate(double _dt)
 			{
 				std::cout << "[EasyPlayground] NetworkUpdate - Chat message received.\n";
 
-				ChatMessage::OnChatMessageReceived(chatMessage->message, chatMessage->username, chatMessage->timestamp);
+				ChatMessage::OnChatMessageReceived(chatMessage->username, chatMessage->message, chatMessage->timestamp);
 
 				delete chatMessage;
 				it = receive_cache.erase(it);
@@ -146,5 +148,4 @@ void EasyPlayground::NetworkUpdate(double _dt)
 		}
 	}
 
-	network->Update();
 }

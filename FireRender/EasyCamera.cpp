@@ -49,53 +49,69 @@ void EasyCamera::ModeSwap(bool mode)
     }
 }
 
-void EasyCamera::cursor_callback(double xpos, double ypos)
+bool EasyCamera::mouse_callback(const MouseData& md)
 {
-    if (!mode)
-        return;
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
-
-    mouseDelta.x += (float)(xpos - lastX);
-    mouseDelta.y += (float)(lastY - ypos);
-    lastX = xpos;
-    lastY = ypos;
-}
-
-void EasyCamera::scroll_callback(double xoffset, double yoffset)
-{
-    //if (!mode)
-    //    return;
-    scrollDelta = (float)yoffset * moveSpeed * 15;
-}
-
-bool EasyCamera::key_callback(int key, int scancode, int action, int mods)
-{
-    if (!mode)
-        return false;
-    if (action == GLFW_PRESS)
-        keyState[key] = true;
-    else if (action == GLFW_RELEASE)
-        keyState[key] = false;
-    else
-        return false;
-
-    if (key == GLFW_KEY_W || key == GLFW_KEY_S || key == GLFW_KEY_A || key == GLFW_KEY_D || key == GLFW_KEY_SPACE || key == GLFW_KEY_LEFT_SHIFT)
-        return true;
-    else
-        return false;
-}
-
-void EasyCamera::mouse_callback(GLFWwindow* window, int button, int action, int mods)
-{
-    if (button == GLFW_MOUSE_BUTTON_2 && action == GLFW_RELEASE)
+    if (md.button.button == GLFW_MOUSE_BUTTON_2 && md.button.action == GLFW_RELEASE)
     {
         ModeSwap(!mode);
     }
+
+    return false;
 }
+
+bool EasyCamera::scroll_callback(const MouseData& md)
+{
+    //if (!mode)
+    //    return;
+    scrollDelta = (float)md.scroll.now.y * moveSpeed * 15;
+
+    return false;
+}
+
+bool EasyCamera::cursorMove_callback(const MouseData& md)
+{
+    if (!mode)
+        return false;
+    if (firstMouse) {
+        lastX = md.position.now.x;
+        lastY = md.position.now.y;
+        firstMouse = false;
+    }
+
+    mouseDelta.x += (float)(md.position.now.x - lastX);
+    mouseDelta.y += (float)(lastY - md.position.now.y);
+    lastX = md.position.now.x;
+    lastY = md.position.now.y;
+
+    return false;
+}
+
+bool EasyCamera::key_callback(const KeyboardData& data)
+{
+    if (!mode)
+        return false;
+    if (data.action == GLFW_PRESS)
+        keyState[data.key] = true;
+    else if (data.action == GLFW_RELEASE)
+        keyState[data.key] = false;
+    else
+        return false;
+
+    if (data.key == GLFW_KEY_W || data.key == GLFW_KEY_S || data.key == GLFW_KEY_A || data.key == GLFW_KEY_D || data.key == GLFW_KEY_SPACE || data.key == GLFW_KEY_LEFT_SHIFT)
+        return true;
+    else
+        return false;
+
+    return false;
+}
+
+bool EasyCamera::character_callback(const KeyboardData& data)
+{
+
+
+    return false;
+}
+
 
 void EasyCamera::Update(double dt)
 {

@@ -7,6 +7,9 @@
     <Filter Include="Etc">
       <UniqueIdentifier>{ec208068-f55c-4a2a-ba78-c1e6edf4f215}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Game\Core">
+      <UniqueIdentifier>{70d922c9-4b62-4f7d-b8bc-934d05a512e4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -22,6 +25,9 @@
       <Filter>Etc</Filter>
     </ClCompile>
     <ClCompile Include="ClientNetwork.cpp" />
+    <ClCompile Include="Player.cpp">
+      <Filter>Game\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.hpp">
@@ -42,6 +48,9 @@
     </ClInclude>
     <ClInclude Include="EasyPlayground_Loading.hpp">
       <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.hpp">
+      <Filter>Game\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

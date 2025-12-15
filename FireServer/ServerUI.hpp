@@ -2,24 +2,30 @@
 
 #include <vector>
 #include <string>
+#include <EasyIO.hpp>
 
+class EasyBufferManager;
 class FireServer;
 class EasyDisplay;
 struct GLFWwindow;
-class ServerUI {
+class ServerUI : public MouseListener, KeyboardListener {
 private:
     enum CommandType {
         CONSOLE_COMMAND,
         BROADCAST_COMMAND,
-        SHUTDOWN_COMMAND
+        SHUTDOWN_COMMAND,
+        START_COMMAND
     };
 
 public:
+    const double snapshotPeriod = 2.5;
+
+    EasyBufferManager* bm;
     EasyDisplay* display;
     FireServer* server;
     double fps = 0.0, ups = 0.0;
 
-    ServerUI(EasyDisplay* display, FireServer* server);
+    ServerUI(EasyDisplay* display, EasyBufferManager* bm, FireServer* server);
     ~ServerUI();
 
     bool Init();
@@ -35,11 +41,11 @@ public:
     void ImGUI_DrawManagementWindow();
     void ImGUI_DrawSessionsWindow();
 
-    void scroll_callback(GLFWwindow* window, double xpos, double ypos);
-    void cursor_callback(GLFWwindow* window, double xpos, double ypos);
-    void mouse_callback(GLFWwindow* window, int button, int action, int mods);
-    void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-    void char_callback(GLFWwindow* window, unsigned int codepoint);
+    bool mouse_callback(const MouseData& md) override;
+    bool scroll_callback(const MouseData& md) override;
+    bool cursorMove_callback(const MouseData& md) override;
+    bool key_callback(const KeyboardData& data) override;
+    bool character_callback(const KeyboardData& data) override;
 
     static void ForwardStandartIO();
 

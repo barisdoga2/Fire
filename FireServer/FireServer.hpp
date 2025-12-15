@@ -13,8 +13,11 @@ class FireServer : public BaseServer, ServerCallback {
 	SqLite3 sqlite;
 
 public:
-	FireServer(EasyBufferManager* bm, unsigned short port);
+	FireServer();
 	~FireServer();
+
+	bool Start(EasyBufferManager* bm);
+	void Stop(std::string shutdownMessage = "");
 
 	void Update(double dt) override;
 

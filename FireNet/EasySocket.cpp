@@ -23,6 +23,11 @@ EasySocket::EasySocket() : m_isBlocking(false), m_socket(INVALID_SOCKET)
 	
 }
 
+EasySocket::~EasySocket()
+{
+	unbind();
+}
+
 std::string EasySocket::AddrToString(const Addr_t& addr)
 {
 	// Extract parts

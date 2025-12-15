@@ -9,7 +9,7 @@
 
 
 
-FireServer::FireServer(EasyBufferManager* bm, unsigned short port) : BaseServer(bm, port, this, FIRE_ENCRYPTION, FIRE_COMPRESSION)
+FireServer::FireServer() : BaseServer()
 {
 
 }
@@ -18,6 +18,17 @@ FireServer::~FireServer()
 {
 
 }
+
+bool FireServer::Start(EasyBufferManager* bm)
+{
+    return BaseServer::Start(bm, SERVER_PORT, this, FIRE_ENCRYPTION, FIRE_COMPRESSION);
+}
+
+void FireServer::Stop(std::string shutdownMessage)
+{
+    BaseServer::Stop();
+}
+
 void FireServer::Update(double dt)
 {
     if (!IsRunning())
@@ -86,7 +97,7 @@ void FireServer::Update(double dt)
             {
                 for(auto& [sid, fs] : sessions)
                     if(fs)
-                        send[fs->sid].push_back(new sChatMessage(chatMessage->message, fSession->username, Clock::now().time_since_epoch().count()));
+                        send[fs->sid].push_back(new sChatMessage(fSession->username, chatMessage->message, Clock::now().time_since_epoch().count()));
 
                 std::cout << "[FireServer] Update - Chat message received and distributed.\n";
 
@@ -115,30 +126,28 @@ void FireServer::Update(double dt)
             recvIt++;
     }
 
-    static Timestamp_t nextInputProcessing = Clock::now();
-    if (nextInputProcessing <= Clock::now() )
     {
-        nextInputProcessing = Clock::now() + std::chrono::milliseconds(100U);
-
-        for (auto& [sid, inputs] : playerInputs)
-        {
-            for (sMoveInput* input : inputs)
-            {
-                sessions[sid]->position.x += 1.0f;
-
-                delete input;
-            }
-        }
-        playerInputs.clear();
-    }
-
-    static Timestamp_t nextStateProcessing = Clock::now();
-    if (nextStateProcessing <= Clock::now())
-    {
-        nextStateProcessing = Clock::now() + std::chrono::milliseconds(100U);
-
-        for (auto& [sid, session] : sessions)
-            send[sid].push_back(new sWorldState(sessions));
+        //static Timestamp_t nextInputProcessing = Clock::now();
+    //if (nextInputProcessing <= Clock::now() )
+    //{
+    //    nextInputProcessing = Clock::now() + std::chrono::milliseconds(100U);
+    //    for (auto& [sid, inputs] : playerInputs)
+    //    {
+    //        for (sMoveInput* input : inputs)
+    //        {
+    //            sessions[sid]->position.x += 1.0f;
+    //            delete input;
+    //        }
+    //    }
+    //    playerInputs.clear();
+    //}
+    //static Timestamp_t nextStateProcessing = Clock::now();
+    //if (nextStateProcessing <= Clock::now())
+    //{
+    //    nextStateProcessing = Clock::now() + std::chrono::milliseconds(100U);
+    //    for (auto& [sid, session] : sessions)
+    //        send[sid].push_back(new sWorldState(sessions));
+    //}
     }
 
     std::vector<SessionID_t> sessionsToLogout;
@@ -194,6 +203,9 @@ void FireServer::OnServerStop(std::string shutdownMessage)
     for (auto& [sid, fs] : sessions)
         send[sid].push_back(new sDisconnectResponse(shutdownMessage));
     FireServer::Update(0.0); // Send
+    for (auto& [sid, fs] : sessions)
+        delete fs;
+    sessions.clear();
 
     sqlite.Close();
     std::cout << "[FireServer] OnServerStart - Stopped.\n";
@@ -322,8 +334,12 @@ void FireServer::OnSessionDestroy(const SessionBase& base, std::string disconnec
 
     SessionID_t sid = *base.sid;
 
-    if(disconnectMessage.length() > 0U)
-        Send(sid, { new sDisconnectResponse(disconnectMessage) });
+    if (disconnectMessage.length() > 0U)
+    {
+        sDisconnectResponse* disconnect = new sDisconnectResponse(disconnectMessage);
+        Send(sid, { disconnect });
+        delete disconnect;
+    }
 
     auto& send = GetSendCache();
     for (auto& [sid, fs] : sessions)
@@ -357,7 +373,9 @@ bool FireServer::OnSessionReconnect(const SessionBase& base, const SessionBase& 
 
     BaseServer::DestroySession(sid, "Reconnected from another client!");
 
-    Send(sid, { new sDisconnectResponse("Account was already in game, disconnected, try again!") }, addr, 0U, 0U, key);
+    sDisconnectResponse* disconnect = new sDisconnectResponse("Account was already in game, disconnected, try again!");
+    Send(sid, { disconnect }, addr, 0U, 0U, key);
+    delete disconnect;
 
     return false;
 }

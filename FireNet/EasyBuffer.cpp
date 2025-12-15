@@ -140,3 +140,16 @@ std::string EasyBufferManager::Stats() const
     return "Server statistics disabled.\n";
 #endif
 }
+
+EasyBufferManager::BMStats EasyBufferManager::StatsV2()
+{
+    EasyBufferManager::BMStats ret{};
+#ifdef SERVER_STATISTICS
+    ret.total_gets = STATS_LOAD(gets);
+    ret.total_frees = STATS_LOAD(frees);
+    ret.busys = busy_buffers.size();
+    ret.frees = free_buffers.size();
+    ret.total = busy_buffers.size() + free_buffers.size();
+#endif
+    return ret;
+}

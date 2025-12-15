@@ -3,12 +3,13 @@
 #include <unordered_map>
 
 #include <glm/glm.hpp>
+#include "EasyIO.hpp"
 
 
 
 class EasyDisplay;
 struct GLFWwindow;
-class EasyCamera {
+class EasyCamera : public MouseListener, KeyboardListener {
 public:
 	EasyDisplay* display;
 
@@ -49,10 +50,11 @@ public:
     void Update(double dt);
     void ModeSwap(bool mode = false);
 
-    void cursor_callback(double xpos, double ypos);
-    void scroll_callback(double xoffset, double yoffset);
-    bool key_callback(int key, int scancode, int action, int mods);
-    void mouse_callback(GLFWwindow* window, int button, int action, int mods);
+	bool mouse_callback(const MouseData& md) override;
+	bool scroll_callback(const MouseData& md) override;
+	bool cursorMove_callback(const MouseData& md) override;
+	bool key_callback(const KeyboardData& data) override;
+	bool character_callback(const KeyboardData& data) override;
 
 private:
     void UpdateVectors();

@@ -60,6 +60,18 @@
     <ClInclude Include="EasyUtils.hpp">
       <Filter>Util</Filter>
     </ClInclude>
+    <ClInclude Include="EasyIO.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelRenderer.hpp">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="DebugRenderer.hpp">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyRenderer.hpp">
+      <Filter>Render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ChunkRenderer.cpp">
@@ -100,6 +112,15 @@
     </ClCompile>
     <ClCompile Include="EasyUtils.cpp">
       <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyIO.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelRenderer.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="DebugRenderer.cpp">
+      <Filter>Render</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -154,33 +154,40 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ChunkRenderer.hpp" />
+    <ClInclude Include="DebugRenderer.hpp" />
     <ClInclude Include="EasyAnimation.hpp" />
     <ClInclude Include="EasyAnimator.hpp" />
     <ClInclude Include="EasyCamera.hpp" />
     <ClInclude Include="EasyDisplay.hpp" />
+    <ClInclude Include="EasyIO.hpp" />
     <ClInclude Include="EasyMaterial.hpp" />
     <ClInclude Include="EasyModel.hpp" />
+    <ClInclude Include="EasyRenderer.hpp" />
     <ClInclude Include="EasyShader.hpp" />
     <ClInclude Include="EasyTexture.hpp" />
     <ClInclude Include="EasyUtils.hpp" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="GL_Ext.hpp" />
     <ClInclude Include="HDR.hpp" />
+    <ClInclude Include="ModelRenderer.hpp" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="SkyboxRenderer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ChunkRenderer.cpp" />
+    <ClCompile Include="DebugRenderer.cpp" />
     <ClCompile Include="EasyAnimation.cpp" />
     <ClCompile Include="EasyAnimator.cpp" />
     <ClCompile Include="EasyCamera.cpp" />
     <ClCompile Include="EasyDisplay.cpp" />
+    <ClCompile Include="EasyIO.cpp" />
     <ClCompile Include="EasyMaterial.cpp" />
     <ClCompile Include="EasyModel.cpp" />
     <ClCompile Include="EasyShader.cpp" />
     <ClCompile Include="EasyTexture.cpp" />
     <ClCompile Include="EasyUtils.cpp" />
     <ClCompile Include="HDR.cpp" />
+    <ClCompile Include="ModelRenderer.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

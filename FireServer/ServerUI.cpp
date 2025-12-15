@@ -17,11 +17,11 @@
 //#include <EasyServer.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
-#include "../3rd_party/imgui_impl_opengl3.h"
-#include "../3rd_party/imgui_impl_glfw.h"
+#include <../3rd_party/imgui_impl_opengl3.h>
+#include <../3rd_party/imgui_impl_glfw.h>
 #include <EasyDisplay.hpp>
 #include <EasySocket.hpp>
-#include "EasyUtils.hpp"
+#include <EasyUtils.hpp>
 #include "FireServer.hpp"
 
 namespace UISnapshot {
@@ -41,6 +41,9 @@ namespace UISnapshot {
 		uint64_t startTime = 0;
 		uint64_t uptimeSec = 0;
 		std::vector<UISession> sessions;
+
+		EasyBufferManager::BMStats bmStats{};
+		unsigned long long total_networkObjectCreates{}, total_networkObjectDeletes{};
 	};
 	static UISnapshot gSnapshot;
 	static double gSnapshotTimer = 0.0;
@@ -149,7 +152,7 @@ namespace UIConsole {
 	static ImGuiConsoleBuf* gImGuiCoutBuf = nullptr;
 }
 
-ServerUI::ServerUI(EasyDisplay* display, FireServer* server) : display(display), server(server)
+ServerUI::ServerUI(EasyDisplay* display, EasyBufferManager* bm, FireServer* server) : display(display), bm(bm), server(server)
 {
 
 }
@@ -166,14 +169,13 @@ ServerUI::~ServerUI()
 
 bool ServerUI::Init()
 {
-	// GLFW Callbacks
+	// Inputs
 	{
-		static ServerUI* instance = this;
-		glfwSetKeyCallback(display->window, [](GLFWwindow* w, int k, int s, int a, int m) { instance->key_callback(w, k, s, a, m); });
-		glfwSetCursorPosCallback(display->window, [](GLFWwindow* w, double x, double y) { instance->cursor_callback(w, x, y); });
-		glfwSetMouseButtonCallback(display->window, [](GLFWwindow* window, int button, int action, int mods) { instance->mouse_callback(window, button, action, mods); });
-		glfwSetScrollCallback(display->window, [](GLFWwindow* w, double x, double y) { instance->scroll_callback(w, x, y); });
-		glfwSetCharCallback(display->window, [](GLFWwindow* w, unsigned int x) { instance->char_callback(w, x); });
+		EasyKeyboard::Init(*display);
+		EasyMouse::Init(*display);
+
+		EasyKeyboard::AddListener(this);
+		EasyMouse::AddListener(this);
 	}
 
 	// ImGUI
@@ -196,6 +198,8 @@ bool ServerUI::Init()
 		ImGui_ImplGlfw_InitForOpenGL(display->window, false);
 		ImGui_ImplOpenGL3_Init(glsl_version);
 	}
+
+	UISnapshot::gSnapshotTimer += snapshotPeriod;
 
 	return true;
 }
@@ -220,6 +224,12 @@ void ServerUI::OnCommand(CommandType type, std::string text)
 	else if (type == SHUTDOWN_COMMAND)
 	{
 		server->Stop(text);
+		UISnapshot::gSnapshotTimer += snapshotPeriod;
+	}
+	else if (type == START_COMMAND)
+	{
+		server->Start(bm);
+		UISnapshot::gSnapshotTimer += snapshotPeriod;
 	}
 }
 
@@ -357,35 +367,60 @@ void ServerUI::ImGUI_DrawManagementWindow()
 		ImGuiWindowFlags_NoCollapse);
 
 	ImGui::Text("Status: %s", gSnapshot.running ? "Running" : "Stopped");
-	ImGui::Text("Active Sessions: %zu", gSnapshot.sessions.size());
-	ImGui::Text("Uptime: %llu sec", gSnapshot.uptimeSec);
-
-	ImGui::Separator();
-
-	const float btnW = 120.0f;
-	const float spacing = ImGui::GetStyle().ItemSpacing.x;
-	const float inputW = ImGui::GetContentRegionAvail().x - btnW - spacing;
-
-	static char broadcastMsg[256]{};
-	ImGui::SetNextItemWidth(inputW);
-	ImGui::InputText("##broadcast", broadcastMsg, sizeof(broadcastMsg));
-	ImGui::SameLine();
-	if (ImGui::Button("Broadcast Message", ImVec2(btnW, ImGui::GetFrameHeight())))
+	if (gSnapshot.running)
 	{
-		OnCommand(BROADCAST_COMMAND, broadcastMsg);
-		broadcastMsg[0] = 0;
+		ImGui::Text("Active Sessions: %zu", gSnapshot.sessions.size());
+		ImGui::Text("Uptime: %llu sec", gSnapshot.uptimeSec);
+
+		ImGui::Separator();
+
+		ImGui::Text("Total Network Object Create: %llu", gSnapshot.total_networkObjectCreates);
+		ImGui::Text("Total Network Object Delete: %llu", gSnapshot.total_networkObjectDeletes);
+
+		ImGui::Separator();
+
+		ImGui::Text("Buffer Count: %llu", gSnapshot.bmStats.total);
+		ImGui::Text("Available Buffer Count: %llu", gSnapshot.bmStats.frees);
+		ImGui::Text("Busy Buffer Count: %llu", gSnapshot.bmStats.busys);
+		ImGui::Text("Total Buffer Gets: %llu", gSnapshot.bmStats.total_gets);
+		ImGui::Text("Total Buffer Frees: %llu", gSnapshot.bmStats.total_frees);
+
+		ImGui::Separator();
+
+		const float btnW = 120.0f;
+		const float spacing = ImGui::GetStyle().ItemSpacing.x;
+		const float inputW = ImGui::GetContentRegionAvail().x - btnW - spacing;
+
+		static char broadcastMsg[256]{};
+		ImGui::SetNextItemWidth(inputW);
+		ImGui::InputText("##broadcast", broadcastMsg, sizeof(broadcastMsg));
+		ImGui::SameLine();
+		if (ImGui::Button("Broadcast Message", ImVec2(btnW, ImGui::GetFrameHeight())))
+		{
+			OnCommand(BROADCAST_COMMAND, broadcastMsg);
+			broadcastMsg[0] = 0;
+		}
+
+		ImGui::Separator();
+
+		static char shutdownMsg[256]{};
+		ImGui::SetNextItemWidth(inputW);
+		ImGui::InputText("##shutdown", shutdownMsg, sizeof(shutdownMsg));
+		ImGui::SameLine();
+		if (ImGui::Button("Stop Server", ImVec2(btnW, ImGui::GetFrameHeight())))
+		{
+			OnCommand(SHUTDOWN_COMMAND, shutdownMsg);
+			shutdownMsg[0] = 0;
+		}
 	}
-
-	ImGui::Separator();
-
-	static char shutdownMsg[256]{};
-	ImGui::SetNextItemWidth(inputW);
-	ImGui::InputText("##shutdown", shutdownMsg, sizeof(shutdownMsg));
-	ImGui::SameLine();
-	if (ImGui::Button("Stop Server", ImVec2(btnW, ImGui::GetFrameHeight())))
+	else
 	{
-		OnCommand(SHUTDOWN_COMMAND, shutdownMsg);
-		shutdownMsg[0] = 0;
+		ImGui::Separator();
+
+		if (ImGui::Button("Start Server", ImVec2(120.0f, ImGui::GetFrameHeight())))
+		{
+			OnCommand(START_COMMAND, "");
+		}
 	}
 
 	ImGui::End();
@@ -435,7 +470,6 @@ bool ServerUI::Update(double _dt)
 	}
 
 	// Snapshot periodically
-	const double snapshotPeriod = 2.5;
 	{
 		using namespace UISnapshot;
 		gSnapshotTimer += _dt;
@@ -444,6 +478,10 @@ bool ServerUI::Update(double _dt)
 			gSnapshotTimer = 0.0;
 
 			gSnapshot.running = server->IsRunning();
+
+			gSnapshot.total_networkObjectCreates = EasySerializeable::total_creates;
+			gSnapshot.total_networkObjectDeletes = EasySerializeable::total_deletes;
+			gSnapshot.bmStats = bm->StatsV2();
 
 			gSnapshot.sessions.clear();
 			uint64_t nowMs = Clock::now().time_since_epoch().count();
@@ -514,37 +552,47 @@ void ServerUI::EndRender()
 	glfwPollEvents();
 }
 
-void ServerUI::scroll_callback(GLFWwindow* window, double xpos, double ypos)
+bool ServerUI::mouse_callback(const MouseData& md)
 {
-	ImGui_ImplGlfw_ScrollCallback(window, xpos, ypos);
+	ImGui_ImplGlfw_MouseButtonCallback(md.window, md.button.button, md.button.action, md.button.mods);
 	if (ImGui::GetIO().WantCaptureMouse)
-		return;
+		return false;
+
+	return false;
 }
 
-void ServerUI::cursor_callback(GLFWwindow* window, double xpos, double ypos)
+bool ServerUI::scroll_callback(const MouseData& md)
 {
-	ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+	ImGui_ImplGlfw_ScrollCallback(md.window, md.scroll.now.x, md.scroll.now.y);
 	if (ImGui::GetIO().WantCaptureMouse)
-		return;
+		return false;
+
+	return false;
 }
 
-void ServerUI::mouse_callback(GLFWwindow* window, int button, int action, int mods)
+bool ServerUI::cursorMove_callback(const MouseData& md)
 {
-	ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+	ImGui_ImplGlfw_CursorPosCallback(md.window, md.position.now.x, md.position.now.y);
 	if (ImGui::GetIO().WantCaptureMouse)
-		return;
+		return false;
+
+	return false;
 }
 
-void ServerUI::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+bool ServerUI::key_callback(const KeyboardData& data)
 {
-	ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+	ImGui_ImplGlfw_KeyCallback(data.window, data.key, data.scancode, data.action, data.mods);
 	if (ImGui::GetIO().WantCaptureKeyboard)
-		return;
+		return false;
+
+	return false;
 }
 
-void ServerUI::char_callback(GLFWwindow* window, unsigned int codepoint)
+bool ServerUI::character_callback(const KeyboardData& data)
 {
-	ImGui_ImplGlfw_CharCallback(window, codepoint);
+	ImGui_ImplGlfw_CharCallback(data.window, data.codepoint);
 	if (ImGui::GetIO().WantCaptureKeyboard)
-		return;
+		return false;
+
+	return false;
 }

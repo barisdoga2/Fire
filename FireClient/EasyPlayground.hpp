@@ -1,7 +1,10 @@
 #pragma once
 
-#include "EasyNet.hpp"
+#include <EasyNet.hpp>
+#include <EasyIO.hpp>
+#include <EasyRenderer.hpp>
 #include "ClientNetwork.hpp"
+#include "Player.hpp"
 
 
 
@@ -15,7 +18,7 @@ class EasyBufferManager;
 class EasyEntity;
 struct GLFWwindow;
 
-class EasyPlayground : public ClientCallback {
+class EasyPlayground : public ClientCallback, KeyboardListener, MouseListener {
 private:
 public:
     // Display
@@ -26,9 +29,9 @@ public:
     // Network
     EasyBufferManager* bm{};
     ClientNetwork* network;
-    std::thread loginThread{};
 
     // Shaders
+    RenderData renderData{};
     EasyShader* shader{};
     EasyShader* normalLinesShader{};
     EasyCamera* camera{};
@@ -43,18 +46,13 @@ public:
     HDR* hdr{};
 
     // Collections
-    EasyEntity* player{};
-    std::vector<EasyEntity*> players{};
+    Player* player{};
+    std::vector<Player*> players{};
 
     // ImGUI
-    bool mb1_pressed{};
-    bool imgui_triangles{};
-    bool imgui_isFog{};
-    bool imgui_showNormalLines{};
     bool isRender{};
     bool isTestRender{};
     bool rememberMe{};
-    float imgui_showNormalLength = 2.2f;
 
     // Etc
     int animation = 1;
@@ -75,8 +73,15 @@ public:
 
     void ProcesPlayer(const std::vector<sPlayerInfo>& infos, const std::vector<sPlayerState>& states);
     void NetworkUpdate(double _dt);
+
     void OnLogin() override;
     void OnDisconnect() override;
+
+    bool mouse_callback(const MouseData& md) override;
+    bool scroll_callback(const MouseData& md) override;
+    bool cursorMove_callback(const MouseData& md) override;
+    bool key_callback(const KeyboardData& data) override;
+    bool character_callback(const KeyboardData& data) override;
 
     void ImGUI_Init();
     void ImGUI_Render();
@@ -89,12 +94,6 @@ public:
     void ImGUI_ChampionSelectWindow();
     void ImGUI_DrawChatWindow();
     void ImGUI_DebugWindow();
-
-    void scroll_callback(GLFWwindow* window, double xpos, double ypos);
-    void cursor_callback(GLFWwindow* window, double xpos, double ypos);
-    void mouse_callback(GLFWwindow* window, int button, int action, int mods);
-    void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-    void char_callback(GLFWwindow* window, unsigned int codepoint) const;
 
     static void ForwardStandartIO();
 

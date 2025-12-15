@@ -155,6 +155,7 @@
     <ClCompile Include="ClientNetwork.cpp" />
     <ClCompile Include="EasyPlayground.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Player.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EasyPlayground_Loading.hpp" />
@@ -163,6 +164,7 @@
     <ClInclude Include="EasyPlayground.hpp" />
     <ClInclude Include="EasyPlayground_ImGUI.hpp" />
     <ClInclude Include="EasyPlayground_Network.hpp" />
+    <ClInclude Include="Player.hpp" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

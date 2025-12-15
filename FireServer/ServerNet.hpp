@@ -358,16 +358,16 @@ REGISTER_PACKET(sChampionBuyResponse, CHAMPION_BUY_RESPONSE);
 
 class sChatMessage : public EasySerializeable {
 public:
-    std::string message;
     std::string username;
+    std::string message;
     unsigned long long timestamp;
 
-    sChatMessage() : message(), username(), timestamp(), EasySerializeable(static_cast<PacketID_t>(CHAT_MESSAGE))
+    sChatMessage() : username(), message(), timestamp(), EasySerializeable(static_cast<PacketID_t>(CHAT_MESSAGE))
     {
 
     }
 
-    sChatMessage(std::string message, std::string username, unsigned long long timestamp) : message(message), username(username), timestamp(timestamp), EasySerializeable(static_cast<PacketID_t>(CHAT_MESSAGE))
+    sChatMessage(std::string username, std::string message, unsigned long long timestamp) : username(username), message(message), timestamp(timestamp), EasySerializeable(static_cast<PacketID_t>(CHAT_MESSAGE))
     {
 
     }
@@ -379,8 +379,8 @@ public:
 
     void Serialize(EasySerializer* ser) override
     {
-        ser->Put(message);
         ser->Put(username);
+        ser->Put(message);
         ser->Put(timestamp);
     }
 };
@@ -492,8 +492,8 @@ public:
     {
         for (auto& [sid, fs] : sessions)
         {
-            playerInfo.emplace_back(fs->stats.uid, fs->username);
-            playerState.emplace_back(fs->stats.uid, fs->position, fs->velocity, fs->lastInputSequence, fs->serverTimestamp);
+            playerInfo.push_back({ fs->stats.uid, fs->username });
+            playerState.push_back({ fs->stats.uid, fs->position, fs->velocity, fs->lastInputSequence, fs->serverTimestamp });
         }
     }
 

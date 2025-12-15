@@ -298,12 +298,12 @@ EasyEntity::EasyEntity(EasyModel* model, EasyTransform transform) : model(model)
     
 }
 
-EasyEntity::EasyEntity(EasyModel* model, uint32_t uid, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale) : model(model), uid(uid), transform({position,rotation,scale})
+EasyEntity::EasyEntity(EasyModel* model, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale) : model(model), transform({position,rotation,scale})
 {
     
 }
 
-bool EasyEntity::Update(double _dt, bool mb1_pressed)
+bool EasyEntity::Update(double _dt)
 {
     if (animator)
         animator->UpdateAnimation(_dt);

@@ -5,11 +5,10 @@
 #include <sstream>
 #include <iomanip>
 
-
 #include <imgui.h>
 #include <imgui_internal.h>
-#include "../3rd_party/imgui_impl_opengl3.h"
-#include "../3rd_party/imgui_impl_glfw.h"
+#include <../3rd_party/imgui_impl_opengl3.h>
+#include <../3rd_party/imgui_impl_glfw.h>
 
 #include <EasyDisplay.hpp>
 #include <EasyCamera.hpp>
@@ -22,9 +21,13 @@
 #include <EasyBuffer.hpp>
 #include <EasyTexture.hpp>
 #include <HDR.hpp>
+#include <EasyRenderer.hpp>
 #include <SkyboxRenderer.hpp>
 #include <ChunkRenderer.hpp>
+#include <ModelRenderer.hpp>
+#include <DebugRenderer.hpp>
 #include <GL_Ext.hpp>
+#include <EasyIO.hpp>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -32,6 +35,8 @@
 #include "EasyPlayground_ImGUI.hpp"
 #include "EasyPlayground_Network.hpp"
 #include "EasyPlayground_Loading.hpp"
+
+
 
 EasyPlayground::EasyPlayground(EasyDisplay* display, EasyBufferManager* bm) : display(display), bm(bm), network(new ClientNetwork(bm, this))
 {
@@ -68,14 +73,13 @@ EasyPlayground::~EasyPlayground()
 
 bool EasyPlayground::Init()
 {
-	// Callbacks
+	// Inputs
 	{
-		static EasyPlayground* instance = this;
-		glfwSetKeyCallback(display->window, [](GLFWwindow* w, int k, int s, int a, int m) { instance->key_callback(w, k, s, a, m); });
-		glfwSetCursorPosCallback(display->window, [](GLFWwindow* w, double x, double y) { instance->cursor_callback(w, x, y); });
-		glfwSetMouseButtonCallback(display->window, [](GLFWwindow* window, int button, int action, int mods) { instance->mouse_callback(window, button, action, mods); });
-		glfwSetScrollCallback(display->window, [](GLFWwindow* w, double x, double y) { instance->scroll_callback(w, x, y); });
-		glfwSetCharCallback(display->window, [](GLFWwindow* w, unsigned int x) { instance->char_callback(w, x); });
+		EasyKeyboard::Init(*display);
+		EasyMouse::Init(*display);
+
+		EasyKeyboard::AddListener(this);
+		EasyMouse::AddListener(this);
 	}
 
 	// Assets
@@ -113,185 +117,29 @@ bool EasyPlayground::Render(double _dt)
 	// Render
 	if (isRender || isTestRender)
 	{
-		std::vector<EasyModel*> objs = { walls };
-
+		std::vector<EasyEntity*> entities = {  };
 
 		// Skybox
 		SkyboxRenderer::Render(camera);
 
 		// Normal Lines
-		if (imgui_showNormalLines)
-		{
-			normalLinesShader->Start();
-
-			normalLinesShader->LoadUniform("view", camera->view_);
-			normalLinesShader->LoadUniform("proj", camera->projection_);
-			normalLinesShader->LoadUniform("normalLength", imgui_showNormalLength);
-
-			// Objects
-			for (EasyModel* model : objs)
-			{
-				for (const auto& kv : model->instances)
-				{
-					EasyModel::EasyMesh* mesh = kv.first;
-
-					if (!mesh->LoadToGPU())
-						continue;
-
-					GL(BindVertexArray(mesh->vao));
-					GL(EnableVertexAttribArray(0));
-					GL(EnableVertexAttribArray(2));
-
-					for (EasyTransform* t : kv.second)
-					{
-						normalLinesShader->LoadUniform("model",
-							CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
-
-						glDrawElements(GL_TRIANGLES,
-							static_cast<unsigned int>(mesh->indices.size()),
-							GL_UNSIGNED_INT, 0);
-					}
-
-					GL(DisableVertexAttribArray(2));
-					GL(DisableVertexAttribArray(0));
-					GL(BindVertexArray(0));
-				}
-			}
-
-			// Chunks
-			for (Chunk* chunk : chunks)
-			{
-				glBindVertexArray(chunk->VAO);
-				glEnableVertexAttribArray(0);
-				normalLinesShader->LoadUniform("model", glm::translate(glm::mat4x4(1), glm::vec3(chunk->coord.x * Chunk::CHUNK_SIZE, 0, chunk->coord.y * Chunk::CHUNK_SIZE)));
-
-				glDrawElements(GL_TRIANGLES, (GLint)chunk->indices.size(), GL_UNSIGNED_INT, 0);
-
-				glDisableVertexAttribArray(0);
-				glBindVertexArray(0);
-			}
-
-			normalLinesShader->Stop();
-
-		}
-
-		if (imgui_triangles) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		DebugRenderer::Render(camera, entities, chunks, renderData);
+		
+		if (renderData.imgui_triangles) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 		// Map
-		ChunkRenderer::Render(camera, chunks, hdr, imgui_isFog);
+		ChunkRenderer::Render(camera, chunks, hdr, renderData.imgui_isFog);
 
 		// Objects
-		{
-			shader->Start();
-			shader->LoadUniform("view", camera->view_);
-			shader->LoadUniform("proj", camera->projection_);
-			shader->LoadUniform("uCameraPos", camera->position);
-			shader->LoadUniform("uIsFog", imgui_isFog ? 1.0f : 0.0f);
-
-			for (EasyModel* model : objs)
-			{
-				//if (model->animator)
-				//	shader->LoadUniform("boneMatrices", model->animator->GetFinalBoneMatrices());
-
-				for (const auto& kv : model->instances)
-				{
-					EasyModel::EasyMesh* mesh = kv.first;
-
-					if (!mesh->LoadToGPU())
-						continue;
-
-					GL(BindVertexArray(mesh->vao));
-					GL(EnableVertexAttribArray(0));
-					GL(EnableVertexAttribArray(1));
-					GL(EnableVertexAttribArray(2));
-					GL(EnableVertexAttribArray(3));
-					GL(EnableVertexAttribArray(4));
-					GL(EnableVertexAttribArray(5));
-					GL(EnableVertexAttribArray(6));
-
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, mesh->texture);
-					shader->LoadUniform("diffuse", 0);
-
-					//shader->LoadUniform("animated", mesh->animatable ? 1 : 0);
-					shader->LoadUniform("animated", 0);
-
-					for (EasyTransform* t : kv.second)
-					{
-						shader->LoadUniform("model", CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
-						glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
-					}
-
-					GL(DisableVertexAttribArray(6));
-					GL(DisableVertexAttribArray(5));
-					GL(DisableVertexAttribArray(4));
-					GL(DisableVertexAttribArray(3));
-					GL(DisableVertexAttribArray(2));
-					GL(DisableVertexAttribArray(1));
-					GL(DisableVertexAttribArray(0));
-					GL(BindVertexArray(0));
-				}
-			}
-
-			shader->Stop();
-		}
+		ModelRenderer::Render(camera, entities, renderData);
 
 		// Players
-		{
-			shader->Start();
-			shader->LoadUniform("view", camera->view_);
-			shader->LoadUniform("proj", camera->projection_);
-			shader->LoadUniform("uCameraPos", camera->position);
-			shader->LoadUniform("uIsFog", imgui_isFog ? 1.0f : 0.0f);
+		std::vector<EasyEntity*> playersAsEntity{};
+		for (Player* p : players)
+			playersAsEntity.push_back(p);
+		ModelRenderer::Render(camera, playersAsEntity, renderData);
 
-			for (EasyEntity* entity : players)
-			{
-				if (entity->animator)
-					shader->LoadUniform("boneMatrices", entity->animator->GetFinalBoneMatrices());
-
-				for (const auto& kv : entity->model->instances)
-				{
-					EasyModel::EasyMesh* mesh = kv.first;
-
-					if (!mesh->LoadToGPU())
-						continue;
-
-					GL(BindVertexArray(mesh->vao));
-					GL(EnableVertexAttribArray(0));
-					GL(EnableVertexAttribArray(1));
-					GL(EnableVertexAttribArray(2));
-					GL(EnableVertexAttribArray(3));
-					GL(EnableVertexAttribArray(4));
-					GL(EnableVertexAttribArray(5));
-					GL(EnableVertexAttribArray(6));
-
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, mesh->texture);
-					shader->LoadUniform("diffuse", 0);
-
-					shader->LoadUniform("animated", entity->animator ? 1 : 0);
-
-					for (EasyTransform* t : kv.second)
-					{
-						shader->LoadUniform("model", CreateTransformMatrix(t->position, t->rotationQuat, t->scale));
-						glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
-					}
-
-					GL(DisableVertexAttribArray(6));
-					GL(DisableVertexAttribArray(5));
-					GL(DisableVertexAttribArray(4));
-					GL(DisableVertexAttribArray(3));
-					GL(DisableVertexAttribArray(2));
-					GL(DisableVertexAttribArray(1));
-					GL(DisableVertexAttribArray(0));
-					GL(BindVertexArray(0));
-				}
-			}
-
-			shader->Stop();
-		}
-
-		if (imgui_triangles) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		if (renderData.imgui_triangles) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
 	// ImGUI
@@ -329,16 +177,13 @@ bool EasyPlayground::Update(double _dt)
 	}
 
 	if(player)
-		player->Update(_dt, mb1_pressed);
+		player->Update(_dt);
 	for(EasyEntity* e : players)
-		e->Update(_dt, e != player ? false : mb1_pressed);
+		e->Update(_dt);
 
 	isRender = network->IsInGame();
 
-	if (network->IsInGame())
-	{
-		NetworkUpdate(_dt);
-	}
+	NetworkUpdate(_dt);
 
 	return !display->ShouldClose();
 }
@@ -389,56 +234,57 @@ void EasyPlayground::EndRender()
 	glfwPollEvents();
 }
 
-void EasyPlayground::scroll_callback(GLFWwindow* window, double xpos, double ypos)
-{
+bool EasyPlayground::mouse_callback(const MouseData& md) 
+{ 
 	if (!camera->mode)
 	{
-		ImGui_ImplGlfw_ScrollCallback(window, xpos, ypos);
+		ImGui_ImplGlfw_MouseButtonCallback(md.window, md.button.button, md.button.action, md.button.mods);
 		if (ImGui::GetIO().WantCaptureMouse)
-			return;
+			return false;
 	}
 
-	camera->scroll_callback(xpos, ypos);
+	camera->mouse_callback(md);
+
+	return false; 
 }
 
-void EasyPlayground::cursor_callback(GLFWwindow* window, double xpos, double ypos)
-{
+bool EasyPlayground::scroll_callback(const MouseData& md) 
+{ 
 	if (!camera->mode)
 	{
-		ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+		ImGui_ImplGlfw_ScrollCallback(md.window, md.scroll.now.x, md.scroll.now.y);
 		if (ImGui::GetIO().WantCaptureMouse)
-			return;
+			return false;
 	}
 
-	camera->cursor_callback(xpos, ypos);
+	camera->scroll_callback(md);
+
+	return false; 
 }
 
-void EasyPlayground::mouse_callback(GLFWwindow* window, int button, int action, int mods)
-{
+bool EasyPlayground::cursorMove_callback(const MouseData& md) 
+{ 
 	if (!camera->mode)
 	{
-		ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+		ImGui_ImplGlfw_CursorPosCallback(md.window, md.position.now.x, md.position.now.y);
 		if (ImGui::GetIO().WantCaptureMouse)
-			return;
+			return false;
 	}
 
-	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS)
-		mb1_pressed = true;
-	else if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_RELEASE)
-		mb1_pressed = false;
+	camera->cursorMove_callback(md);
 
-	camera->mouse_callback(window, button, action, mods);
+	return false;
 }
 
-void EasyPlayground::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_RELEASE)
+bool EasyPlayground::key_callback(const KeyboardData& data) 
+{ 
+	if (data.key == GLFW_KEY_GRAVE_ACCENT && data.action == GLFW_RELEASE)
 	{
 		isConsoleWindow = !isConsoleWindow;
-		return;
+		return false;
 	}
 
-	if (key == GLFW_KEY_F1 && action == GLFW_RELEASE)
+	if (data.key == GLFW_KEY_F1 && data.action == GLFW_RELEASE)
 	{
 		isTestRender = !isTestRender;
 		if (isTestRender)
@@ -446,71 +292,75 @@ void EasyPlayground::key_callback(GLFWwindow* window, int key, int scancode, int
 			for (auto& p : players)
 				delete p;
 			players.clear();
-			player = new EasyEntity(model);
+			player = new Player(model, 0U, true, glm::vec3(0, 0, 0));
 			players.push_back(player);
 		}
-		return;
+		return false;
 	}
 
-	if (key == GLFW_KEY_LEFT_ALT && action == GLFW_RELEASE)
+	if (data.key == GLFW_KEY_LEFT_ALT && data.action == GLFW_RELEASE)
 	{
 		camera->ModeSwap(false);
-		return;
+		return false;
 	}
-	else if (key == GLFW_KEY_LEFT_ALT && action == GLFW_PRESS)
+	else if (data.key == GLFW_KEY_LEFT_ALT && data.action == GLFW_PRESS)
 	{
 		camera->ModeSwap(true);
-		return;
+		return false;
 	}
 
-	ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+	ImGui_ImplGlfw_KeyCallback(data.window, data.key, data.scancode, data.action, data.mods);
 	if (ImGui::GetIO().WantCaptureKeyboard)
-		return;
+		return false;
 
-	if (camera->key_callback(key, scancode, action, mods))
+	if (camera->key_callback(data))
 	{
-		return;
+		return false;
 	}
 
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE)
+	if (data.key == GLFW_KEY_ESCAPE && data.action == GLFW_RELEASE)
 	{
 		display->exitRequested = true;
-		return;
+		return false;
 	}
 
-	if (key == GLFW_KEY_T && action == GLFW_RELEASE)
+	if (data.key == GLFW_KEY_T && data.action == GLFW_RELEASE)
 	{
 		animation = 2;
-		return;
+		return false;
 	}
 
-	if (key == GLFW_KEY_W && action == GLFW_RELEASE)
+	if (data.key == GLFW_KEY_W && data.action == GLFW_RELEASE)
 	{
 		network->GetSendCache().push_back(new sMoveInput(network->session.uid, 0U, 0U, glm::vec3(0.0f), 0U));
-		return;
+		return false;
 	}
 
-	if (key == GLFW_KEY_R && action == GLFW_RELEASE)
+	if (data.key == GLFW_KEY_R && data.action == GLFW_RELEASE)
 	{
 		ReloadShaders();
-		return;
+		return false;
 	}
 
-	if (key == GLFW_KEY_P && action == GLFW_RELEASE)
+	if (data.key == GLFW_KEY_P && data.action == GLFW_RELEASE)
 	{
 		ReGenerateMap();
-		return;
+		return false;
 	}
+
+	return false; 
 }
 
-void EasyPlayground::char_callback(GLFWwindow* window, unsigned int codepoint) const
-{
+bool EasyPlayground::character_callback(const KeyboardData& data) 
+{ 
 	if (!camera->mode)
 	{
-		ImGui_ImplGlfw_CharCallback(window, codepoint);
+		ImGui_ImplGlfw_CharCallback(data.window, data.codepoint);
 		if (ImGui::GetIO().WantCaptureKeyboard)
-			return;
+			return false;
 	}
+
+	return false;
 }
 
 void EasyPlayground::ForwardStandartIO()

@@ -35,27 +35,14 @@ void EasyPlayground::ReloadShaders()
 {
 	std::cout << "[EasyPlayground] ReloadShaders - Reloading shaders...\n";
 
-	if (normalLinesShader) delete normalLinesShader;
-	normalLinesShader = new EasyShader("NormalLines");
-	normalLinesShader->Start();
-	normalLinesShader->BindAttribs({ "aPos", "aUV", "aNormal" });
-	normalLinesShader->BindUniforms({ "model", "view", "proj", "normalLength" });
-	normalLinesShader->Stop();
-
-	if (shader) delete normalLinesShader;
-	shader = new EasyShader("model");
-	shader->Start();
-	shader->BindAttribs({ "position", "uv", "normal", "tangent", "bitangent", "boneIds", "weights" });
-	shader->BindUniforms(GENERAL_UNIFORMS);
-	shader->BindUniforms({ "diffuse", "view", "proj", "model", "animated" });
-	shader->BindUniformArray("boneMatrices", 200);
-	shader->Stop();
-
+	DebugRenderer::Init();
+	ModelRenderer::Init();
 	SkyboxRenderer::Init();
 	HDR::Init();
+	ChunkRenderer::Init();
+
 	if (hdr) delete hdr;
 	hdr = new HDR("defaultLightingHDR");
-	ChunkRenderer::Init();
 }
 
 void EasyPlayground::ReGenerateMap()
@@ -82,8 +69,6 @@ void EasyPlayground::ReGenerateMap()
 	//Chunk::GenerateChunkAt(chunks, { 1,-1 }, seed);
 	//Chunk::GenerateChunkAt(chunks, { -1,1 }, seed);
 	//Chunk::GenerateChunkAt(chunks, { -1,-1 }, seed);
-
-
 
 #if 1
 	// Generate some other

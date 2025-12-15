@@ -65,6 +65,11 @@ public:
     {
 
     }
+
+    ~ServerContext()
+    {
+
+    }
 };
 
 class SessionManager {
@@ -78,6 +83,16 @@ public:
     SessionManager(ServerContext* cntx) : cntx(cntx)
     {
 
+    }
+
+    ~SessionManager()
+    {
+        for (const SessionID_t& sid : sessionIDs)
+        {
+            delete sessions[sid];
+            sessions[sid] = nullptr;
+        }
+        sessionIDs.clear();
     }
 
     void Update(double dt)
@@ -133,11 +148,24 @@ class ReceiveManager {
     };
 
     ServerContext* cntx;
+    EasyBuffer* receiveBuffer;
+    EasyBuffer* decompressBuffer;
 
 public:
-    ReceiveManager(ServerContext* cntx) : cntx(cntx)
+    ReceiveManager(ServerContext* cntx) : cntx(cntx), receiveBuffer(), decompressBuffer()
     {
+        while (!receiveBuffer)
+            receiveBuffer = cntx->bufferMan->Get();
+        while (!decompressBuffer)
+            decompressBuffer = cntx->bufferMan->Get();
+    }
 
+    ~ReceiveManager()
+    {
+        if(receiveBuffer)
+            cntx->bufferMan->Free(receiveBuffer);
+        if (decompressBuffer)
+            cntx->bufferMan->Free(decompressBuffer);
     }
 
     void Update(double dt)
@@ -149,7 +177,6 @@ public:
             if (!session)
             {
                 session = cntx->sessionMan->CreateSession(rcv->sid, rcv->addr, rcv->recv, rcv->buff);
-                cntx->bufferMan->Free(rcv->buff);
             }
             else
             {
@@ -172,24 +199,28 @@ public:
 private:
     ReceiveManager::RawPacket* ReceiveOne()
     {
-        ReceiveManager::RawPacket* pck = nullptr;
-        if (EasyBuffer* buff = cntx->bufferMan->Get(); buff)
+        if (!receiveBuffer)
+            receiveBuffer = cntx->bufferMan->Get();
+        if (!receiveBuffer)
+            return nullptr;
+
+        uint64_t addr;
+        receiveBuffer->reset();
+        if (uint64_t ret = cntx->sck->receive(receiveBuffer->begin(), receiveBuffer->capacity(), receiveBuffer->m_payload_size, addr); ret == WSAEISCONN)
         {
-            uint64_t addr;
-            if (uint64_t ret = cntx->sck->receive(buff->begin(), buff->capacity(), buff->m_payload_size, addr); ret == WSAEISCONN)
+            if (receiveBuffer->m_payload_size >= EasyPacket::MinimumSize())
             {
-                if (buff->m_payload_size >= EasyPacket::MinimumSize())
+                EasyPacket packet(receiveBuffer);
+                SessionID_t sid = *packet.SessionID();
+                if (IS_SESSION(sid))
                 {
-                    EasyPacket packet(buff);
-                    SessionID_t sid = *packet.SessionID();
-                    if (IS_SESSION(sid))
-                        pck = new ReceiveManager::RawPacket(sid, addr, buff, Clock::now());
+                    ReceiveManager::RawPacket* ret = new ReceiveManager::RawPacket(sid, addr, receiveBuffer, Clock::now());
+                    receiveBuffer = nullptr;
+                    return ret;
                 }
             }
-            if (!pck)
-                cntx->bufferMan->Free(buff);
         }
-        return pck;
+        return nullptr;
     }
 
     bool ProcessReceived(Session* session, RawPacket* rcv)
@@ -199,22 +230,20 @@ private:
         CryptData crypt(session->sid, session->seqid_in, session->seqid_out, session->key);
         if (pck.MakeDecrypted(crypt, rcv->buff))
         {
-            if (EasyBuffer* outBuff = cntx->bufferMan->Get(); outBuff)
+            decompressBuffer->reset();
+            if (pck.MakeDecompressed(rcv->buff, decompressBuffer))
             {
-                if (pck.MakeDecompressed(rcv->buff, outBuff))
+                std::vector<EasySerializeable*> cache;
+                if (MakeDeserialized(decompressBuffer, cache))
                 {
-                    std::vector<EasySerializeable*> cache;
-                    if (MakeDeserialized(outBuff, cache))
-                    {
-                        cntx->receiveCache[session->sid].insert(cntx->receiveCache[session->sid].end(), cache.begin(), cache.end());
-                        session->seqid_in++;
-                        session->lastReceive = rcv->recv;
-                        ret = true;
-                    }
+                    cntx->receiveCache[session->sid].insert(cntx->receiveCache[session->sid].end(), cache.begin(), cache.end());
+                    session->seqid_in++;
+                    session->lastReceive = rcv->recv;
+                    ret = true;
                 }
-                cntx->bufferMan->Free(outBuff);
             }
         }
+        cntx->bufferMan->Free(rcv->buff);
         return ret;
     }
 
@@ -224,17 +253,35 @@ private:
         EasyPacket pck(rcv->buff);
         if (pck.MakeDecrypted(crypt, rcv->buff))
         {
-            if (EasyBuffer* outBuff = cntx->bufferMan->Get(); outBuff)
+            decompressBuffer->~EasyBuffer();
+            if (pck.MakeDecompressed(rcv->buff, decompressBuffer))
             {
-                if (pck.MakeDecompressed(rcv->buff, outBuff))
+                if (MakeDeserialized(decompressBuffer, ret))
                 {
-                    if (MakeDeserialized(outBuff, ret))
-                    {
 
-                    }
                 }
-                cntx->bufferMan->Free(outBuff);
             }
+        }
+        cntx->bufferMan->Free(rcv->buff);
+        return ret;
+    }
+
+public:
+    std::vector<EasySerializeable*> Process(const CryptData& crypt, EasyBuffer* rcvBuff)
+    {
+        std::vector<EasySerializeable*> ret{};
+        EasyPacket pck(rcvBuff);
+        if (pck.MakeDecrypted(crypt, rcvBuff))
+        {
+            decompressBuffer->reset();
+            if (pck.MakeDecompressed(rcvBuff, decompressBuffer))
+            {
+                if (MakeDeserialized(decompressBuffer, ret))
+                {
+
+                }
+            }
+            cntx->bufferMan->Free(rcvBuff);
         }
         return ret;
     }
@@ -242,17 +289,35 @@ private:
 
 class SendManager {
     ServerContext* cntx;
+    EasyBuffer* serializationBuffer;
+    EasyBuffer* sendBuffer;
 
 public:
-    SendManager(ServerContext* cntx) : cntx(cntx)
+    SendManager(ServerContext* cntx) : cntx(cntx), serializationBuffer(), sendBuffer()
     {
+        while (!serializationBuffer)
+            serializationBuffer = cntx->bufferMan->Get();
+        while (!sendBuffer)
+            sendBuffer = cntx->bufferMan->Get();
+    }
 
+    ~SendManager()
+    {
+        if(serializationBuffer)
+            cntx->bufferMan->Free(serializationBuffer);
+        if(sendBuffer)
+            cntx->bufferMan->Free(sendBuffer);
     }
 
     void Update(double dt)
     {
         for (auto& [sid, cache] : cntx->sendCache)
+        {
             SendMultiple(sid, cache);
+            for (auto& obj : cache)
+                delete obj;
+            cache.clear();
+        }
         cntx->sendCache.clear();
     }
 
@@ -261,26 +326,20 @@ private:
     {
         if (Session* session = cntx->sessionMan->GetSession(sid); ((cache.size() > 0U) && (session)))
         {
-            if (EasyBuffer* serializationBuffer = cntx->bufferMan->Get(); serializationBuffer)
+            serializationBuffer->reset();
+            if (MakeSerialized(serializationBuffer, cache))
             {
-                if (MakeSerialized(serializationBuffer, cache))
+                sendBuffer->reset();
+                if (EasyPacket::MakeCompressed(serializationBuffer, sendBuffer))
                 {
-                    if (EasyBuffer* sendBuffer = cntx->bufferMan->Get(); sendBuffer)
+                    if (EasyPacket::MakeEncrypted({ sid, session->seqid_in, session->seqid_out, session->key }, sendBuffer))
                     {
-                        if (EasyPacket::MakeCompressed(serializationBuffer, sendBuffer))
+                        if (uint64_t res = cntx->sck->send(sendBuffer->begin(), sendBuffer->m_payload_size + EasyPacket::HeaderSize(), session->addr); res == WSAEISCONN)
                         {
-                            if (EasyPacket::MakeEncrypted({ sid, session->seqid_in, session->seqid_out, session->key }, sendBuffer))
-                            {
-                                if (uint64_t res = cntx->sck->send(sendBuffer->begin(), sendBuffer->m_payload_size + EasyPacket::HeaderSize(), session->addr); res == WSAEISCONN)
-                                {
-                                    session->seqid_out++;
-                                }
-                            }
+                            session->seqid_out++;
                         }
-                        cntx->bufferMan->Free(sendBuffer);
                     }
                 }
-                cntx->bufferMan->Free(serializationBuffer);
             }
         }
     }
@@ -289,26 +348,20 @@ private:
     {
         if (cache.size() > 0U)
         {
-            if (EasyBuffer* serializationBuffer = cntx->bufferMan->Get(); serializationBuffer)
+            serializationBuffer->reset();
+            if (MakeSerialized(serializationBuffer, cache))
             {
-                if (MakeSerialized(serializationBuffer, cache))
+                sendBuffer->reset();
+                if (EasyPacket::MakeCompressed(serializationBuffer, sendBuffer))
                 {
-                    if (EasyBuffer* sendBuffer = cntx->bufferMan->Get(); sendBuffer)
+                    if (EasyPacket::MakeEncrypted({ sid, seqid_in, seqid_out, key }, sendBuffer))
                     {
-                        if (EasyPacket::MakeCompressed(serializationBuffer, sendBuffer))
+                        if (uint64_t res = cntx->sck->send(sendBuffer->begin(), sendBuffer->m_payload_size + EasyPacket::HeaderSize(), addr); res == WSAEISCONN)
                         {
-                            if (EasyPacket::MakeEncrypted({ sid, seqid_in, seqid_out, key }, sendBuffer))
-                            {
-                                if (uint64_t res = cntx->sck->send(sendBuffer->begin(), sendBuffer->m_payload_size + EasyPacket::HeaderSize(), addr); res == WSAEISCONN)
-                                {
-                                    
-                                }
-                            }
+
                         }
-                        cntx->bufferMan->Free(sendBuffer);
                     }
                 }
-                cntx->bufferMan->Free(serializationBuffer);
             }
         }
     }
@@ -316,7 +369,7 @@ private:
     friend class BaseServer;
 };
 
-BaseServer::BaseServer(EasyBufferManager* bm, const unsigned short port, ServerCallback* cbk, bool encryption, bool compression) : cntx(new ServerContext(bm, cbk, encryption, compression)), port(port), running(false)
+BaseServer::BaseServer() : cntx(), running(false)
 {
 
 }
@@ -328,23 +381,7 @@ BaseServer::~BaseServer()
 
 std::vector<EasySerializeable*> BaseServer::Process(const CryptData& crypt, EasyBuffer* buffer)
 {
-    std::vector<EasySerializeable*> ret{};
-    EasyPacket pck(buffer);
-    if (pck.MakeDecrypted(crypt, buffer))
-    {
-        if (EasyBuffer* outBuff = cntx->bufferMan->Get(); outBuff)
-        {
-            if (pck.MakeDecompressed(buffer, outBuff))
-            {
-                if (MakeDeserialized(outBuff, ret))
-                {
-
-                }
-            }
-            cntx->bufferMan->Free(outBuff);
-        }
-    }
-    return ret;
+    return cntx->receiveMan->Process(crypt, buffer);
 }
 
 void BaseServer::Send(SessionID_t sid, const std::vector<EasySerializeable*>& objs, const Addr_t& addr, const SequenceID_t& seqid_in, const SequenceID_t& seqid_out, const Key_t& key)
@@ -362,11 +399,14 @@ void BaseServer::DestroySession(SessionID_t sid, std::string disconnectMessage)
     cntx->sessionMan->DestroySession(sid, disconnectMessage);
 }
 
-bool BaseServer::Start()
+bool BaseServer::Start(EasyBufferManager* bm, const unsigned short port, ServerCallback* cbk, bool encryption, bool compression)
 {
     if (IsRunning())
         return false;
+
     std::cout << "[BaseServer] Start - Starting...\n";
+    cntx = new ServerContext(bm, cbk, encryption, compression);
+    
     cntx->sck = new EasySocket();
     if (cntx->sck->bind(port, EasyIpAddress::Any) != WSAEISCONN)
     {
@@ -399,7 +439,21 @@ void BaseServer::Stop(std::string shutdownMessage)
 
     running = false;
     BaseServer::instance = nullptr;
+
+    delete cntx->sessionMan;
+    cntx->sessionMan = nullptr;
+
+    delete cntx->receiveMan;
+    cntx->receiveMan = nullptr;
+
+    delete cntx->sendMan;
+    cntx->sendMan = nullptr;
+
+    delete cntx->sck;
+    cntx->sck = nullptr;
+
     delete cntx;
+    cntx = nullptr;
 
     std::cout << "[BaseServer] Stop - Stopped.\n";
 }

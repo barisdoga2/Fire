@@ -140,7 +140,7 @@ public:
     unsigned long long timeSent = 0;
     unsigned long long timeout = 10000000000;
 
-    ChatMessage(const std::string& m, const std::string& u,  unsigned long long ts) : username(u), message(m), timeSent(ts)
+    ChatMessage(const std::string& u, const std::string& m,  unsigned long long ts) : username(u), message(m), timeSent(ts)
     { }
 
     std::string toString() const
@@ -153,7 +153,7 @@ public:
         return (now - timeSent) >= timeout;
     }
 
-    static void OnChatMessageReceived(const std::string& msg,const std::string& user,unsigned long long timeSent)
+    static void OnChatMessageReceived(const std::string& user, const std::string& msg,unsigned long long timeSent)
     {
         messages.emplace_back(user, msg, timeSent);
         scrollToBottom = true;
@@ -337,7 +337,7 @@ void EasyPlayground::ImGUI_DrawChatWindow()
         if (!text.empty())
         {
             // Send
-            network->GetSendCache().push_back(new sChatMessage(text, "", 0));
+            network->GetSendCache().push_back(new sChatMessage("", text, 0));
             inputBuf[0] = '\0';
         }
     }
@@ -660,8 +660,7 @@ void EasyPlayground::ImGUI_LoginWindow()
 		// Save config on click
 		if (!network->IsLoggingIn())
 		{
-			loginThread = std::thread([this]() {network->Login(SERVER_URL); });
-			loginThread.detach();
+            network->Login();
 		}
 	}
 
@@ -681,10 +680,10 @@ void EasyPlayground::ImGUI_DebugWindow()
     ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
 
     ImGui::Begin("ImGUI Settings");
-    ImGui::Checkbox("Fog Enabled", &imgui_isFog);
-    ImGui::Checkbox("Triangles Enabled", &imgui_triangles);
-    ImGui::Checkbox("Normals Enabled", &imgui_showNormalLines);
-    ImGui::InputFloat("Normal Length", &imgui_showNormalLength);
+    ImGui::Checkbox("Fog Enabled", &renderData.imgui_isFog);
+    ImGui::Checkbox("Triangles Enabled", &renderData.imgui_triangles);
+    ImGui::Checkbox("Normals Enabled", &renderData.imgui_showNormalLines);
+    ImGui::InputFloat("Normal Length", &renderData.imgui_showNormalLength);
     ImGui::End();
 }
 

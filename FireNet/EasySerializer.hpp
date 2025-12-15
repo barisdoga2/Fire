@@ -9,12 +9,26 @@
 class EasySerializer;
 class EasySerializeable {
 public:
+    static inline unsigned long long total_creates{}, total_deletes{};
+
     PacketID_t packetID;
-    virtual void Serialize(EasySerializer* ser) = 0U;
+
     EasySerializeable(PacketID_t packetID) : packetID(packetID)
     {
-
+        total_creates++;
     }
+
+    //EasySerializeable(const EasySerializeable& easySerializeable) = delete;
+
+    EasySerializeable() = delete;
+
+    ~EasySerializeable()
+    {
+        total_deletes++;
+    }
+
+    virtual void Serialize(EasySerializer* ser) = 0U;
+
 };
 
 class PacketFactory
