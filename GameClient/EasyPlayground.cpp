@@ -36,7 +36,14 @@
 #include "EasyPlayground_Network.hpp"
 #include "EasyPlayground_Loading.hpp"
 
-
+uint64_t GetClientTimeMs()
+{
+	using clock = std::chrono::steady_clock; // ÖNEMLİ: steady
+	static const auto start = clock::now();
+	return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+		clock::now() - start
+	).count();
+}
 
 EasyPlayground::EasyPlayground(EasyDisplay* display, EasyBufferManager* bm) : display(display), bm(bm), network(new ClientNetwork(bm, this))
 {
@@ -103,6 +110,12 @@ bool EasyPlayground::Init()
 bool EasyPlayground::Render(double _dt)
 {
 	camera->Update(_dt);
+
+	if (player)
+		player->Update(_dt);
+
+	for (EasyEntity* e : players)
+		e->Update(_dt);
 
 	bool success = true;
 
@@ -171,14 +184,13 @@ bool EasyPlayground::Update(double _dt)
 	// Try load everything until done
 	static bool srcReady{}; if (!srcReady && model->LoadToGPU()) srcReady = true;
 
-	if(player)
-		player->Update(_dt);
-	for(EasyEntity* e : players)
-		e->Update(_dt);
-
 	isRender = network->IsInGame();
 
 	NetworkUpdate(_dt);
+
+	for (Player* p : players)
+		if (!p->isMainPlayer)
+			p->UpdateRemoteInterpolation(GetClientTimeMs());
 
 	return !display->ShouldClose();
 }
@@ -287,7 +299,7 @@ bool EasyPlayground::key_callback(const KeyboardData& data)
 			for (auto& p : players)
 				delete p;
 			players.clear();
-			player = new Player(model, 0U, true, glm::vec3(0, 0, 0));
+			player = new Player(network, model, 0U, true, glm::vec3(0, 0, 0));
 			players.push_back(player);
 		}
 		return false;
@@ -322,12 +334,6 @@ bool EasyPlayground::key_callback(const KeyboardData& data)
 	if (data.key == GLFW_KEY_T && data.action == GLFW_RELEASE)
 	{
 		animation = 2;
-		return false;
-	}
-
-	if (data.key == GLFW_KEY_W && data.action == GLFW_RELEASE)
-	{
-		network->GetSendCache().push_back(new sMoveInput(network->session.uid, 0U, 0U, glm::vec3(0.0f), 0U));
 		return false;
 	}
 

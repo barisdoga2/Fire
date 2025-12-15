@@ -2,6 +2,7 @@
 
 #include <unordered_set>
 #include <vector>
+#include <deque>
 #include <EasyNet.hpp>
 #include <EasySerializer.hpp>
 
@@ -38,7 +39,7 @@
 #define CHAT_MESSAGE                                            ((PacketID_t)(205U))
 #define GAME_BOOT                                               ((PacketID_t)(206U))
 
-#define MOVE_INPUT                                              ((PacketID_t)(300U))
+#define PLAYER_INPUT                                            ((PacketID_t)(300U))
 #define PLAYER_STATE                                            ((PacketID_t)(301U))
 #define WORLD_STATE                                             ((PacketID_t)(302U))
 #define PLAYER_INFO                                             ((PacketID_t)(303U))
@@ -53,6 +54,36 @@ public:
     std::vector<unsigned int> champions_owned{};
 };
 
+class sPlayerInput : public EasySerializeable
+{
+public:
+    UserID_t  uid{};
+    SequenceID_t  inputSeq{};
+    uint32_t  dtMs{};
+    glm::vec3 moveDir{};;
+    uint64_t  clientTimeMs{};
+
+    sPlayerInput() : EasySerializeable(static_cast<PacketID_t>(PLAYER_INPUT))
+    {
+
+    }
+
+    sPlayerInput(UserID_t uid_, SequenceID_t seq_, uint32_t dtMs_, glm::vec3 dir_, uint64_t ctm_) : EasySerializeable(static_cast<PacketID_t>(PLAYER_INPUT)), uid(uid_), inputSeq(seq_), dtMs(dtMs_), moveDir(dir_), clientTimeMs(ctm_)
+    {
+
+    }
+
+    void Serialize(EasySerializer* ser) override
+    {
+        ser->Put(uid);
+        ser->Put(inputSeq);
+        ser->Put(dtMs);
+        ser->Put(moveDir);
+        ser->Put(clientTimeMs);
+    }
+};
+REGISTER_PACKET(sPlayerInput, PLAYER_INPUT);
+
 class FireSession {
 public:
     std::string username;
@@ -62,10 +93,10 @@ public:
     UserStats stats;
     Timestamp_t recv;
 
-    glm::vec3 position{};
-    glm::vec3 velocity{};
-    uint64_t lastInputSequence{};
-    unsigned long long serverTimestamp{};
+    glm::vec3 position{ 0.f };
+    glm::vec3 velocity{ 0.f };
+    uint64_t lastInputSeq{ 0 };
+    std::deque<sPlayerInput> inputQueue;
 
     bool logoutRequested{};
 
@@ -386,36 +417,6 @@ public:
 };
 REGISTER_PACKET(sChatMessage, CHAT_MESSAGE);
 
-class sMoveInput : public EasySerializeable
-{
-public:
-    UserID_t  uid{};
-    SequenceID_t  inputSeq{};
-    uint32_t  dtMs{};
-    glm::vec3 moveDir{};;
-    uint64_t  clientTimeMs{};
-
-    sMoveInput() : EasySerializeable(static_cast<PacketID_t>(MOVE_INPUT))
-    {
-
-    }
-
-    sMoveInput(UserID_t uid_, SequenceID_t seq_, uint32_t dtMs_, glm::vec3 dir_, uint64_t ctm_) : EasySerializeable(static_cast<PacketID_t>(MOVE_INPUT)), uid(uid_), inputSeq(seq_), dtMs(dtMs_), moveDir(dir_), clientTimeMs(ctm_)
-    {
-
-    }
-
-    void Serialize(EasySerializer* ser) override
-    {
-        ser->Put(uid);
-        ser->Put(inputSeq);
-        ser->Put(dtMs);
-        ser->Put(moveDir);
-        ser->Put(clientTimeMs);
-    }
-};
-REGISTER_PACKET(sMoveInput, MOVE_INPUT);
-
 class sPlayerState : public EasySerializeable {
 public:
     UserID_t uid;
@@ -493,7 +494,7 @@ public:
         for (auto& [sid, fs] : sessions)
         {
             playerInfo.push_back({ fs->stats.uid, fs->username });
-            playerState.push_back({ fs->stats.uid, fs->position, fs->velocity, fs->lastInputSequence, fs->serverTimestamp });
+            playerState.push_back({ fs->stats.uid, fs->position, fs->velocity, fs->lastInputSeq, 0U });
         }
     }
 
@@ -523,7 +524,7 @@ public:
     {
         for (auto& [sid, fs] : sessions)
         {
-            playerState.emplace_back(fs->stats.uid, fs->position, fs->velocity, fs->lastInputSequence, fs->serverTimestamp);
+            playerState.emplace_back(fs->stats.uid, fs->position, fs->velocity, fs->lastInputSeq, 0U);
         }
     }
 

@@ -167,8 +167,11 @@ void ClientNetwork::Stop()
 
 void ClientNetwork::Update()
 {
-    ReceiveOne();
-    SendOne();
+    for (uint8_t i = 0U; i < 16U; i++)
+    {
+        ReceiveOne();
+        SendOne();
+    }
 
     if (isLoggingIn)
     {

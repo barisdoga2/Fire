@@ -97,4 +97,18 @@ public:
 
     static void ForwardStandartIO();
 
+    inline Player* GetPlayerByUID(UserID_t uid)
+    {
+        Player* ret{};
+        for (Player* p : players)
+        {
+            if (p->uid == uid)
+            {
+                ret = p;
+                break;
+            }
+        }
+        return ret;
+    }
 };
+

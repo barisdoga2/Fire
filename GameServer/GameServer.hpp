@@ -19,6 +19,8 @@ public:
 	bool Start(EasyBufferManager* bm);
 	void Stop(std::string shutdownMessage = "");
 
+	void ProcessReceived(double dt);
+	void Tick(double dt);
 	void Update(double dt) override;
 
 	void BroadcastMessage(std::string broadcastMessage);
