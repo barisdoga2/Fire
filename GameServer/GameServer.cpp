@@ -1,4 +1,4 @@
-#include <filesystem>
+﻿#include <filesystem>
 #include <sstream>
 #include <random>
 
@@ -29,15 +29,8 @@ void GameServer::Stop(std::string shutdownMessage)
     BaseServer::Stop(shutdownMessage);
 }
 
-void GameServer::Update(double dt)
+void GameServer::ProcessReceived(double dt)
 {
-    if (!IsRunning())
-        return;
-
-    BaseServer::Update(dt);
-
-    static std::unordered_map<SessionID_t, std::vector<sMoveInput*>> playerInputs;
-
     ServerCache_t& send = GetSendCache();
     ServerCache_t& recv = GetReceiveCache();
     for (auto recvIt = recv.begin(); recvIt != recv.end(); )
@@ -75,6 +68,16 @@ void GameServer::Update(double dt)
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
+            else if (sPlayerInput* playerInput = dynamic_cast<sPlayerInput*>(*objIt); playerInput)
+            {
+                std::cout << "[GameServer] Update - sPlayerInput received.\n";
+
+                // ...
+
+                fSession->recv = Clock::now();
+                delete* objIt;
+                objIt = recvIt->second.erase(objIt);
+            }
             else if (sLogoutRequest* logoutRequest = dynamic_cast<sLogoutRequest*>(*objIt); logoutRequest)
             {
                 std::cout << "[GameServer] Update - Logout request received.\n";
@@ -105,68 +108,47 @@ void GameServer::Update(double dt)
                 delete* objIt;
                 objIt = recvIt->second.erase(objIt);
             }
-            else if (sMoveInput* moveInput = dynamic_cast<sMoveInput*>(*objIt); moveInput)
-            {
-                std::cout << "[GameServer] Update - Player input received.\n";
-                
-                playerInputs[fSession->sid].push_back(moveInput);
-
-                fSession->recv = Clock::now();
-                objIt = recvIt->second.erase(objIt);
-            }
             else
             {
                 objIt++;
             }
         }
-        
+
         if (recvIt->second.size() == 0U)
             recvIt = recv.erase(recvIt);
         else
             recvIt++;
     }
+}
 
-    {
-        //static Timestamp_t nextInputProcessing = Clock::now();
-    //if (nextInputProcessing <= Clock::now() )
-    //{
-    //    nextInputProcessing = Clock::now() + std::chrono::milliseconds(100U);
-    //    for (auto& [sid, inputs] : playerInputs)
-    //    {
-    //        for (sMoveInput* input : inputs)
-    //        {
-    //            sessions[sid]->position.x += 1.0f;
-    //            delete input;
-    //        }
-    //    }
-    //    playerInputs.clear();
-    //}
-    //static Timestamp_t nextStateProcessing = Clock::now();
-    //if (nextStateProcessing <= Clock::now())
-    //{
-    //    nextStateProcessing = Clock::now() + std::chrono::milliseconds(100U);
-    //    for (auto& [sid, session] : sessions)
-    //        send[sid].push_back(new sWorldState(sessions));
-    //}
-    }
+void GameServer::Update(double dt)
+{
+    if (!IsRunning())
+        return;
 
-    std::vector<SessionID_t> sessionsToLogout;
-    std::vector<SessionID_t> sessionsToTimeout;
-    for (auto& [sid, fSession] : sessions)
-    {   
-        if (fSession->recv + std::chrono::milliseconds(SESSION_TIMEOUT) < Clock::now())
-            sessionsToTimeout.push_back(sid);
-        else if(fSession->logoutRequested)
-            sessionsToLogout.push_back(sid);
-    }
-    for (SessionID_t& sid : sessionsToLogout)
+    BaseServer::Update(dt);
+
+    ProcessReceived(dt);
+
+    // Destroy Sessions. Timeout and Logout
     {
-        DestroySession(sid);
-    }
-    for (SessionID_t& sid : sessionsToTimeout)
-    {
-        std::cout << "[GameServer] Update - Session timed out.\n";
-        DestroySession(sid, "Session timed out.");
+        std::vector<std::pair<SessionID_t, std::string>> sessionsToDestroy{};
+        for (auto& [sid, fSession] : sessions)
+        {
+            if (fSession->recv + std::chrono::milliseconds(SESSION_TIMEOUT) < Clock::now())
+            {
+                std::cout << "[GameServer] Update - Session timed out.\n";
+                sessionsToDestroy.push_back({ sid, "Session timed out." });
+            }
+            else if (fSession->logoutRequested)
+            {
+                sessionsToDestroy.push_back({ sid, "" });
+            }
+        }
+        for (const std::pair<SessionID_t, std::string>& s2d : sessionsToDestroy)
+        {
+            DestroySession(s2d.first, s2d.second);
+        }
     }
 }
 

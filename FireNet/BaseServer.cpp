@@ -170,28 +170,31 @@ public:
 
     void Update(double dt)
     {
-        if (RawPacket* rcv = ReceiveOne(); rcv)
+        for (uint8_t i = 0U; i < 16U; i++)
         {
-            Session* session = cntx->sessionMan->GetSession(rcv->sid);
+            if (RawPacket* rcv = ReceiveOne(); rcv)
+            {
+                Session* session = cntx->sessionMan->GetSession(rcv->sid);
 
-            if (!session)
-            {
-                session = cntx->sessionMan->CreateSession(rcv->sid, rcv->addr, rcv->recv, rcv->buff);
-            }
-            else
-            {
-                if (session->addr != rcv->addr)
+                if (!session)
                 {
-                    session = cntx->cbk->OnSessionReconnect(session->GetBase(), { &rcv->sid, &rcv->addr, &session->key, &session->key_expiry, &rcv->recv }) ? session : nullptr;
+                    session = cntx->sessionMan->CreateSession(rcv->sid, rcv->addr, rcv->recv, rcv->buff);
                 }
                 else
                 {
+                    if (session->addr != rcv->addr)
+                    {
+                        session = cntx->cbk->OnSessionReconnect(session->GetBase(), { &rcv->sid, &rcv->addr, &session->key, &session->key_expiry, &rcv->recv }) ? session : nullptr;
+                    }
+                    else
+                    {
 
+                    }
+                    if (session)
+                        ProcessReceived(session, rcv);
+                    else
+                        cntx->bufferMan->Free(rcv->buff);
                 }
-                if (session)
-                    ProcessReceived(session, rcv);
-                else
-                    cntx->bufferMan->Free(rcv->buff);
             }
         }
     }

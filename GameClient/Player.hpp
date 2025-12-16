@@ -3,15 +3,18 @@
 #include <EasyIO.hpp>
 #include <EasyEntity.hpp>
 #include <../GameServer/GameServer.hpp>
+#include <../GameServer/ServerNet.hpp>
+
 
 class EasyModel;
+class ClientNetwork;
 class Player : public EasyEntity, MouseListener, KeyboardListener {
 public:
 	const bool isMainPlayer;
 	const UserID_t uid;
+	ClientNetwork* network;
 
-	Player(EasyModel* model, UserID_t uid, bool isMainPlayer, glm::vec3 position);
-
+	Player(ClientNetwork* network, EasyModel* model, UserID_t uid, bool isMainPlayer, glm::vec3 position);
 	~Player();
 
 	bool Update(double _dt) override;

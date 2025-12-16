@@ -1,4 +1,4 @@
-
+﻿
 void EasyPlayground::OnDisconnect()
 {
 	ChatMessage::Clear();
@@ -28,7 +28,7 @@ void EasyPlayground::ProcesPlayer(const std::vector<sPlayerInfo>& infos, const s
 				it++;
 		if (it == players.end())
 		{
-			Player* newPlayer = new Player(model, info.uid, (network->session.uid == info.uid), glm::vec3(0,0,0));
+			Player* newPlayer = new Player(network, model, info.uid, (network->session.uid == info.uid), glm::vec3(0,0,0));
 			if (network->session.uid == info.uid)
 			{
 				std::cout << "[EasyPlayground] ProcesPlayer - Initialized own player.\n";
@@ -96,6 +96,15 @@ void EasyPlayground::NetworkUpdate(double _dt)
 				break; // Disconnect clears the cache already
 				//delete disconnectResponse;  // Disconnect clears the cache already
 				//it = receive_cache.erase(it);  // Disconnect clears the cache already
+			}
+			else if (auto* playerState = dynamic_cast<sPlayerState*>(*it); playerState)
+			{
+				std::cout << "[EasyPlayground] NetworkUpdate - sPlayerState received.\n";
+
+				// ...
+
+				delete playerState;
+				it = receive_cache.erase(it);
 			}
 			else if (auto* heartbeat = dynamic_cast<sHearbeat*>(*it); heartbeat)
 			{

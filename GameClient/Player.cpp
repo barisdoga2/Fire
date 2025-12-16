@@ -1,11 +1,13 @@
-#include "Player.hpp"
+﻿#include "Player.hpp"
 #include <EasyModel.hpp>
 #include <EasyAnimator.hpp>
 #include <EasyAnimation.hpp>
+#include "ClientNetwork.hpp"
 
 
 
-Player::Player(EasyModel* model, UserID_t uid, bool isMainPlayer, glm::vec3 position) : uid(uid), isMainPlayer(isMainPlayer), EasyEntity(model, position)
+
+Player::Player(ClientNetwork* network, EasyModel* model, UserID_t uid, bool isMainPlayer, glm::vec3 position) : network(network), uid(uid), isMainPlayer(isMainPlayer), EasyEntity(model, position)
 {
 
 }
@@ -21,6 +23,9 @@ bool Player::Update(double _dt)
         animator = new EasyAnimator(model->animations.at(0));
     else if (animator)
         animator->UpdateAnimation(_dt);
+
+    if (!isMainPlayer)
+        return true;
 
     return true;
 }
