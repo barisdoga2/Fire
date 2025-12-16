@@ -7,7 +7,12 @@
 #include <EasySerializer.hpp>
 #include <EasyUtils.hpp>
 
-
+static uint64_t GetServerTimeMs()
+{
+    using clock = std::chrono::steady_clock;
+    static const auto start = clock::now();
+    return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - start).count();
+}
 
 GameServer::GameServer() : BaseServer()
 {
@@ -98,8 +103,8 @@ void GameServer::ProcessReceived(double dt)
             }
             else if (sChatMessage* chatMessage = dynamic_cast<sChatMessage*>(*objIt); chatMessage)
             {
-                for(auto& [sid, fs] : sessions)
-                    if(fs)
+                for (auto& [sid, fs] : sessions)
+                    if (fs)
                         send[fs->sid].push_back(new sChatMessage(fSession->username, chatMessage->message, Clock::now().time_since_epoch().count()));
 
                 std::cout << "[GameServer] Update - Chat message received and distributed.\n";

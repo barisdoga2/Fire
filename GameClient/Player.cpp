@@ -59,3 +59,76 @@ bool Player::character_callback(const KeyboardData& data)
 	
 	return false;
 }
+
+void Player::ApplyInput(const sPlayerInput& in)
+{
+    const float speed = 5.0f;
+    const float dts = (float)in.dtMs / 1000.f;
+
+    transform.position += in.moveDir * (speed * (float)dts); // veya: position += ...
+}
+
+void Player::Reconcile()
+{
+    transform.position = serverState.position;
+
+    auto it = pendingInputs.begin();
+    while (it != pendingInputs.end())
+    {
+        if (it->inputSeq <= serverState.lastInputSequence)
+            it = pendingInputs.erase(it);
+        else
+            ++it;
+    }
+
+    for (const auto& in : pendingInputs)
+        ApplyInput(in);
+}
+
+void Player::PushSnapshot(const sPlayerState& s)
+{
+    snapBuf.push_back(NetSnapshot{ (uint64_t)s.serverTimestamp, s.position, s.velocity });
+
+    // buffer şişmesin
+    while (snapBuf.size() > 32)
+        snapBuf.pop_front();
+}
+
+static glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t)
+{
+    return a + (b - a) * t;
+}
+
+void Player::UpdateRemoteInterpolation(uint64_t nowClientMs)
+{
+    if (isMainPlayer) return;
+
+    constexpr uint64_t interpDelayMs = 200; // 2 snapshot gerisi
+    const uint64_t renderTime = (nowClientMs > interpDelayMs) ? (nowClientMs - interpDelayMs) : 0;
+
+    // renderTime'dan eski olanları at (en az 2 kalsın)
+    while (snapBuf.size() >= 2 && snapBuf[1].serverTimeMs <= renderTime)
+        snapBuf.pop_front();
+
+    if (snapBuf.size() == 0) return;
+
+    if (snapBuf.size() == 1)
+    {
+        // tek snapshot varsa snap (ya da extrapolate)
+        transform.position = snapBuf[0].pos;
+        return;
+    }
+
+    const auto& a = snapBuf[0];
+    const auto& b = snapBuf[1];
+
+    const uint64_t t0 = a.serverTimeMs;
+    const uint64_t t1 = b.serverTimeMs;
+
+    float t = 0.f;
+    if (t1 > t0)
+        t = float(double(renderTime - t0) / double(t1 - t0));
+
+    t = glm::clamp(t, 0.f, 1.f);
+    transform.position = Lerp(a.pos, b.pos, t);
+}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <EasyIO.hpp>
 #include <EasyEntity.hpp>
 #include <../GameServer/GameServer.hpp>
@@ -25,4 +26,19 @@ public:
 	bool key_callback(const KeyboardData& data) override;
 	bool character_callback(const KeyboardData& data) override;
 
+
+
+	SequenceID_t nextInputSeq = 0U;
+	std::vector<sPlayerInput> pendingInputs;
+	sPlayerState serverState{};
+	sPlayerInput lastSentInput{};
+	bool hasLastSentInput{ false };
+	double sendAccum{ 0.0 };
+
+	void ApplyInput(const sPlayerInput& in);
+	void Reconcile();
+
+	std::deque<NetSnapshot> snapBuf;
+	void PushSnapshot(const sPlayerState& s);
+	void UpdateRemoteInterpolation(uint64_t nowClientMs);
 };

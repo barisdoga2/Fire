@@ -36,7 +36,14 @@
 #include "EasyPlayground_Network.hpp"
 #include "EasyPlayground_Loading.hpp"
 
-
+uint64_t GetClientTimeMs()
+{
+	using clock = std::chrono::steady_clock; // ÖNEMLİ: steady
+	static const auto start = clock::now();
+	return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+		clock::now() - start
+	).count();
+}
 
 EasyPlayground::EasyPlayground(EasyDisplay* display, EasyBufferManager* bm) : display(display), bm(bm), network(new ClientNetwork(bm, this))
 {
@@ -180,6 +187,10 @@ bool EasyPlayground::Update(double _dt)
 	isRender = network->IsInGame();
 
 	NetworkUpdate(_dt);
+
+	for (Player* p : players)
+		if (!p->isMainPlayer)
+			p->UpdateRemoteInterpolation(GetClientTimeMs());
 
 	return !display->ShouldClose();
 }
