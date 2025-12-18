@@ -9,7 +9,6 @@
 
 
 
-class EasyDisplay;
 class EasyModel;
 class EasyShader;
 class EasyCamera;
@@ -22,32 +21,24 @@ class EasyPlayground : public ClientCallback, KeyboardListener, MouseListener {
 private:
 public:
     // Display
-    EasyDisplay* display{};
     double fps{};
     double ups{};
 
     // Network
-    EasyBufferManager* bm{};
-    ClientNetwork* network;
+    EasyBufferManager* bm;
+    ClientNetwork* network{};
 
     // Shaders
     RenderData renderData{};
-    EasyShader* shader{};
-    EasyShader* normalLinesShader{};
-    EasyCamera* camera{};
 
-    // Assets
-    EasyModel* model{};
-    EasyModel* cube_1x1x1{};
-    EasyModel* items{};
-    EasyModel* buildings{};
-    EasyModel* walls{};
-    std::vector<Chunk*> chunks{};
+    // Assets and Collections
     HDR* hdr{};
-
-    // Collections
-    Player* player{};
+    std::unordered_map<std::string, EasyModel*> models{};
+    EasyModel*& Model(std::string name) { return models[name]; };
+    std::vector<Chunk*> chunks{};
+    MainPlayer* player{};
     std::vector<Player*> players{};
+    EasyCamera* camera{};
 
     // ImGUI
     bool isRender{};
@@ -58,33 +49,42 @@ public:
     int animation = 1;
     int seed = 1337;
 
-    EasyPlayground(EasyDisplay* display, EasyBufferManager* bm);
+    EasyPlayground(EasyBufferManager* bm);
     ~EasyPlayground();
 
-    bool Init();
-
+    // Update
     bool Update(double _dt);
+    void NetworkUpdate(double _dt);
+
+    // Render
+    void ImGUI_Render();
     bool Render(double _dt);
     void StartRender(double _dt);
     void EndRender();
+
+    // Loading
+    bool Init();
+    void DeInit();
     void ReloadShaders();
     void ReloadAssets();
     void ReGenerateMap();
 
-    void ProcesPlayer(const std::vector<sPlayerInfo>& infos, const std::vector<sPlayerState>& states);
-    void NetworkUpdate(double _dt);
-
+    // Network
     void OnLogin() override;
     void OnDisconnect() override;
+    void ClearPlayers();
+    void CreateMainPlayer(ClientNetwork* network, UserID_t uid = 0U);
+    void ProcesPlayer(const std::vector<sPlayerInfo>& infos, const std::vector<sPlayerState>& states);
 
-    bool mouse_callback(const MouseData& md) override;
-    bool scroll_callback(const MouseData& md) override;
-    bool cursorMove_callback(const MouseData& md) override;
+    // Callbacks
+    bool button_callback(const MouseData& data) override;
+    bool scroll_callback(const MouseData& data) override;
+    bool move_callback(const MouseData& data) override;
     bool key_callback(const KeyboardData& data) override;
-    bool character_callback(const KeyboardData& data) override;
+    bool char_callback(const KeyboardData& data) override;
 
+    // ImGUI
     void ImGUI_Init();
-    void ImGUI_Render();
     void ImGUI_TestRender();
     void ImGUI_DrawConsoleWindow();
     void ImGUI_BroadcastMessageWindow();
@@ -95,20 +95,9 @@ public:
     void ImGUI_DrawChatWindow();
     void ImGUI_DebugWindow();
 
+    // Utility
+    Player* GetPlayerByUID(UserID_t uid);
     static void ForwardStandartIO();
 
-    inline Player* GetPlayerByUID(UserID_t uid)
-    {
-        Player* ret{};
-        for (Player* p : players)
-        {
-            if (p->uid == uid)
-            {
-                ret = p;
-                break;
-            }
-        }
-        return ret;
-    }
 };
 

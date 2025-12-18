@@ -36,83 +36,22 @@
 #include "EasyPlayground_Network.hpp"
 #include "EasyPlayground_Loading.hpp"
 
-uint64_t GetClientTimeMs()
-{
-	using clock = std::chrono::steady_clock; // ÖNEMLİ: steady
-	static const auto start = clock::now();
-	return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-		clock::now() - start
-	).count();
-}
 
-EasyPlayground::EasyPlayground(EasyDisplay* display, EasyBufferManager* bm) : display(display), bm(bm), network(new ClientNetwork(bm, this))
+
+
+EasyPlayground::EasyPlayground(EasyBufferManager* bm) : bm(bm)
 {
 	
 }
 
 EasyPlayground::~EasyPlayground()
 {
-	network->Stop();
-
-	// ImGUI
-	{
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext();
-	}
-
-	delete shader;
-	delete normalLinesShader;
-	delete camera;
-	delete hdr;
-	delete network;
-	delete model;
-	delete cube_1x1x1;
-	delete buildings;
-	delete walls;
-	for (auto& c : chunks)
-		delete c;
-
-	HDR::DeInit();
-	SkyboxRenderer::DeInit();
-	ChunkRenderer::DeInit();
-}
-
-bool EasyPlayground::Init()
-{
-	// Inputs
-	{
-		EasyKeyboard::Init(*display);
-		EasyMouse::Init(*display);
-
-		EasyKeyboard::AddListener(this);
-		EasyMouse::AddListener(this);
-	}
-
-	// Assets
-	{
-		ReloadAssets();
-	}
-
-	// Shaders
-	{
-		ReloadShaders();
-	}
-
-	// ImGUI
-	{
-		ImGUI_Init();
-	}
-
-	return true;
+	DeInit();
 }
 
 bool EasyPlayground::Render(double _dt)
 {
 	camera->Update(_dt);
-
-	if (player)
-		player->Update(_dt);
 
 	for (EasyEntity* e : players)
 		e->Update(_dt);
@@ -182,17 +121,13 @@ bool EasyPlayground::Update(double _dt)
 	}
 
 	// Try load everything until done
-	static bool srcReady{}; if (!srcReady && model->LoadToGPU()) srcReady = true;
+	static bool srcReady{}; if (!srcReady && Model("MainCharacter")->LoadToGPU()) srcReady = true;
 
 	isRender = network->IsInGame();
 
 	NetworkUpdate(_dt);
 
-	for (Player* p : players)
-		if (!p->isMainPlayer)
-			p->UpdateRemoteInterpolation(GetClientTimeMs());
-
-	return !display->ShouldClose();
+	return !EasyDisplay::ShouldClose();
 }
 
 void EasyPlayground::StartRender(double _dt)
@@ -220,7 +155,7 @@ void EasyPlayground::StartRender(double _dt)
 		fps = 1.0 / avgDt;
 	}
 
-	glViewport(0, 0, display->windowSize.x, display->windowSize.y);
+	glViewport(0, 0, EasyDisplay::GetWindowSize().x, EasyDisplay::GetWindowSize().y);
 	GL(ClearDepth(1.f));
 	GL(ClearColor(0.5f, 0.7f, 1.0f, 1));
 	GL(Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
@@ -236,49 +171,55 @@ void EasyPlayground::StartRender(double _dt)
 
 void EasyPlayground::EndRender()
 {
-	glfwSetWindowTitle(display->window, (std::ostringstream() << std::fixed << std::setprecision(3) << "FPS: " << fps << " | UPS: " << ups).str().c_str());
-	glfwSwapBuffers(display->window);
+	glfwSetWindowTitle(EasyDisplay::GetWindow(), (std::ostringstream() << std::fixed << std::setprecision(3) << "FPS: " << fps << " | UPS: " << ups).str().c_str());
+	glfwSwapBuffers(EasyDisplay::GetWindow());
 	glfwPollEvents();
 }
 
-bool EasyPlayground::mouse_callback(const MouseData& md) 
+bool EasyPlayground::button_callback(const MouseData& data) 
 { 
-	if (!camera->mode)
+	if (!camera->enabled)
 	{
-		ImGui_ImplGlfw_MouseButtonCallback(md.window, md.button.button, md.button.action, md.button.mods);
+		ImGui_ImplGlfw_MouseButtonCallback(data.window, data.button.button, data.button.action, data.button.mods);
 		if (ImGui::GetIO().WantCaptureMouse)
 			return false;
 	}
 
-	camera->mouse_callback(md);
+	camera->button_callback(data);
+	if (player)
+		player->button_callback(data);
 
 	return false; 
 }
 
-bool EasyPlayground::scroll_callback(const MouseData& md) 
+bool EasyPlayground::scroll_callback(const MouseData& data) 
 { 
-	if (!camera->mode)
+	if (!camera->enabled)
 	{
-		ImGui_ImplGlfw_ScrollCallback(md.window, md.scroll.now.x, md.scroll.now.y);
+		ImGui_ImplGlfw_ScrollCallback(data.window, data.scroll.now.x, data.scroll.now.y);
 		if (ImGui::GetIO().WantCaptureMouse)
 			return false;
 	}
 
-	camera->scroll_callback(md);
+	camera->scroll_callback(data);
+	if (player)
+		player->scroll_callback(data);
 
 	return false; 
 }
 
-bool EasyPlayground::cursorMove_callback(const MouseData& md) 
+bool EasyPlayground::move_callback(const MouseData& data) 
 { 
-	if (!camera->mode)
+	if (!camera->enabled)
 	{
-		ImGui_ImplGlfw_CursorPosCallback(md.window, md.position.now.x, md.position.now.y);
+		ImGui_ImplGlfw_CursorPosCallback(data.window, data.position.now.x, data.position.now.y);
 		if (ImGui::GetIO().WantCaptureMouse)
 			return false;
 	}
 
-	camera->cursorMove_callback(md);
+	camera->move_callback(data);
+	if (player)
+		player->move_callback(data);
 
 	return false;
 }
@@ -296,38 +237,34 @@ bool EasyPlayground::key_callback(const KeyboardData& data)
 		isTestRender = !isTestRender;
 		if (isTestRender)
 		{
-			for (auto& p : players)
-				delete p;
-			players.clear();
-			player = new Player(network, model, 0U, true, glm::vec3(0, 0, 0));
-			players.push_back(player);
+			ClearPlayers();
+			CreateMainPlayer(network, 0U);
 		}
 		return false;
 	}
 
 	if (data.key == GLFW_KEY_LEFT_ALT && data.action == GLFW_RELEASE)
 	{
-		camera->ModeSwap(false);
+		camera->enabled = true;
 		return false;
 	}
 	else if (data.key == GLFW_KEY_LEFT_ALT && data.action == GLFW_PRESS)
 	{
-		camera->ModeSwap(true);
+		camera->enabled = false;
 		return false;
 	}
+
+	camera->key_callback(data);
+	if (player)
+		player->key_callback(data);
 
 	ImGui_ImplGlfw_KeyCallback(data.window, data.key, data.scancode, data.action, data.mods);
 	if (ImGui::GetIO().WantCaptureKeyboard)
 		return false;
 
-	if (camera->key_callback(data))
-	{
-		return false;
-	}
-
 	if (data.key == GLFW_KEY_ESCAPE && data.action == GLFW_RELEASE)
 	{
-		display->exitRequested = true;
+		EasyDisplay::SetExitRequested(true);
 		return false;
 	}
 
@@ -352,9 +289,12 @@ bool EasyPlayground::key_callback(const KeyboardData& data)
 	return false; 
 }
 
-bool EasyPlayground::character_callback(const KeyboardData& data) 
+bool EasyPlayground::char_callback(const KeyboardData& data) 
 { 
-	if (!camera->mode)
+	if (player)
+		player->char_callback(data);
+
+	if (!camera->enabled)
 	{
 		ImGui_ImplGlfw_CharCallback(data.window, data.codepoint);
 		if (ImGui::GetIO().WantCaptureKeyboard)
@@ -369,4 +309,18 @@ void EasyPlayground::ForwardStandartIO()
 	using namespace UIConsole;
 	gImGuiCoutBuf = new ImGuiConsoleBuf(gConsoleLines);
 	gOldCoutBuf = std::cout.rdbuf(gImGuiCoutBuf);
+}
+
+Player* EasyPlayground::GetPlayerByUID(UserID_t uid)
+{
+	Player* ret{};
+	for (Player* p : players)
+	{
+		if (p->uid == uid)
+		{
+			ret = p;
+			break;
+		}
+	}
+	return ret;
 }

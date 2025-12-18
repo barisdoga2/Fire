@@ -1,10 +1,83 @@
 
+void EasyPlayground::DeInit()
+{
+	// Network
+	if (network)
+		delete network;
+	network = nullptr;
+
+	// Players and Main Player
+	for (Player* p : players)
+		delete p;
+	players.clear();
+	player = nullptr;
+
+	// HDRs
+	if (hdr)
+		delete hdr;
+	hdr = nullptr;
+
+	// Models
+	for (auto& [name, model] : models)
+		delete model;
+	models.clear();
+
+	// Chunks
+	for (Chunk* c : chunks)
+		delete c;
+	chunks.clear();
+
+	// Camera
+	if (camera)
+		delete camera;
+	camera = nullptr;
+
+	// Engine
+	EasyIO::DeInit();
+	HDR::DeInit();
+	SkyboxRenderer::DeInit();
+	ChunkRenderer::DeInit();
+	ModelRenderer::DeInit();
+	DebugRenderer::DeInit();
+}
+
+bool EasyPlayground::Init()
+{
+	EasyPlayground::DeInit();
+
+	// Inputs
+	EasyIO::Init();
+	EasyKeyboard::AddListener(this);
+	EasyMouse::AddListener(this);
+
+	// Shaders
+	ReloadShaders();
+
+	// Assets
+	ReloadAssets();
+
+	// ImGUI
+	ImGUI_Init();
+
+	return true;
+}
+
 void EasyPlayground::ReloadAssets()
 {
-	players.clear();
+	if (network)
+		delete network;
+	network = new ClientNetwork(bm, this);
 
-	if (model) delete model;
-	model = EasyModel::LoadModel(
+	for (Player* p : players)
+		delete p;
+	players.clear();
+	player = nullptr;
+
+	for (auto& [name,model] : models)
+		delete model;
+	models.clear();
+	
+	Model("MainCharacter") = EasyModel::LoadModel(
 		GetRelPath("res/models/Kachujin G Rosales Skin.fbx"),
 		{
 			GetRelPath("res/models/Standing Idle on Kachujin G Rosales wo Skin.fbx"),
@@ -13,20 +86,18 @@ void EasyPlayground::ReloadAssets()
 		}, glm::vec3(0.0082f) // Y = 1.70m
 	);
 
-	if (cube_1x1x1) delete cube_1x1x1;
-	cube_1x1x1 = EasyModel::LoadModel(GetRelPath("res/models/1x1cube.dae"));
+	Model("1x1cube.dae") = EasyModel::LoadModel(GetRelPath("res/models/1x1cube.dae"));
+	Model("items.dae") = EasyModel::LoadModel(GetRelPath("res/models/items.dae"));
+	Model("Buildings.dae") = EasyModel::LoadModel(GetRelPath("res/models/Buildings.dae"));
+	Model("Walls.dae") = EasyModel::LoadModel(GetRelPath("res/models/Walls.dae"));
+	
+	if (camera)
+		delete camera;
+	camera = new FRCamera();
 
-	if (items) delete items;
-	items = EasyModel::LoadModel(GetRelPath("res/models/items.dae"));
-
-	if (buildings) delete buildings;
-	buildings = EasyModel::LoadModel(GetRelPath("res/models/Buildings.dae"));
-
-	if (walls) delete walls;
-	walls = EasyModel::LoadModel(GetRelPath("res/models/Walls.dae"));
-
-	if (camera) delete camera;
-	camera = new EasyCamera(display, { 1,4.4,5.8 }, { 1 - 0.15, 4.4 - 0.44,5.8 - 0.895 }, 74.f, 0.01f, 1000.f);
+	if (hdr)
+		delete hdr;
+	hdr = new HDR("defaultLightingHDR");
 
 	ReGenerateMap();
 }
@@ -35,14 +106,11 @@ void EasyPlayground::ReloadShaders()
 {
 	std::cout << "[EasyPlayground] ReloadShaders - Reloading shaders...\n";
 
+	HDR::Init();
 	DebugRenderer::Init();
 	ModelRenderer::Init();
 	SkyboxRenderer::Init();
-	HDR::Init();
 	ChunkRenderer::Init();
-
-	if (hdr) delete hdr;
-	hdr = new HDR("defaultLightingHDR");
 }
 
 void EasyPlayground::ReGenerateMap()

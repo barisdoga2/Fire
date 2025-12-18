@@ -17,9 +17,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     EasyUtils_Init();
 
-    if (EasyDisplay display({ 1536 * 0.8,864 * 0.8 }); display.Init())
+    if (EasyDisplay::Init({ 1536 * 0.8,864 * 0.8 }))
     {
-        if (EasyPlayground playground(&display, bf); playground.Init())
+        if (EasyPlayground playground(bf); playground.Init())
         {
             std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
             std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
@@ -54,7 +54,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                     ups_timer = 0.0;
                 }
 
-                running &= !display.ShouldClose();
+                running &= !EasyDisplay::ShouldClose();
             }
         }
     }

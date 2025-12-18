@@ -7,18 +7,35 @@
 
 
 
-void EasyMouse::Init(const EasyDisplay& display)
+void EasyMouse::Init()
 {
-	listeners.clear();
+	DeInit();
 
-	glfwSetMouseButtonCallback(display.window, mouse_callback);
-	glfwSetCursorPosCallback(display.window, cursor_callback);
-	glfwSetScrollCallback(display.window, scroll_callback);
+	glfwSetMouseButtonCallback(EasyDisplay::GetWindow(), button_callback);
+	glfwSetCursorPosCallback(EasyDisplay::GetWindow(), move_callback);
+	glfwSetScrollCallback(EasyDisplay::GetWindow(), scroll_callback);
+	glfwSetCursorEnterCallback(EasyDisplay::GetWindow(), enter_callback);
 
-	glfwGetCursorPos(display.window, &data.position.now.x, &data.position.now.y);
+	glfwGetCursorPos(EasyDisplay::GetWindow(), &data.position.now.x, &data.position.now.y);
 
-	data.window = display.window;
+	data.window = EasyDisplay::GetWindow();
 	data.position.old = data.position.now;
+}
+
+void EasyMouse::DeInit()
+{
+	glfwSetMouseButtonCallback(EasyDisplay::GetWindow(), nullptr);
+	glfwSetCursorPosCallback(EasyDisplay::GetWindow(), nullptr);
+	glfwSetScrollCallback(EasyDisplay::GetWindow(), nullptr);
+	glfwSetCursorEnterCallback(EasyDisplay::GetWindow(), nullptr);
+
+	listeners = {};
+	data = {};
+	for (int i = 0; i < MAX_BUTTONS; i++)
+	{
+		buttons[i] = false;
+		buttons_read[i] = false;
+	}
 }
 
 void EasyMouse::AddListener(MouseListener* listener)
@@ -50,7 +67,7 @@ bool EasyMouse::IsButtonDown(int button)
 		return false;
 }
 
-void EasyMouse::mouse_callback(GLFWwindow* window, int button, int action, int mods)
+void EasyMouse::button_callback(GLFWwindow* window, int button, int action, int mods)
 {
 	if (button < MAX_BUTTONS)
 		buttons[button] = action;
@@ -61,12 +78,12 @@ void EasyMouse::mouse_callback(GLFWwindow* window, int button, int action, int m
 
 	for (MouseListener* l : listeners)
 	{
-		if (l->mouse_callback(data))
+		if (l->button_callback(data))
 			return;
 	}
 }
 
-void EasyMouse::cursor_callback(GLFWwindow* window, double xpos, double ypos)
+void EasyMouse::move_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	data.position.old = data.position.now;
 	data.position.now.x = xpos;
@@ -76,7 +93,7 @@ void EasyMouse::cursor_callback(GLFWwindow* window, double xpos, double ypos)
 
 	for (MouseListener* l : listeners)
 	{
-		if (l->cursorMove_callback(data))
+		if (l->move_callback(data))
 			return;
 	}
 }
@@ -93,14 +110,41 @@ void EasyMouse::scroll_callback(GLFWwindow* window, double posX, double posY)
 	}
 }
 
-void EasyKeyboard::Init(const EasyDisplay& display)
+void EasyMouse::enter_callback(GLFWwindow* window, int entered)
 {
-	listeners.clear();
+	data.position.entered = entered;
 
-	glfwSetKeyCallback(display.window, key_callback);
-	glfwSetCharCallback(display.window, character_callback);
+	for (MouseListener* l : listeners)
+	{
+		if (l->enter_callback(data))
+			return;
+	}
+}
 
-	data.window = display.window;
+void EasyKeyboard::Init()
+{
+	DeInit();
+
+	glfwSetKeyCallback(EasyDisplay::GetWindow(), key_callback);
+	glfwSetCharCallback(EasyDisplay::GetWindow(), char_callback);
+	glfwSetCharModsCallback(EasyDisplay::GetWindow(), char_mods_callback);
+
+	data.window = EasyDisplay::GetWindow();
+}
+
+void EasyKeyboard::DeInit()
+{
+	glfwSetKeyCallback(EasyDisplay::GetWindow(), nullptr);
+	glfwSetCharCallback(EasyDisplay::GetWindow(), nullptr);
+	glfwSetCharModsCallback(EasyDisplay::GetWindow(), nullptr);
+
+	listeners = {};
+	data = {};
+	for (int i = 0; i < MAX_BUTTONS; i++)
+	{
+		keys[i] = false;
+		keys_read[i] = false;
+	}
 }
 
 void EasyKeyboard::AddListener(KeyboardListener* listener)
@@ -147,12 +191,22 @@ void EasyKeyboard::key_callback(GLFWwindow* window, int key, int scancode, int a
 			return;
 }
 
-void EasyKeyboard::character_callback(GLFWwindow* window, unsigned int codepoint)
+void EasyKeyboard::char_callback(GLFWwindow* window, unsigned int codepoint)
 {
 	data.codepoint = codepoint;
 
 	for (KeyboardListener* k : listeners)
-		if (k->character_callback(data))
+		if (k->char_callback(data))
+			return;
+}
+
+void EasyKeyboard::char_mods_callback(GLFWwindow* window, unsigned int codepoint, int mods)
+{
+	data.codepoint = codepoint;
+	data.mods = mods;
+
+	for (KeyboardListener* k : listeners)
+		if (k->char_mods_callback(data))
 			return;
 }
 

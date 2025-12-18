@@ -6,7 +6,6 @@
 
 class EasyBufferManager;
 class GameServer;
-class EasyDisplay;
 struct GLFWwindow;
 class ServerUI : public MouseListener, KeyboardListener {
 private:
@@ -21,11 +20,10 @@ public:
     const double snapshotPeriod = 2.5;
 
     EasyBufferManager* bm;
-    EasyDisplay* display;
     GameServer* server;
     double fps = 0.0, ups = 0.0;
 
-    ServerUI(EasyDisplay* display, EasyBufferManager* bm, GameServer* server);
+    ServerUI(EasyBufferManager* bm, GameServer* server);
     ~ServerUI();
 
     bool Init();
@@ -41,11 +39,11 @@ public:
     void ImGUI_DrawManagementWindow();
     void ImGUI_DrawSessionsWindow();
 
-    bool mouse_callback(const MouseData& md) override;
-    bool scroll_callback(const MouseData& md) override;
-    bool cursorMove_callback(const MouseData& md) override;
+    bool button_callback(const MouseData& data) override;
+    bool scroll_callback(const MouseData& data) override;
+    bool move_callback(const MouseData& data) override;
     bool key_callback(const KeyboardData& data) override;
-    bool character_callback(const KeyboardData& data) override;
+    bool char_callback(const KeyboardData& data) override;
 
     static void ForwardStandartIO();
 

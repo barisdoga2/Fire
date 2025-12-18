@@ -270,6 +270,8 @@ EasyShader* ChunkRenderer::chunkShader;
 
 void ChunkRenderer::Init()
 {
+    DeInit();
+
 	chunkShader = new EasyShader(std::string("Chunk"));
 	chunkShader->BindAttribs({ "aPos", "aUV", "aNormal", "aTangent" });
 	chunkShader->BindUniforms(GENERAL_UNIFORMS);
@@ -296,8 +298,8 @@ void ChunkRenderer::Render(EasyCamera* camera, std::vector<Chunk*> chunks, HDR* 
 		glBindVertexArray(chunk->VAO);
 		glEnableVertexAttribArray(0);
 		chunkShader->LoadUniform("uModel", glm::translate(glm::mat4x4(1), glm::vec3(chunk->coord.x * Chunk::CHUNK_SIZE, 0, chunk->coord.y * Chunk::CHUNK_SIZE)));
-		chunkShader->LoadUniform("uView", camera->view_);
-		chunkShader->LoadUniform("uProj", camera->projection_);
+		chunkShader->LoadUniform("uView", camera->viewMatrix);
+		chunkShader->LoadUniform("uProj", camera->projectionMatrix);
 		chunkShader->LoadUniform("uCameraPos", camera->position);
 		chunkShader->LoadUniform("uIsFog", fog ? 1.0f : 0.0f);
         chunkShader->LoadTexture(0, GL_TEXTURE_2D, "diffuseTexture", chunk->backMaterial->GetTexture(EasyMaterial::ALBEDO));

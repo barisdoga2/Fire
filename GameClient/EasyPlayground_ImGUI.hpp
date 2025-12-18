@@ -191,7 +191,7 @@ void EasyPlayground::ImGUI_Init()
 
     ImVector<ImWchar> ranges;
     ImFontGlyphRangesBuilder builder;
-    builder.AddText(u8"ğĞşŞıİüÜöÖçÇ");
+    //builder.AddText("ğĞşŞıİüÜöÖçÇ");
     builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
     builder.BuildRanges(&ranges);
     io.Fonts->AddFontFromFileTTF(GetRelPath("res/fonts/Arial.ttf").c_str(), 14.f, 0, ranges.Data);
@@ -202,7 +202,7 @@ void EasyPlayground::ImGUI_Init()
     //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(display->window, false);
+    ImGui_ImplGlfw_InitForOpenGL(EasyDisplay::GetWindow(), false);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     char usernameArr[16] = "";
@@ -221,8 +221,8 @@ void EasyPlayground::ImGUI_DrawConsoleWindow()
 
     UIConsole::ImGuiConsoleBuf::PruneOldLogs();
 
-    const float W = (float)display->windowSize.x;
-    const float H = (float)display->windowSize.y;
+    const float W = (float)EasyDisplay::GetWindowSize().x;
+    const float H = (float)EasyDisplay::GetWindowSize().y;
 
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(W * 0.55f, H * 0.35f), ImGuiCond_Always);

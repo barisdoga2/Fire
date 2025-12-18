@@ -38,8 +38,8 @@ void DebugRenderer::Render(EasyCamera* camera, const std::vector<EasyEntity*>& e
 
 	debugShader->Start();
 
-	debugShader->LoadUniform("view", camera->view_);
-	debugShader->LoadUniform("proj", camera->projection_);
+	debugShader->LoadUniform("view", camera->viewMatrix);
+	debugShader->LoadUniform("proj", camera->projectionMatrix);
 	debugShader->LoadUniform("normalLength", rD.imgui_showNormalLength);
 
 	// Objects

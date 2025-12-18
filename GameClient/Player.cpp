@@ -1,15 +1,17 @@
 ﻿#include "Player.hpp"
+#include <EasyIO.hpp>
 #include <EasyModel.hpp>
 #include <EasyAnimator.hpp>
 #include <EasyAnimation.hpp>
 #include "ClientNetwork.hpp"
 
+#include <GLFW/glfw3.h>
 
 
-
-Player::Player(ClientNetwork* network, EasyModel* model, UserID_t uid, bool isMainPlayer, glm::vec3 position) : network(network), uid(uid), isMainPlayer(isMainPlayer), EasyEntity(model, position)
+Player::Player(ClientNetwork* network, EasyModel* model, UserID_t uid, bool isMainPlayer, glm::vec3 position) 
+: network(network), uid(uid), isMainPlayer(isMainPlayer), targetPosition(position), EasyEntity(model, position)
 {
-
+	
 }
 
 Player::~Player()
@@ -20,29 +22,27 @@ Player::~Player()
 bool Player::Update(double _dt) 
 {
     if (!animator && model->isRawDataLoadedToGPU && model->animations.size() > 0u)
-        animator = new EasyAnimator(model->animations.at(0));
-    else if (animator)
-        animator->UpdateAnimation(_dt);
+        animator = new EasyAnimator(model->animations.at(0U));
 
-    if (!isMainPlayer)
-        return true;
+	if (animator)
+		animator->UpdateAnimation(_dt);
 
     return true;
 }
 
-bool Player::mouse_callback(const MouseData& md)
+bool Player::button_callback(const MouseData& data)
 {
 	
 	return false;
 }
 
-bool Player::scroll_callback(const MouseData& md)
+bool Player::scroll_callback(const MouseData& data)
 {
 	
 	return false;
 }
 
-bool Player::cursorMove_callback(const MouseData& md)
+bool Player::move_callback(const MouseData& data)
 {
 	
 	return false;
@@ -54,81 +54,86 @@ bool Player::key_callback(const KeyboardData& data)
 	return false;
 }
 
-bool Player::character_callback(const KeyboardData& data)
+bool Player::char_callback(const KeyboardData& data)
 {
 	
 	return false;
 }
 
-void Player::ApplyInput(const sPlayerInput& in)
+MainPlayer::MainPlayer(ClientNetwork* network, EasyModel* model, UserID_t uid, glm::vec3 position) : Player(network, model, uid, true, position)
 {
-    const float speed = 5.0f;
-    const float dts = (float)in.dtMs / 1000.f;
 
-    transform.position += in.moveDir * (speed * (float)dts); // veya: position += ...
 }
 
-void Player::Reconcile()
+MainPlayer::~MainPlayer()
 {
-    transform.position = serverState.position;
 
-    auto it = pendingInputs.begin();
-    while (it != pendingInputs.end())
+}
+
+bool MainPlayer::Update(double _dt)
+{
+    float dt = (float)_dt;
+
+    bool w = keyStates[GLFW_KEY_W];
+    bool s = keyStates[GLFW_KEY_S];
+    bool a = keyStates[GLFW_KEY_A];
+    bool d = keyStates[GLFW_KEY_D];
+    bool rotateOnly = (!w && !s && (a || d));
+    bool moveInput = (w || s || a || d);
+
+    float yawRad = glm::radians(transform.rotation.y);
+    if (rotateOnly)
     {
-        if (it->inputSeq <= serverState.lastInputSequence)
-            it = pendingInputs.erase(it);
+        transform.rotation.y -= (a ? -1.f : 1.f) * 180.f * dt;
+        transform.rotation.y = glm::mod(transform.rotation.y, 360.f);
+        direction = glm::vec3(0.f);
+    }
+    else
+    {
+        if (!moveInput)
+        {
+            direction = glm::mix(direction, glm::vec3(0.f), dt * 10.f);
+        }
         else
-            ++it;
+        {
+            glm::vec3 inputDir((a ? -1.f : 0.f) + (d ? 1.f : 0.f), 0.f, (w ? 1.f : 0.f) + (s ? -1.f : 0.f) );
+            if (glm::length(inputDir) > 0.f)
+                inputDir = glm::normalize(inputDir);
+
+            glm::vec3 desiredDir(sin(yawRad) * inputDir.z + cos(yawRad) * inputDir.x, 0.f, cos(yawRad) * inputDir.z - sin(yawRad) * inputDir.x);
+            direction = glm::normalize(glm::mix(direction, desiredDir, dt * 8.f));
+        }
+
+        bool positionLerp = false;
+        targetPosition += direction * speed * dt;
+        transform.position = positionLerp ? ((targetPosition - transform.position) * 0.1f) : targetPosition;
+
+        if (glm::length(direction) > 0.001f)
+            transform.rotation.y = glm::degrees(std::atan2(direction.x, direction.z));
     }
 
-    for (const auto& in : pendingInputs)
-        ApplyInput(in);
+    if (animator)
+        animator->PlayAnimation(model->animations.at((w || s) ? 1U : 0U));
+
+    return Player::Update(_dt);
 }
 
-void Player::PushSnapshot(const sPlayerState& s)
+bool MainPlayer::key_callback(const KeyboardData& data)
 {
-    snapBuf.push_back(NetSnapshot{ (uint64_t)s.serverTimestamp, s.position, s.velocity });
-
-    // buffer şişmesin
-    while (snapBuf.size() > 32)
-        snapBuf.pop_front();
-}
-
-static glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t)
-{
-    return a + (b - a) * t;
-}
-
-void Player::UpdateRemoteInterpolation(uint64_t nowClientMs)
-{
-    if (isMainPlayer) return;
-
-    constexpr uint64_t interpDelayMs = 200; // 2 snapshot gerisi
-    const uint64_t renderTime = (nowClientMs > interpDelayMs) ? (nowClientMs - interpDelayMs) : 0;
-
-    // renderTime'dan eski olanları at (en az 2 kalsın)
-    while (snapBuf.size() >= 2 && snapBuf[1].serverTimeMs <= renderTime)
-        snapBuf.pop_front();
-
-    if (snapBuf.size() == 0) return;
-
-    if (snapBuf.size() == 1)
-    {
-        // tek snapshot varsa snap (ya da extrapolate)
-        transform.position = snapBuf[0].pos;
-        return;
-    }
-
-    const auto& a = snapBuf[0];
-    const auto& b = snapBuf[1];
-
-    const uint64_t t0 = a.serverTimeMs;
-    const uint64_t t1 = b.serverTimeMs;
-
-    float t = 0.f;
-    if (t1 > t0)
-        t = float(double(renderTime - t0) / double(t1 - t0));
-
-    t = glm::clamp(t, 0.f, 1.f);
-    transform.position = Lerp(a.pos, b.pos, t);
+	if (Player::key_callback(data))
+		return true;
+	
+	if (data.key == GLFW_KEY_W || data.key == GLFW_KEY_A || data.key == GLFW_KEY_S || data.key == GLFW_KEY_D)
+	{
+		if (data.action == GLFW_PRESS || data.action == GLFW_REPEAT)
+		{
+			keyStates[data.key] = true;
+		}
+		else if (data.action == GLFW_RELEASE)
+		{
+			keyStates[data.key] = false;
+		}
+		return true;
+	}
+	return false;
 }

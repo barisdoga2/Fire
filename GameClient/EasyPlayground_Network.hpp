@@ -1,4 +1,19 @@
 ﻿
+void EasyPlayground::ClearPlayers()
+{
+	for (auto& p : players)
+		delete p;
+	players.clear();
+}
+
+void EasyPlayground::CreateMainPlayer(ClientNetwork* network, UserID_t uid)
+{
+	player = new MainPlayer(network, Model("MainCharacter"), uid, glm::vec3(0, 0, 0));
+	players.push_back(player);
+	delete camera;
+	camera = new TPCamera(player, {0,1.72f,0});
+}
+
 void EasyPlayground::OnDisconnect()
 {
 	ChatMessage::Clear();
@@ -28,17 +43,16 @@ void EasyPlayground::ProcesPlayer(const std::vector<sPlayerInfo>& infos, const s
 				it++;
 		if (it == players.end())
 		{
-			Player* newPlayer = new Player(network, model, info.uid, (network->session.uid == info.uid), glm::vec3(0,0,0));
-			if (network->session.uid == info.uid)
+			if ((network->session.uid == info.uid))
 			{
-				std::cout << "[EasyPlayground] ProcesPlayer - Initialized own player.\n";
-				player = newPlayer;
+				std::cout << "[EasyPlayground] ProcesPlayer - Init own player.\n";
+				CreateMainPlayer(network, info.uid);
 			}
 			else
 			{
 				std::cout << "[EasyPlayground] ProcesPlayer - A new player.\n";
+				players.push_back(new Player(network, Model("MainCharacter"), info.uid, false, glm::vec3(0, 0, 0)));
 			}
-			players.push_back(newPlayer);
 		}
 	}
 

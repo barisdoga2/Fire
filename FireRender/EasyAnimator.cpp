@@ -111,8 +111,11 @@ EasyAnimator::EasyAnimator(EasyAnimation* animation)
 
 void EasyAnimator::PlayAnimation(EasyAnimation* pAnimation)
 {
-    m_CurrentAnimation = pAnimation;
-    m_CurrentTime = 0.0;
+    if (m_CurrentAnimation != pAnimation)
+    {
+        m_CurrentAnimation = pAnimation;
+        m_CurrentTime = 0.0;
+    }
 }
 
 void EasyAnimator::BlendTo(EasyAnimation* next, double duration)

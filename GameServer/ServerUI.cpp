@@ -152,7 +152,7 @@ namespace UIConsole {
 	static ImGuiConsoleBuf* gImGuiCoutBuf = nullptr;
 }
 
-ServerUI::ServerUI(EasyDisplay* display, EasyBufferManager* bm, GameServer* server) : display(display), bm(bm), server(server)
+ServerUI::ServerUI(EasyBufferManager* bm, GameServer* server) : bm(bm), server(server)
 {
 
 }
@@ -171,8 +171,7 @@ bool ServerUI::Init()
 {
 	// Inputs
 	{
-		EasyKeyboard::Init(*display);
-		EasyMouse::Init(*display);
+		EasyIO::Init();
 
 		EasyKeyboard::AddListener(this);
 		EasyMouse::AddListener(this);
@@ -195,7 +194,7 @@ bool ServerUI::Init()
 		io.Fonts->Build();
 		ImGui::StyleColorsDark();
 		//ImGui::StyleColorsLight();
-		ImGui_ImplGlfw_InitForOpenGL(display->window, false);
+		ImGui_ImplGlfw_InitForOpenGL(EasyDisplay::GetWindow(), false);
 		ImGui_ImplOpenGL3_Init(glsl_version);
 	}
 
@@ -237,8 +236,8 @@ void ServerUI::ImGUI_DrawSessionsWindow()
 {
 	using namespace UISnapshot;
 
-	const float W = (float)display->windowSize.x;
-	const float H = (float)display->windowSize.y;
+	const float W = (float)EasyDisplay::GetWindowSize().x;
+	const float H = (float)EasyDisplay::GetWindowSize().y;
 
 	ImGui::SetNextWindowPos(ImVec2(W * 0.5f, 0.0f), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(W * 0.5f, H * 0.5f), ImGuiCond_Always);
@@ -304,8 +303,8 @@ void ServerUI::ImGUI_DrawConsoleWindow()
 
 	UIConsole::ImGuiConsoleBuf::PruneOldLogs();
 
-	const float W = (float)display->windowSize.x;
-	const float H = (float)display->windowSize.y;
+	const float W = (float)EasyDisplay::GetWindowSize().x;
+	const float H = (float)EasyDisplay::GetWindowSize().y;
 
 	ImGui::SetNextWindowPos(ImVec2(0.0f, H * 0.5f), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(W, H * 0.5f), ImGuiCond_Always);
@@ -354,8 +353,8 @@ void ServerUI::ImGUI_DrawManagementWindow()
 {
 	using namespace UISnapshot;
 
-	const float W = (float)display->windowSize.x;
-	const float H = (float)display->windowSize.y;
+	const float W = (float)EasyDisplay::GetWindowSize().x;
+	const float H = (float)EasyDisplay::GetWindowSize().y;
 
 	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(W * 0.5f, H * 0.5f), ImGuiCond_Always);
@@ -503,7 +502,7 @@ bool ServerUI::Update(double _dt)
 		}
 	}
 
-	return !display->ShouldClose();
+	return !EasyDisplay::ShouldClose();
 }
 
 void ServerUI::StartRender(double _dt)
@@ -531,7 +530,7 @@ void ServerUI::StartRender(double _dt)
 		fps = 1.0 / avgDt;
 	}
 
-	glViewport(0, 0, display->windowSize.x, display->windowSize.y);
+	glViewport(0, 0, EasyDisplay::GetWindowSize().x, EasyDisplay::GetWindowSize().y);
 	GL(ClearDepth(1.f));
 	GL(ClearColor(0.5f, 0.7f, 1.0f, 1));
 	GL(Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
@@ -547,32 +546,32 @@ void ServerUI::StartRender(double _dt)
 
 void ServerUI::EndRender()
 {
-	glfwSetWindowTitle(display->window, (std::ostringstream() << std::fixed << std::setprecision(3) << "FPS: " << fps << " | UPS: " << ups).str().c_str());
-	glfwSwapBuffers(display->window);
+	glfwSetWindowTitle(EasyDisplay::GetWindow(), (std::ostringstream() << std::fixed << std::setprecision(3) << "FPS: " << fps << " | UPS: " << ups).str().c_str());
+	glfwSwapBuffers(EasyDisplay::GetWindow());
 	glfwPollEvents();
 }
 
-bool ServerUI::mouse_callback(const MouseData& md)
+bool ServerUI::button_callback(const MouseData& data)
 {
-	ImGui_ImplGlfw_MouseButtonCallback(md.window, md.button.button, md.button.action, md.button.mods);
+	ImGui_ImplGlfw_MouseButtonCallback(data.window, data.button.button, data.button.action, data.button.mods);
 	if (ImGui::GetIO().WantCaptureMouse)
 		return false;
 
 	return false;
 }
 
-bool ServerUI::scroll_callback(const MouseData& md)
+bool ServerUI::scroll_callback(const MouseData& data)
 {
-	ImGui_ImplGlfw_ScrollCallback(md.window, md.scroll.now.x, md.scroll.now.y);
+	ImGui_ImplGlfw_ScrollCallback(data.window, data.scroll.now.x, data.scroll.now.y);
 	if (ImGui::GetIO().WantCaptureMouse)
 		return false;
 
 	return false;
 }
 
-bool ServerUI::cursorMove_callback(const MouseData& md)
+bool ServerUI::move_callback(const MouseData& data)
 {
-	ImGui_ImplGlfw_CursorPosCallback(md.window, md.position.now.x, md.position.now.y);
+	ImGui_ImplGlfw_CursorPosCallback(data.window, data.position.now.x, data.position.now.y);
 	if (ImGui::GetIO().WantCaptureMouse)
 		return false;
 
@@ -588,7 +587,7 @@ bool ServerUI::key_callback(const KeyboardData& data)
 	return false;
 }
 
-bool ServerUI::character_callback(const KeyboardData& data)
+bool ServerUI::char_callback(const KeyboardData& data)
 {
 	ImGui_ImplGlfw_CharCallback(data.window, data.codepoint);
 	if (ImGui::GetIO().WantCaptureKeyboard)

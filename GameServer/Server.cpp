@@ -40,9 +40,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     if (bool running = server->Start(bm); running)
     {
-        if (EasyDisplay display({ 800, 600 }, { 1,2 }); display.Init())
+        if (EasyDisplay::Init({ 800, 600 }, { 1,2 }))
         {
-            if (ServerUI serverUI(&display, bm, server); serverUI.Init())
+            if (ServerUI serverUI(bm, server); serverUI.Init())
             {
                 std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
                 std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
@@ -77,7 +77,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                         fps_timer = 0.0;
                     }
 
-                    running &= !display.ShouldClose();
+                    running &= !EasyDisplay::ShouldClose();
                 }
             }
         }

@@ -5,57 +5,97 @@
 #include <glm/glm.hpp>
 #include "EasyIO.hpp"
 
-
-
-class EasyDisplay;
+// ###########
+// BASE CAMERA
+class EasyEntity;
 struct GLFWwindow;
-class EasyCamera : public MouseListener, KeyboardListener {
+class EasyCamera : public MouseListener, public KeyboardListener {
 public:
-	EasyDisplay* display;
+	const glm::vec3 worldUp;
+	const float far, near, fov;
 
-	glm::vec3 position{ 0.f, 0.f, 3.f };
-	glm::vec3 front{ 0.f, 0.f, -1.f };
-	glm::vec3 up{ 0.f, 1.f, 0.f };
-	glm::vec3 right{ 1.f, 0.f, 0.f };
-	glm::vec3 worldUp{ 0.f, 1.f, 0.f };
-	bool mode = false;
+	glm::vec3 position;
+	glm::vec3 rotation;
 
-	float aspect = 0.f;
-	float fov = 90.f;
-	float yaw = -89.f;
-	float pitch = -26.f;
+	glm::vec3 front;
+	glm::vec3 up;
+	glm::vec3 right;
 
-	float far = 0.f, near = 0.f;
+	glm::mat4 viewMatrix;
+	glm::mat4 projectionMatrix;
 
-	glm::mat4 view_{ 1.f };
-	glm::mat4 projection_{ 1.f };
+	bool enabled{true};
 
-	float moveSpeed = 5.f;
-	float mouseSensitivity = 0.13f;
-	float lerpSpeed = 10.f;
+	EasyCamera(
+		glm::vec3 position = glm::vec3(0, 0, 0), glm::vec3 rotation = glm::vec3(0, 0, 0),
+		float far = 10000.f, float near = 0.01f, float fov = 90.f, glm::vec3 worldUp = glm::vec3(0.f, 1.f, 0.f)
+	);
 
-	// --- Input state ---
-	glm::vec2 mouseDelta{ 0.f };
-	float scrollDelta = 0.f;
-	std::unordered_map<int, bool> keyState;
+	virtual void Update(double dt) = 00U;
 
+	void UpdateVectors();
+	void UpdateMatrices(glm::vec3 targetPosition);
+
+};
+
+// ###################
+// THIRD PERSON CAMERA
+class TPCamera : public EasyCamera {
+public:
+	float distance = 6.0f;
+	float minDist = 0.0f;
+	float maxDist = 15.0f;
+
+	glm::vec3 eyeOffset;
+
+	float mouseSensitivity = 0.15f;
+	float scrollSensitivity = 1.0f;
+
+	bool rotating = false;
 	bool firstMouse = true;
-	double lastX = 0.0, lastY = 0.0;
+	glm::dvec2 lastMouse{};
 
-	// --- Target states for smoothing ---
-	glm::vec3 targetPos;
-	glm::vec3 targetFront;
+	EasyEntity* target;
 
-    EasyCamera(EasyDisplay* display, glm::vec3 pos, glm::vec3 target, float fov, float nearP, float farP);
-    void Update(double dt);
-    void ModeSwap(bool mode = false);
+	TPCamera(EasyEntity* target, glm::vec3 eyeOffset = glm::vec3(0,0,0), float far = 10000.f, float near = 0.01f, float fov = 90.f);
 
-	bool mouse_callback(const MouseData& md) override;
-	bool scroll_callback(const MouseData& md) override;
-	bool cursorMove_callback(const MouseData& md) override;
+	void Update(double dt) override;
+
+	bool button_callback(const MouseData& data) override;
+	bool scroll_callback(const MouseData& data) override;
+	bool move_callback(const MouseData& data) override;
+
 	bool key_callback(const KeyboardData& data) override;
-	bool character_callback(const KeyboardData& data) override;
+	bool char_callback(const KeyboardData& data) override;
+};
 
-private:
-    void UpdateVectors();
+
+// FREE ROAM CAMERA
+class FRCamera : public EasyCamera {
+public:
+	bool frRotating = false;
+	bool frFirstMouse = true;
+	glm::dvec2 frLastMouse{};
+
+	float scroll{};
+	float frMoveSpeed = 8.0f;
+	float frMouseSensitivity = 0.12f;
+	float frScrollSensitivity = 50.0f;
+
+	bool keyState[MAX_KEYS]{}; 
+
+	FRCamera(
+		glm::vec3 position = glm::vec3(0),
+		glm::vec3 rotation = glm::vec3(0),
+		float far = 10000.f,
+		float near = 0.01f,
+		float fov = 90.f);
+
+	void Update(double dt) override;
+
+	bool button_callback(const MouseData& data) override;
+	bool scroll_callback(const MouseData& data) override;
+	bool move_callback(const MouseData& data) override;
+	bool key_callback(const KeyboardData& data) override;
+	bool char_callback(const KeyboardData& data) override;
 };
