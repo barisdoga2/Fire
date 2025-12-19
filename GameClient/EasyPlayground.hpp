@@ -4,6 +4,7 @@
 #include <EasyIO.hpp>
 #include <EasyRender.hpp>
 #include <EasyEntity.hpp>
+#include <EasyConsole.hpp>
 #include "ClientNetwork.hpp"
 #include "Player.hpp"
 
@@ -22,11 +23,10 @@ class EasyPlayground : public ClientCallback, KeyboardListener, MouseListener {
 private:
 public:
     // Display
-    double fps{};
-    double ups{};
+    EasyConsole console{};
 
     // Network
-    EasyBufferManager* bm;
+    EasyBufferManager* bm{};
     ClientNetwork* network{};
 
     // Shaders
@@ -51,7 +51,7 @@ public:
     int animation = 1;
     int seed = 1337;
 
-    EasyPlayground(EasyBufferManager* bm);
+    EasyPlayground();
     ~EasyPlayground();
 
     // Update
@@ -63,10 +63,10 @@ public:
     void RenderScene(double _dt);
     bool Render(double _dt);
     void StartRender(double _dt);
-    void EndRender();
+    void EndRender(double _dt);
 
     // Loading
-    bool Init();
+    bool Init(EasyBufferManager* bm);
     void DeInit();
     void ReloadShaders();
     void ReloadAssets();
@@ -100,8 +100,9 @@ public:
     void ImGUI_DebugWindow();
 
     // Utility
+    bool ShortcutManagement(const KeyboardData& data);
+
     Player* GetPlayerByUID(UserID_t uid);
-    static void ForwardStandartIO();
 
 };
 

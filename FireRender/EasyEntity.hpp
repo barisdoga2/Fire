@@ -5,6 +5,8 @@
 class EasyModel;
 class EasyAnimator;
 class EasyEntity {
+    bool assetReady{};
+
 public:
     EasyModel* model;
     EasyAnimator* animator{};
@@ -17,4 +19,6 @@ public:
     virtual bool Update(double _dt);
 
     virtual glm::mat4x4 TransformationMatrix() const;
+
+    virtual void AssetReadyCallback() = 0U;
 };

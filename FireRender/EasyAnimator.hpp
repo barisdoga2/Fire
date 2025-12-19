@@ -1,14 +1,16 @@
 #pragma once
 
 #include <vector>
-
 #include <glm/glm.hpp>
+
 
 
 struct AssimpNodeData;
 class EasyAnimation;
 class EasyAnimator {
 private:
+    EasyAnimation* m_CurrentAnimation = nullptr;
+
     std::vector<glm::mat4x4> m_FinalBoneMatrices;
     double m_CurrentTime;
 
@@ -21,11 +23,13 @@ private:
 
     bool mirror = false;
 
-public:
-    EasyAnimation* m_CurrentAnimation = nullptr;
+    std::vector<EasyAnimation*> animations{};
 
-    EasyAnimator(EasyAnimation* animation);
+public:
+    EasyAnimator(const std::vector<EasyAnimation*>& animations);
+
     void PlayAnimation(EasyAnimation* pAnimation);
+    void PlayAnimation(uint8_t aID);
     void BlendTo(EasyAnimation* next, double duration);
 
     void SetMirror(bool m) { mirror = m; }

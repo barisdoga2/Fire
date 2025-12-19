@@ -44,11 +44,15 @@ void EasyPlayground::DeInit()
 	ChunkRenderer::DeInit();
 	ModelRenderer::DeInit();
 	DebugRenderer::DeInit();
+
+	bm = nullptr;
 }
 
-bool EasyPlayground::Init()
+bool EasyPlayground::Init(EasyBufferManager* bm)
 {
 	EasyPlayground::DeInit();
+
+	this->bm = bm;
 
 	// Inputs
 	EasyIO::Init();

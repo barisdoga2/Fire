@@ -76,7 +76,6 @@ public:
 	bool button_callback(const MouseData& data) override;
 	bool scroll_callback(const MouseData& data) override;
 	bool move_callback(const MouseData& data) override;
-
 	bool key_callback(const KeyboardData& data) override;
 	bool char_callback(const KeyboardData& data) override;
 };
@@ -96,12 +95,7 @@ class FRCamera : public EasyCamera {
 	bool keyState[MAX_KEYS]{};
 
 public:
-	FRCamera(
-		glm::vec3 position = glm::vec3(0),
-		glm::vec3 rotation = glm::vec3(0),
-		float far = 10000.f,
-		float near = 0.01f,
-		float fov = 90.f);
+	FRCamera(glm::vec3 position = glm::vec3(0),glm::vec3 rotation = glm::vec3(0),float far = 10000.f,float near = 0.01f,float fov = 90.f);
 
 	void Update(double dt) override;
 

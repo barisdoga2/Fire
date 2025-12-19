@@ -77,4 +77,8 @@ bool LoadFileBinary(std::string file, std::vector<char>* out);
 
 void EasyUtils_Init();
 
+void ToggleConsole();
+
+void ShowConsole(bool show = true);
+
 std::string GetRelPath(std::string append);

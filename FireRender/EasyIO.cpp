@@ -4,6 +4,7 @@
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <algorithm>
 
 
 
@@ -36,6 +37,15 @@ void EasyMouse::DeInit()
 		buttons[i] = false;
 		buttons_read[i] = false;
 	}
+}
+
+void EasyMouse::Update(double _dt)
+{
+	std::sort(listeners.begin(), listeners.end(),
+		[](const EasyListener* a, const EasyListener* b)
+		{
+			return a->z < b->z;
+		});
 }
 
 void EasyMouse::EnableCursor(bool enabled)
@@ -82,9 +92,9 @@ void EasyMouse::button_callback(GLFWwindow* window, int button, int action, int 
 	data.button.action = action;
 	data.button.mods = mods;
 
-	for (MouseListener* l : listeners)
+	for (MouseListener* listener : listeners)
 	{
-		if (l->button_callback(data))
+		if (listener->isEnabled && listener->button_callback(data))
 			return;
 	}
 }
@@ -97,9 +107,9 @@ void EasyMouse::move_callback(GLFWwindow* window, double xpos, double ypos)
 	data.position.delta = data.position.now - data.position.old;
 	// screenPosition = ToScreenCoords(data.position.now);
 
-	for (MouseListener* l : listeners)
+	for (MouseListener* listener : listeners)
 	{
-		if (l->move_callback(data))
+		if (listener->isEnabled && listener->move_callback(data))
 			return;
 	}
 }
@@ -109,9 +119,9 @@ void EasyMouse::scroll_callback(GLFWwindow* window, double posX, double posY)
 	data.scroll.now.x = posX;
 	data.scroll.now.y = posY;
 
-	for (MouseListener* l : listeners)
+	for (MouseListener* listener : listeners)
 	{
-		if (l->scroll_callback(data))
+		if (listener->isEnabled && listener->scroll_callback(data))
 			return;
 	}
 }
@@ -120,9 +130,9 @@ void EasyMouse::enter_callback(GLFWwindow* window, int entered)
 {
 	data.position.entered = entered;
 
-	for (MouseListener* l : listeners)
+	for (MouseListener* listener : listeners)
 	{
-		if (l->enter_callback(data))
+		if (listener->isEnabled && listener->enter_callback(data))
 			return;
 	}
 }
@@ -151,6 +161,15 @@ void EasyKeyboard::DeInit()
 		keys[i] = false;
 		keys_read[i] = false;
 	}
+}
+
+void EasyKeyboard::Update(double _dt)
+{
+	std::sort(listeners.begin(), listeners.end(),
+		[](const EasyListener* a, const EasyListener* b)
+		{
+			return a->z < b->z;
+		});
 }
 
 void EasyKeyboard::AddListener(KeyboardListener* listener)
@@ -192,8 +211,8 @@ void EasyKeyboard::key_callback(GLFWwindow* window, int key, int scancode, int a
 	data.action = action;
 	data.mods = mods;
 
-	for (KeyboardListener* k : listeners)
-		if (k->key_callback(data))
+	for (KeyboardListener* listener : listeners)
+		if (listener->isEnabled && listener->key_callback(data))
 			return;
 }
 
@@ -201,8 +220,8 @@ void EasyKeyboard::char_callback(GLFWwindow* window, unsigned int codepoint)
 {
 	data.codepoint = codepoint;
 
-	for (KeyboardListener* k : listeners)
-		if (k->char_callback(data))
+	for (KeyboardListener* listener : listeners)
+		if (listener->isEnabled && listener->char_callback(data))
 			return;
 }
 
@@ -211,8 +230,8 @@ void EasyKeyboard::char_mods_callback(GLFWwindow* window, unsigned int codepoint
 	data.codepoint = codepoint;
 	data.mods = mods;
 
-	for (KeyboardListener* k : listeners)
-		if (k->char_mods_callback(data))
+	for (KeyboardListener* listener : listeners)
+		if (listener->isEnabled && listener->char_mods_callback(data))
 			return;
 }
 

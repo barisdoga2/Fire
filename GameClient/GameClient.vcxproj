@@ -96,7 +96,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x86/debug/;../x86/debug/;</AdditionalLibraryDirectories>
       <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -115,7 +115,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x86/release/;../x86/release/;</AdditionalLibraryDirectories>
       <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -133,7 +133,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x64/debug/;../x64/debug/;</AdditionalLibraryDirectories>
       <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -152,7 +152,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../libs/x64/release/;../x64/release/;</AdditionalLibraryDirectories>
       <AdditionalDependencies>Ws2_32.lib;mysqlcppconn.lib;FireNet.lib;FireRender.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -167,6 +167,7 @@
     <ClCompile Include="Player.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AnimationSM.hpp" />
     <ClInclude Include="EasyPlayground_Loading.hpp" />
     <ClInclude Include="ClientNetwork.hpp" />
     <ClInclude Include="Config.hpp" />

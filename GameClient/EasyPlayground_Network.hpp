@@ -40,7 +40,7 @@ void EasyPlayground::ProcesPlayer(const std::vector<sPlayerInfo>& infos, const s
 	{
 		auto it = players.begin();
 		while (it != players.end())
-			if ((*it)->uid == info.uid)
+			if ((*it)->UserID() == info.uid)
 				break;
 			else
 				it++;
@@ -63,7 +63,7 @@ void EasyPlayground::ProcesPlayer(const std::vector<sPlayerInfo>& infos, const s
 	{
 		auto it = players.begin();
 		while (it != players.end())
-			if ((*it)->uid == state.uid)
+			if ((*it)->UserID() == state.uid)
 				break;
 			else
 				it++;

@@ -88,6 +88,60 @@ bool EasyModel::LoadToGPU()
 }
 
 // STATIC
+
+static void PrintNodeRecursive(const aiNode* node, int depth = 0)
+{
+    if (!node) return;
+
+    for (int i = 0; i < depth; ++i) std::cout << "  ";
+    std::cout << "[Node] " << node->mName.C_Str() << "\n";
+
+    for (unsigned int i = 0; i < node->mNumChildren; ++i)
+        PrintNodeRecursive(node->mChildren[i], depth + 1);
+}
+
+void PrintAssimpSceneNames(const aiScene* scene)
+{
+    if (!scene)
+    {
+        std::cout << "Scene is null\n";
+        return;
+    }
+
+    std::cout << "===== NODES =====\n";
+    PrintNodeRecursive(scene->mRootNode);
+
+    std::cout << "\n===== MESHES =====\n";
+    for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+    {
+        const aiMesh* m = scene->mMeshes[i];
+        std::cout << "[Mesh] " << m->mName.C_Str() << "\n";
+
+        std::cout << "  Bones:\n";
+        for (unsigned int b = 0; b < m->mNumBones; ++b)
+            std::cout << "    [Bone] " << m->mBones[b]->mName.C_Str() << "\n";
+    }
+
+    std::cout << "\n===== ANIMATIONS =====\n";
+    for (unsigned int a = 0; a < scene->mNumAnimations; ++a)
+    {
+        const aiAnimation* anim = scene->mAnimations[a];
+        std::cout << "[Animation] " << anim->mName.C_Str() << "\n";
+
+        for (unsigned int c = 0; c < anim->mNumChannels; ++c)
+        {
+            const aiNodeAnim* ch = anim->mChannels[c];
+            std::cout << "  [Channel] " << ch->mNodeName.C_Str() << "\n";
+        }
+    }
+
+    std::cout << "\n===== MATERIALS =====\n";
+    for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
+        std::cout << "[Material] " << i << "\n";
+
+    std::cout << "=====================\n";
+}
+
 EasyModel* EasyModel::LoadModel(const std::string& file, const std::vector<std::string> animFiles, glm::vec3 scale)
 {
     EasyModel* model = new EasyModel();
@@ -105,6 +159,7 @@ EasyModel* EasyModel::LoadModel(const std::string& file, const std::vector<std::
         {
             std::cout << "[EasyModel] LoadModel - Loading animation '" << anfile << "'\n";
             const aiScene* animScene = aiImportFile(anfile.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace);
+            //PrintAssimpSceneNames(animScene);
             assert(animScene != nullptr && animScene->mNumAnimations == 1);
             model->animations.push_back(new EasyAnimation(animScene, animScene->mAnimations[0], model->m_BoneInfoMap, model->m_BoneCounter));
             aiReleaseImport(animScene);

@@ -1,108 +1,6 @@
 ﻿
 static bool isConsoleWindow = true;
 
-namespace UIConsole {
-    struct UIConsoleLine
-    {
-        std::string text;
-        std::chrono::steady_clock::time_point time;
-
-        UIConsoleLine(std::string text, std::chrono::steady_clock::time_point time) : text(text), time(time)
-        {
-
-        }
-
-    };
-
-    static std::vector<UIConsoleLine> gConsoleLines;
-    static char gConsoleInput[512] = {};
-    static bool gAutoScroll = true;
-
-    class ImGuiConsoleBuf : public std::streambuf
-    {
-        std::vector<UIConsoleLine>& lines;
-        std::string currentLine;
-        std::mutex mtx;
-
-    public:
-        ImGuiConsoleBuf(std::vector<UIConsoleLine>& lines)
-            : lines(lines)
-        {
-        }
-
-    protected:
-        int overflow(int c) override
-        {
-            if (c == EOF)
-                return EOF;
-
-            std::lock_guard<std::mutex> lock(mtx);
-
-            if (c == '\n')
-            {
-                if (!currentLine.empty())
-                {
-                    lines.push_back({
-    TimeNow_HHMMSS() + " - " + currentLine,
-    std::chrono::steady_clock::now()
-                        });
-                    currentLine.clear();
-                }
-            }
-            else
-            {
-                currentLine.push_back(static_cast<char>(c));
-            }
-
-            return c;
-        }
-
-        std::streamsize xsputn(const char* s, std::streamsize count) override
-        {
-            std::lock_guard<std::mutex> lock(mtx);
-
-            for (std::streamsize i = 0; i < count; ++i)
-            {
-                char c = s[i];
-                if (c == '\n')
-                {
-                    lines.push_back({
-    TimeNow_HHMMSS() + " - " + currentLine,
-    std::chrono::steady_clock::now()
-                        });
-                    currentLine.clear();
-                }
-                else
-                {
-                    currentLine.push_back(c);
-                }
-            }
-            return count;
-        }
-
-    public:
-        static void PruneOldLogs()
-        {
-            return;
-            using namespace std::chrono;
-
-            const auto now = steady_clock::now();
-            const auto ttl = seconds(30);
-
-            while (!gConsoleLines.empty())
-            {
-                if (now - gConsoleLines.front().time > ttl)
-                    gConsoleLines.erase(gConsoleLines.begin());
-                else
-                    break;
-            }
-        }
-        
-    };
-
-    static std::streambuf* gOldCoutBuf = nullptr;
-    static ImGuiConsoleBuf* gImGuiCoutBuf = nullptr;
-}
 
 inline ImTextureID LoadTextureSTB(const char* filename, int* outW = nullptr, int* outH = nullptr)
 {
@@ -217,9 +115,7 @@ void EasyPlayground::ImGUI_DrawConsoleWindow()
     if (!isConsoleWindow)
         return;
 
-    using namespace UIConsole;
-
-    UIConsole::ImGuiConsoleBuf::PruneOldLogs();
+    console.PruneOldLogs();
 
     const float W = (float)EasyDisplay::GetWindowSize().x;
     const float H = (float)EasyDisplay::GetWindowSize().y;
@@ -227,16 +123,16 @@ void EasyPlayground::ImGUI_DrawConsoleWindow()
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(W * 0.55f, H * 0.35f), ImGuiCond_Always);
 
-    ImGui::Begin("Console", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+    ImGui::Begin("Console", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoFocusOnAppearing);
 
     // Scroll
     {
         ImGui::BeginChild("console_scroll", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - 5), false, ImGuiWindowFlags_HorizontalScrollbar);
 
-        for (const auto& line : gConsoleLines)
+        for (const auto& line : console.Lines())
             ImGui::TextUnformatted(line.text.c_str());
 
-        if (gAutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+        if (console.AutoScroll() && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
             ImGui::SetScrollHereY(1.0f);
 
         ImGui::EndChild();
@@ -249,18 +145,17 @@ void EasyPlayground::ImGUI_DrawConsoleWindow()
         const float btnW = 110.0f;
         const float spacing = ImGui::GetStyle().ItemSpacing.x;
         const float inputW = ImGui::GetContentRegionAvail().x - btnW - spacing;
+
+        static char consoleInputBuff[128U]{'\0'};
+
         ImGui::SetNextItemWidth(inputW);
-        ImGui::InputText("##cmd", gConsoleInput, sizeof(gConsoleInput));
+        ImGui::InputText("##cmd", consoleInputBuff, sizeof(consoleInputBuff));
 
         ImGui::SameLine();
         if (ImGui::Button("Send", ImVec2(btnW, ImGui::GetFrameHeight())))
         {
-            // Process 'gConsoleInput'
-            gConsoleLines.push_back({
-    TimeNow_HHMMSS() + " - " + gConsoleInput,
-    std::chrono::steady_clock::now()
-                });
-            gConsoleInput[0] = 0;
+            console.AddLine(consoleInputBuff);
+            consoleInputBuff[0U] = '\0';
         }
     }
 
@@ -283,11 +178,13 @@ void EasyPlayground::ImGUI_DrawChatWindow()
     ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);
 
     if (!ImGui::Begin("ChatWindow", nullptr,
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoResize |
+        //ImGuiWindowFlags_NoTitleBar |
+        //ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar))
+        //ImGuiWindowFlags_NoSavedSettings | 
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoFocusOnAppearing))
     {
         ImGui::End();
         return;
@@ -363,7 +260,8 @@ void EasyPlayground::ImGUI_PlayerInfoWindow()
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_AlwaysAutoResize |
-        ImGuiWindowFlags_NoSavedSettings);
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoFocusOnAppearing);
 
     // ---- Header ----
     ImGui::Text("Username:   %s", network->session.username.c_str());
@@ -442,7 +340,13 @@ void EasyPlayground::ImGUI_ChampionSelectWindow()
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.40f);
                 ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
             }
-            bool pressed =ImGui::ImageButton(std::to_string(i).c_str(), icons[i], ImVec2(64.0f, 64.0f));
+            bool pressed = ImGui::ImageButton(std::to_string(i).c_str(), icons[i], ImVec2(64.0f, 64.0f));
+            if (i == 0)
+            {
+                ImGui::FocusItem();
+                if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))
+                    pressed = true;
+            }
 
             if (pressed && owned)
                 clicked = i;
@@ -524,14 +428,24 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 
 	if (!network->IsLoginFailed())
 	{
-		if (ImGui::Button("Cancel", ImVec2(btnWidth, 28)))
+        bool isButtonClicked = ImGui::Button("Cancel", ImVec2(btnWidth, 28));
+        ImGui::FocusItem();
+        if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))
+            isButtonClicked = true;
+
+		if (isButtonClicked)
 		{
             network->Stop();
 		}
 	}
 	else
 	{
-		if (ImGui::Button("OK", ImVec2(btnWidth, 28)))
+        bool isButtonClicked = ImGui::Button("OK", ImVec2(btnWidth, 28));
+        ImGui::FocusItem();
+        if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))
+            isButtonClicked = true;
+
+		if (isButtonClicked)
 		{
             network->Stop();
 		}
@@ -589,7 +503,12 @@ void EasyPlayground::ImGUI_BroadcastMessageWindow()
     // Center button
     float btnWidth = 100.0f;
     CenterItem(btnWidth);
-    if (ImGui::Button("OK", ImVec2(btnWidth, 28)))
+
+    bool isButtonClicked = ImGui::Button("OK", ImVec2(btnWidth, 28));
+    ImGui::FocusItem();
+    if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))
+        isButtonClicked = true;
+    if (isButtonClicked)
     {
         ChatMessage::isBroadcastMessage = false;
         ChatMessage::broadcastMessage = "";
@@ -655,7 +574,12 @@ void EasyPlayground::ImGUI_LoginWindow()
 	// Login button
 	float btnWidth = 140;
 	CenteredItem(btnWidth);
-	if (ImGui::Button("Login", ImVec2(btnWidth, 32)))
+
+    bool isLoginClicked = ImGui::Button("Login", ImVec2(btnWidth, 32));
+    ImGui::FocusItem();
+    if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))
+        isLoginClicked = true;
+	if (isLoginClicked)
 	{
 		// Save config on click
 		if (!network->IsLoggingIn())
@@ -679,7 +603,9 @@ void EasyPlayground::ImGUI_DebugWindow()
     );
     ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
 
-    ImGui::Begin("ImGUI Settings");
+    ImGui::Begin("ImGUI Settings", nullptr, ImGuiWindowFlags_NoNav |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoBringToFrontOnFocus);
     ImGui::Checkbox("Fog Enabled", &renderData.imgui_isFog);
     ImGui::Checkbox("Triangles Enabled", &renderData.imgui_triangles);
     ImGui::Checkbox("Normals Enabled", &renderData.imgui_showNormalLines);

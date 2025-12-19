@@ -36,10 +36,10 @@
 #include "EasyPlayground_Network.hpp"
 #include "EasyPlayground_Loading.hpp"
 
+#include <EasyConsole.hpp>
 
 
-
-EasyPlayground::EasyPlayground(EasyBufferManager* bm) : bm(bm)
+EasyPlayground::EasyPlayground()
 {
 	
 }
@@ -141,29 +141,6 @@ void EasyPlayground::ImGUI_Render(double _dt)
 
 void EasyPlayground::StartRender(double _dt)
 {
-	// FPS Calc
-	{
-		static double frameTimes[25] = { 0.0 };
-		static int frameCount = 0;
-		static int index = 0;
-
-		// store current frame delta time
-		frameTimes[index] = _dt;
-		index = (index + 1) % 25;
-
-		if (frameCount < 25)
-			++frameCount;
-
-		// calculate average delta over last N frames
-		double avgDt = 0.0;
-		for (int i = 0; i < frameCount; ++i)
-			avgDt += frameTimes[i];
-		avgDt /= frameCount;
-
-		// calculate FPS
-		fps = 1.0 / avgDt;
-	}
-
 	glViewport(0, 0, EasyDisplay::GetWindowSize().x, EasyDisplay::GetWindowSize().y);
 	GL(ClearDepth(1.f));
 	GL(ClearColor(0.5f, 0.7f, 1.0f, 1));
@@ -178,38 +155,16 @@ void EasyPlayground::StartRender(double _dt)
 	GL(Enable(GL_MULTISAMPLE));
 }
 
-void EasyPlayground::EndRender()
+void EasyPlayground::EndRender(double _dt)
 {
-	glfwSetWindowTitle(EasyDisplay::GetWindow(), (std::ostringstream() << std::fixed << std::setprecision(3) << "FPS: " << fps << " | UPS: " << ups).str().c_str());
-	glfwSwapBuffers(EasyDisplay::GetWindow());
-	glfwPollEvents();
+	EasyDisplay::SetTitle((std::ostringstream() << std::fixed << std::setprecision(3) << "FPS: " << EasyDisplay::RtFPS() << " | UPS: " << EasyDisplay::RtUPS()).str().c_str());
+	EasyDisplay::Render(_dt);
 }
 
 // Update
 bool EasyPlayground::Update(double _dt)
 {
-	// UPS Calc
-	{
-		static double updateTimes[4] = { 0.0 };
-		static int frameCount = 0;
-		static int index = 0;
-
-		// store current frame delta time
-		updateTimes[index] = _dt;
-		index = (index + 1) % 4;
-
-		if (frameCount < 4)
-			++frameCount;
-
-		// calculate average delta over last N frames
-		double avgDt = 0.0;
-		for (int i = 0; i < frameCount; ++i)
-			avgDt += updateTimes[i];
-		avgDt /= frameCount;
-
-		// calculate FPS
-		ups = 1.0 / avgDt;
-	}
+	EasyDisplay::Update(_dt);
 
 	// Try load everything until done
 	static bool srcReady{}; if (!srcReady && Model(MAIN_CHARACTER)->LoadToGPU()) srcReady = true;
@@ -248,146 +203,129 @@ void EasyPlayground::NetworkUpdate(double _dt)
 // Input
 bool EasyPlayground::button_callback(const MouseData& data) 
 { 
-	if (!camera->enabled)
-	{
-		ImGui_ImplGlfw_MouseButtonCallback(data.window, data.button.button, data.button.action, data.button.mods);
-		if (ImGui::GetIO().WantCaptureMouse)
-			return false;
-	}
+	if (ImGui_ImplGlfw_MouseButtonCallback(data.window, data.button.button, data.button.action, data.button.mods); ImGui::GetIO().WantCaptureMouse)
+		return true;
 
-	camera->button_callback(data);
-	if (player)
-		player->button_callback(data);
+	if (player && player->button_callback(data))
+		return true;
 
-	return false; 
-}
-
-bool EasyPlayground::scroll_callback(const MouseData& data) 
-{ 
-	if (!camera->enabled)
-	{
-		ImGui_ImplGlfw_ScrollCallback(data.window, data.scroll.now.x, data.scroll.now.y);
-		if (ImGui::GetIO().WantCaptureMouse)
-			return false;
-	}
-
-	camera->scroll_callback(data);
-	if (player)
-		player->scroll_callback(data);
-
-	return false; 
-}
-
-bool EasyPlayground::move_callback(const MouseData& data) 
-{ 
-	if (!camera->enabled)
-	{
-		ImGui_ImplGlfw_CursorPosCallback(data.window, data.position.now.x, data.position.now.y);
-		if (ImGui::GetIO().WantCaptureMouse)
-			return false;
-	}
-
-	camera->move_callback(data);
-	if (player)
-		player->move_callback(data);
+	if (camera->enabled && camera->button_callback(data))
+		return true;
 
 	return false;
 }
 
-bool EasyPlayground::key_callback(const KeyboardData& data) 
+bool EasyPlayground::scroll_callback(const MouseData& data) 
 { 
-	if (data.key == GLFW_KEY_GRAVE_ACCENT && data.action == GLFW_RELEASE)
-	{
-		isConsoleWindow = !isConsoleWindow;
-		return false;
-	}
+	if (ImGui_ImplGlfw_ScrollCallback(data.window, data.scroll.now.x, data.scroll.now.y); ImGui::GetIO().WantCaptureMouse)
+		return true;
 
-	if (data.key == GLFW_KEY_F1 && data.action == GLFW_RELEASE)
+	if (player && player->scroll_callback(data))
+		return true;
+
+	if (camera->enabled && camera->scroll_callback(data))
+		return true;
+
+	return false;
+}
+
+bool EasyPlayground::move_callback(const MouseData& data)
+{
+	if (ImGui_ImplGlfw_CursorPosCallback(data.window, data.position.now.x, data.position.now.y); ImGui::GetIO().WantCaptureMouse)
+		return true;
+
+	if (player && player->move_callback(data))
+		return true;
+
+	if (camera->enabled && camera->move_callback(data))
+		return true;
+
+	return false;
+}
+
+bool EasyPlayground::ShortcutManagement(const KeyboardData& data)
+{
+	static const int exitKey = GLFW_KEY_ESCAPE;
+	static const int consoleKey = GLFW_KEY_GRAVE_ACCENT;
+	static const int testRenderKey = GLFW_KEY_F1;
+	static int lastKey = 0;
+
+	bool captured = false;
+
+	if (data.key == exitKey || data.key == consoleKey || data.key == testRenderKey)
 	{
-		isTestRender = !isTestRender;
-		if (isTestRender)
+		if (data.action == GLFW_RELEASE)
 		{
-			ClearPlayers();
-			CreateMainPlayer(network, 0U);
+			if (data.key == exitKey)
+			{
+				captured = true;
+			}
+			else if (data.key == consoleKey)
+			{
+				isConsoleWindow = !isConsoleWindow;
+				captured = true;
+			}
+			else if (data.key == testRenderKey)
+			{
+				isTestRender = !isTestRender;
+				if (isTestRender)
+				{
+					ClearPlayers();
+					CreateMainPlayer(network, 0U);
+				}
+				ImGui::FocusWindow(nullptr);
+				captured = true;
+			}
 		}
-		return false;
+		else if (data.action == GLFW_PRESS || data.action == GLFW_REPEAT)
+		{
+			captured = true;
+		}
 	}
 
-	if (data.key == GLFW_KEY_LEFT_ALT && data.action == GLFW_RELEASE)
-	{
-		camera->enabled = true;
-		return false;
-	}
-	else if (data.key == GLFW_KEY_LEFT_ALT && data.action == GLFW_PRESS)
-	{
-		camera->enabled = false;
-		return false;
-	}
+	lastKey = data.key;
 
-	camera->key_callback(data);
-	if (player)
-		player->key_callback(data);
+	return captured;
+}
 
-	ImGui_ImplGlfw_KeyCallback(data.window, data.key, data.scancode, data.action, data.mods);
-	if (ImGui::GetIO().WantCaptureKeyboard)
-		return false;
+bool EasyPlayground::key_callback(const KeyboardData& data) 
+{
+	if (ShortcutManagement(data))
+		return true;
 
-	if (data.key == GLFW_KEY_ESCAPE && data.action == GLFW_RELEASE)
-	{
-		EasyDisplay::SetExitRequested(true);
-		return false;
-	}
+	if (ImGui_ImplGlfw_KeyCallback(data.window, data.key, data.scancode, data.action, data.mods); ImGui::GetIO().WantCaptureKeyboard)
+		return true;
 
-	if (data.key == GLFW_KEY_T && data.action == GLFW_RELEASE)
-	{
-		animation = 2;
-		return false;
-	}
+	if (player && player->key_callback(data))
+		return true;
 
-	if (data.key == GLFW_KEY_R && data.action == GLFW_RELEASE)
-	{
-		ReloadShaders();
-		return false;
-	}
+	if (camera->enabled && camera->key_callback(data))
+		return true;
 
-	if (data.key == GLFW_KEY_P && data.action == GLFW_RELEASE)
-	{
-		ReGenerateMap();
-		return false;
-	}
-
-	return false; 
+	return false;
 }
 
 bool EasyPlayground::char_callback(const KeyboardData& data) 
 { 
-	if (player)
-		player->char_callback(data);
+	if (ImGui_ImplGlfw_CharCallback(data.window, data.codepoint); ImGui::GetIO().WantCaptureKeyboard)
+		return true;
 
-	if (!camera->enabled)
-	{
-		ImGui_ImplGlfw_CharCallback(data.window, data.codepoint);
-		if (ImGui::GetIO().WantCaptureKeyboard)
-			return false;
-	}
+	if (player && player->char_callback(data))
+		return true;
+
+	if (camera->enabled && camera->char_callback(data))
+		return true;
 
 	return false;
 }
 
 // Utility
-void EasyPlayground::ForwardStandartIO()
-{
-	using namespace UIConsole;
-	gImGuiCoutBuf = new ImGuiConsoleBuf(gConsoleLines);
-	gOldCoutBuf = std::cout.rdbuf(gImGuiCoutBuf);
-}
-
 Player* EasyPlayground::GetPlayerByUID(UserID_t uid)
 {
 	Player* ret{};
 	for (Player* p : players)
 	{
-		if (p->uid == uid)
+		if (p->UserID() == uid)
 		{
 			ret = p;
 			break;

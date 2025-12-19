@@ -1,5 +1,8 @@
 #pragma once
 
+#define FPS (1000.0 / 144.0)
+#define UPS (1000.0 / 24.0)
+
 #include <iostream>
 #include <fstream>
 #include <string>

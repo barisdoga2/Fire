@@ -1,4 +1,6 @@
-﻿#include <iostream>
+﻿#include "Config.hpp"
+
+#include <iostream>
 #include <chrono>
 
 #include <EasyUtils.hpp>
@@ -8,56 +10,57 @@
 
 EasyBufferManager* bf = new EasyBufferManager(50U, 1472U);
 
+#ifdef SUBSYSTEM_WINDOWS
 #include <windows.h>
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+#else
+int main(void)
+#endif
 {
-    EasyPlayground::ForwardStandartIO();
-
-    bool running{};
+    EasyPlayground playground{};
 
     EasyUtils_Init();
 
-    if (EasyDisplay::Init({ 1536 * 0.8,864 * 0.8 }))
+    bool running = true;
+    if (running)
+        running = EasyDisplay::Init({ 1536 * 0.8,864 * 0.8 });
+
+    if (running)
+        running = playground.Init(bf);
+
+    if (running)
     {
-        if (EasyPlayground playground(bf); playground.Init())
+        using MainClock = std::chrono::high_resolution_clock;
+
+        double fps_timer = 0.0, ups_timer = 0.0;
+        MainClock::time_point lastTime{};
+        while (running)
         {
-            std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
-            std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
+            MainClock::time_point currentTime = std::chrono::high_resolution_clock::now();
+            double elapsed_ms = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
+            lastTime = currentTime;
 
-            const double fps_constant = 1000.0 / 144.0;
-            const double ups_constant = 1000.0 / 24.0;
+            fps_timer += elapsed_ms;
+            ups_timer += elapsed_ms;
 
-            double fps_timer = 0.0;
-            double ups_timer = 0.0;
-
-            running = true;
-            while (running)
+            if (fps_timer >= FPS)
             {
-                currentTime = std::chrono::high_resolution_clock::now();
-                double elapsed_ms = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
-                lastTime = currentTime;
-
-                fps_timer += elapsed_ms;
-                ups_timer += elapsed_ms;
-
-                if (fps_timer >= fps_constant)
-                {
-                    playground.StartRender(fps_timer / 1000.0);
-                    running &= playground.Render(fps_timer / 1000.0);
-                    playground.EndRender();
-                    fps_timer = 0.0;
-                }
-
-                if (ups_timer >= ups_constant)
-                {
-                    running &= playground.Update(ups_timer / 1000.0);
-                    ups_timer = 0.0;
-                }
-
-                running &= !EasyDisplay::ShouldClose();
+                playground.StartRender(fps_timer / 1000.0);
+                running &= playground.Render(fps_timer / 1000.0);
+                playground.EndRender(fps_timer / 1000.0);
+                fps_timer = 0.0;
             }
+
+            if (ups_timer >= UPS)
+            {
+                running &= playground.Update(ups_timer / 1000.0);
+                ups_timer = 0.0;
+            }
+
+            running &= !EasyDisplay::ShouldClose();
         }
     }
+    
 	return 0;
 }
 

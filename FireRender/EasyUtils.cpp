@@ -266,7 +266,27 @@ std::string HashSHA256(const std::string& input)
 #include <windows.h>
 #include <dbghelp.h>
 
+void ShowConsole(bool show)
+{
+    HWND console = GetConsoleWindow();
+    if (!console) return;
 
+    if (show)
+        ShowWindow(console, SW_HIDE);
+    else
+        ShowWindow(console, SW_SHOW);
+}
+
+void ToggleConsole()
+{
+    HWND console = GetConsoleWindow();
+    if (!console) return;
+
+    if (IsWindowVisible(console))
+        ShowWindow(console, SW_HIDE);
+    else
+        ShowWindow(console, SW_SHOW);
+}
 
 void CreateMiniDump(EXCEPTION_POINTERS* e)
 {

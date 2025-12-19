@@ -6,6 +6,14 @@
 #define MAX_BUTTONS 3U
 #define MAX_KEYS 512U
 
+
+class EasyListener {
+public:
+	bool isEnabled{true};
+	int z{0};
+};
+
+
 class Button {
 public:
 	int button = 0;
@@ -36,7 +44,7 @@ public:
 	bool cursorEnabled{true};
 };
 
-class MouseListener {
+class MouseListener : public EasyListener {
 public:
 	virtual inline bool button_callback(const MouseData& data) { return false; }
 	virtual inline bool scroll_callback(const MouseData& data) { return false; }
@@ -56,6 +64,8 @@ private:
 public:
 	static void Init();
 	static void DeInit();
+
+	static void Update(double _dt);
 
 	static void EnableCursor(bool enabled);
 	static void AddListener(MouseListener* listener);
@@ -82,7 +92,7 @@ public:
 	unsigned int codepoint = 0;
 };
 
-class KeyboardListener {
+class KeyboardListener : public EasyListener {
 public:
 	virtual inline bool key_callback(const KeyboardData& data) { return false; }
 	virtual inline bool char_callback(const KeyboardData& data) { return false; }
@@ -101,6 +111,8 @@ private:
 public:
 	static void Init();
 	static void DeInit();
+
+	static void Update(double _dt);
 
 	static void AddListener(KeyboardListener* listener);
 	static bool ListenKey(int key);

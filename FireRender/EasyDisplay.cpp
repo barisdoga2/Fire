@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 #include <vector>
+#include <algorithm>
 
 
 
@@ -128,6 +129,66 @@ void EasyDisplay::DeInit()
 	isInit = false;
 }
 
+void EasyDisplay::Update(double _dt)
+{
+	static double updateTimes[4] = { 0.0 };
+	static int frameCount = 0;
+	static int index = 0;
+
+	// store current frame delta time
+	updateTimes[index] = _dt;
+	index = (index + 1) % 4;
+
+	if (frameCount < 4)
+		++frameCount;
+
+	// calculate average delta over last N frames
+	double avgDt = 0.0;
+	for (int i = 0; i < frameCount; ++i)
+		avgDt += updateTimes[i];
+	avgDt /= frameCount;
+
+	// calculate FPS
+	data.ups = 1.0 / avgDt;
+
+	//std::sort(listeners.begin(), listeners.end(),
+	//	[](const EasyListener* a, const EasyListener* b)
+	//	{
+	//		return a->z < b->z;
+	//	});
+}
+
+void EasyDisplay::SetTitle(std::string title)
+{
+	glfwSetWindowTitle(data.window, title.c_str());
+}
+
+void EasyDisplay::Render(double _dt)
+{
+	static double frameTimes[25] = { 0.0 };
+	static int frameCount = 0;
+	static int index = 0;
+
+	// store current frame delta time
+	frameTimes[index] = _dt;
+	index = (index + 1) % 25;
+
+	if (frameCount < 25)
+		++frameCount;
+
+	// calculate average delta over last N frames
+	double avgDt = 0.0;
+	for (int i = 0; i < frameCount; ++i)
+		avgDt += frameTimes[i];
+	avgDt /= frameCount;
+
+	// calculate FPS
+	data.fps = 1.0 / avgDt;
+
+	glfwSwapBuffers(data.window);
+	glfwPollEvents();
+}
+
 bool EasyDisplay::ShouldClose()
 {
 	return data.exitRequested || glfwWindowShouldClose(data.window);
@@ -141,6 +202,16 @@ float EasyDisplay::GetAspectRatio()
 void EasyDisplay::SetExitRequested(bool requested)
 {
 	data.exitRequested = requested;
+}
+
+double EasyDisplay::RtFPS()
+{
+	return data.fps;
+}
+
+double EasyDisplay::RtUPS()
+{
+	return data.ups;
 }
 
 GLFWwindow* EasyDisplay::GetWindow()
@@ -164,7 +235,7 @@ void EasyDisplay::window_pos_callback(GLFWwindow* window, int x, int y)
 	data.windowPosition.y = y;
 
 	for (WindowListener* listener : listeners)
-		if (listener->window_pos_callback(data))
+		if (listener->isEnabled && listener->window_pos_callback(data))
 			return;
 
 }
@@ -175,7 +246,7 @@ void EasyDisplay::window_size_callback(GLFWwindow* window, int width, int height
 	data.windowSize.y = height;
 
 	for (WindowListener* listener : listeners)
-		if (listener->window_size_callback(data))
+		if (listener->isEnabled && listener->window_size_callback(data))
 			return;
 
 }
@@ -185,7 +256,7 @@ void EasyDisplay::window_close_callback(GLFWwindow* window)
 	data.close = true;
 
 	for (WindowListener* listener : listeners)
-		if (listener->window_close_callback(data))
+		if (listener->isEnabled && listener->window_close_callback(data))
 			return;
 
 }
@@ -195,7 +266,7 @@ void EasyDisplay::window_refresh_callback(GLFWwindow* window)
 	data.refresh = true;
 
 	for (WindowListener* listener : listeners)
-		if (listener->window_refresh_callback(data))
+		if (listener->isEnabled && listener->window_refresh_callback(data))
 			return;
 
 }
@@ -205,7 +276,7 @@ void EasyDisplay::window_focus_callback(GLFWwindow* window, int focused)
 	data.focused = focused;
 
 	for (WindowListener* listener : listeners)
-		if (listener->window_focus_callback(data))
+		if (listener->isEnabled && listener->window_focus_callback(data))
 			return;
 
 }
@@ -215,7 +286,7 @@ void EasyDisplay::window_iconify_callback(GLFWwindow* window, int iconified)
 	data.iconified = iconified;
 
 	for (WindowListener* listener : listeners)
-		if (listener->window_iconify_callback(data))
+		if (listener->isEnabled && listener->window_iconify_callback(data))
 			return;
 
 }
@@ -225,7 +296,7 @@ void EasyDisplay::window_maximize_callback(GLFWwindow* window, int maximized)
 	data.maximized = maximized;
 
 	for (WindowListener* listener : listeners)
-		if (listener->window_maximize_callback(data))
+		if (listener->isEnabled && listener->window_maximize_callback(data))
 			return;
 
 }
@@ -236,7 +307,7 @@ void EasyDisplay::window_framebuffer_size_callback(GLFWwindow* window, int width
 	data.frameBufferSize.y = height;
 
 	for (WindowListener* listener : listeners)
-		if (listener->window_framebuffer_size_callback(data))
+		if (listener->isEnabled && listener->window_framebuffer_size_callback(data))
 			return;
 
 }
@@ -247,7 +318,7 @@ void EasyDisplay::window_content_scale_callback(GLFWwindow* window, float xscale
 	data.windowContentScale.y = yscale;
 
 	for (WindowListener* listener : listeners)
-		if (listener->window_content_scale_callback(data))
+		if (listener->isEnabled && listener->window_content_scale_callback(data))
 			return;
 
 }
@@ -258,7 +329,7 @@ void EasyDisplay::window_drop_callback(GLFWwindow* window, int count, const char
 	data.drop.paths = paths;
 
 	for (WindowListener* listener : listeners)
-		if (listener->window_drop_callback(data))
+		if (listener->isEnabled && listener->window_drop_callback(data))
 			return;
 
 }
@@ -269,7 +340,7 @@ void EasyDisplay::monitor_callback(GLFWmonitor* monitor, int event)
 	data.monitor.event = event;
 
 	for (WindowListener* listener : listeners)
-		if (listener->monitor_callback(data))
+		if (listener->isEnabled && listener->monitor_callback(data))
 			return;
 
 }
@@ -280,7 +351,7 @@ void EasyDisplay::error_callback(int error, const char* description)
 	data.error.description = description;
 
 	for (WindowListener* listener : listeners)
-		if (listener->error_callback(data))
+		if (listener->isEnabled && listener->error_callback(data))
 			return;
 
 }

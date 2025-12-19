@@ -60,6 +60,9 @@
     <ClInclude Include="Config.hpp">
       <Filter>Etc</Filter>
     </ClInclude>
+    <ClInclude Include="AnimationSM.hpp">
+      <Filter>Client\Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="publish.bat">

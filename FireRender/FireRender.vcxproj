@@ -158,6 +158,7 @@
     <ClInclude Include="EasyAnimation.hpp" />
     <ClInclude Include="EasyAnimator.hpp" />
     <ClInclude Include="EasyCamera.hpp" />
+    <ClInclude Include="EasyConsole.hpp" />
     <ClInclude Include="EasyDisplay.hpp" />
     <ClInclude Include="EasyEntity.hpp" />
     <ClInclude Include="EasyIO.hpp" />

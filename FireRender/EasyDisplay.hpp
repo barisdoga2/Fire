@@ -1,7 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <string>
 #include <glm/glm.hpp>
+#include "EasyIO.hpp"
 
 struct GLFWwindow;
 struct GLFWmonitor;
@@ -44,9 +46,11 @@ public:
 	DropData drop{};
 	MonitorData monitor{};
 	ErrorData error{};
+
+	double fps{}, ups{};
 };
 
-class WindowListener {
+class WindowListener : public EasyListener {
 public:
 	virtual inline bool window_pos_callback(const WindowData& data) { return false; }
 	virtual inline bool window_size_callback(const WindowData& data) { return false; }
@@ -74,13 +78,18 @@ public:
     static bool Init(glm::tvec2<int> windowSize = { 800, 600 }, glm::tvec2<int> position = { 0, 0 });
 	static void DeInit();
 
+	static void Update(double _dt);
+
 	static glm::ivec2 GetWindowSize();
 	static void AddListener(WindowListener* listener);
 	static bool ShouldClose();
 	static float GetAspectRatio();
 	static void SetExitRequested(bool requested);
-
+	static void SetTitle(std::string title);
+	static void Render(double _dt);
 	static GLFWwindow* GetWindow();
+	static double RtUPS();
+	static double RtFPS();
 
 private:
 	static void window_pos_callback(GLFWwindow* window, int x, int y);

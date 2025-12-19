@@ -67,14 +67,18 @@ bool TPCamera::button_callback(const MouseData& data)
     if (!enabled)
         return false;
 
+    bool captured = false;
+
     if (data.button.button == GLFW_MOUSE_BUTTON_2 || data.button.button == GLFW_MOUSE_BUTTON_1)
     {
+        captured = true;
+
         rotating = (data.button.action == GLFW_PRESS);
         firstMouse = true;
         EasyMouse::EnableCursor(!rotating);
-        return true;
-    }		
-    return false;
+    }
+
+    return captured;
 }
 
 bool TPCamera::scroll_callback(const MouseData& data)
@@ -82,9 +86,13 @@ bool TPCamera::scroll_callback(const MouseData& data)
     if (!enabled)
         return false;
 
+    bool captured = false;
+
+    captured = true;
     distance -= (float)data.scroll.now.y * scrollSensitivity;
     distance = glm::clamp(distance, minDist, maxDist);
-    return true;
+
+    return captured;
 }
 
 bool TPCamera::move_callback(const MouseData& data)
@@ -92,23 +100,28 @@ bool TPCamera::move_callback(const MouseData& data)
     if (!enabled)
         return false;
 
-    if (!rotating)
-        return false;
+    bool captured = false;
 
-    if (firstMouse)
+    if (rotating)
     {
-        lastMouse = data.position.now;
-        firstMouse = false;
-        return true;
+        captured = true;
+
+        if (firstMouse)
+        {
+            lastMouse = data.position.now;
+            firstMouse = false;
+        }
+        else
+        {
+            glm::vec2 delta = data.position.now - lastMouse;
+            lastMouse = data.position.now;
+
+            rotation.y += delta.x * mouseSensitivity;
+            rotation.x -= delta.y * mouseSensitivity;
+        }
     }
 
-    glm::vec2 delta = data.position.now - lastMouse;
-    lastMouse = data.position.now;
-
-    rotation.y += delta.x * mouseSensitivity; 
-    rotation.x -= delta.y * mouseSensitivity; 
-
-    return true;
+    return captured;
 }
 
 bool TPCamera::key_callback(const KeyboardData& data) 
@@ -116,7 +129,9 @@ bool TPCamera::key_callback(const KeyboardData& data)
     if (!enabled)
         return false;
 
-    return false; 
+    bool captured = false;
+
+    return captured;
 }
 
 bool TPCamera::char_callback(const KeyboardData& data) 
@@ -124,7 +139,9 @@ bool TPCamera::char_callback(const KeyboardData& data)
     if (!enabled)
         return false;
 
-    return false;
+    bool captured = false;
+
+    return captured;
 }
 
 // ################
@@ -157,29 +174,34 @@ void FRCamera::Update(double dt)
     UpdateMatrices(position + front);
 }
 
-
 bool FRCamera::move_callback(const MouseData& data)
 {
     if (!enabled)
         return false;
 
-    if (!frRotating)
-        return false;
+    bool captured = false;
 
-    if (frFirstMouse)
+    if (frRotating)
     {
-        frLastMouse = data.position.now;
-        frFirstMouse = false;
-        return true;
+        captured = true;
+
+        if (frFirstMouse)
+        {
+            frLastMouse = data.position.now;
+            frFirstMouse = false;
+        }
+        else
+        {
+            glm::vec2 delta = data.position.now - frLastMouse;
+            frLastMouse = data.position.now;
+
+            rotation.y += delta.x * frMouseSensitivity;
+            rotation.x -= delta.y * frMouseSensitivity;
+        }
     }
+    
 
-    glm::vec2 delta = data.position.now - frLastMouse;
-    frLastMouse = data.position.now;
-
-    rotation.y += delta.x * frMouseSensitivity;
-    rotation.x -= delta.y * frMouseSensitivity;
-
-    return true;
+    return captured;
 }
 
 bool FRCamera::scroll_callback(const MouseData& data)
@@ -187,8 +209,12 @@ bool FRCamera::scroll_callback(const MouseData& data)
     if (!enabled)
         return false;
 
+    bool captured = false;
+
+    captured = true;
     scroll = (float)data.scroll.now.y;
-    return true;
+
+    return captured;
 }
 
 bool FRCamera::button_callback(const MouseData& data)
@@ -196,13 +222,17 @@ bool FRCamera::button_callback(const MouseData& data)
     if (!enabled)
         return false;
 
+    bool captured = false;
+
     if (data.button.button == GLFW_MOUSE_BUTTON_2)
     {
+        captured = true;
+
         frRotating = (data.button.action == GLFW_PRESS);
         frFirstMouse = true;
-        return true;
     }
-    return false;
+
+    return captured;
 }
 
 bool FRCamera::key_callback(const KeyboardData& data)
@@ -210,22 +240,27 @@ bool FRCamera::key_callback(const KeyboardData& data)
     if (!enabled)
         return false;
 
-    if (data.key < 0 || data.key > GLFW_KEY_LAST)
-        return false;
+    bool captured = false;
 
-    if (data.action == GLFW_PRESS)
-        keyState[data.key] = true;
-    else if (data.action == GLFW_RELEASE)
-        keyState[data.key] = false;
+    if (data.key == GLFW_KEY_W || data.key == GLFW_KEY_A || data.key == GLFW_KEY_S || data.key == GLFW_KEY_D || data.key == GLFW_KEY_LEFT_SHIFT || data.key == GLFW_KEY_SPACE)
+    {
+        captured = true;
 
-    return true; // consume
+        if (data.action == GLFW_PRESS)
+            keyState[data.key] = true;
+        else if (data.action == GLFW_RELEASE)
+            keyState[data.key] = false;
+    }
+
+    return captured;
 }
-
 
 bool FRCamera::char_callback(const KeyboardData& data)
 {
     if (!enabled)
         return false;
+    
+    bool captured = false;
 
-    return false;
+    return captured;
 }

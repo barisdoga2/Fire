@@ -76,6 +76,9 @@
     <ClInclude Include="EasyEntity.hpp">
       <Filter>Render\Core</Filter>
     </ClInclude>
+    <ClInclude Include="EasyConsole.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EasyAnimation.cpp">

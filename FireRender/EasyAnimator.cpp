@@ -99,10 +99,10 @@ static const std::unordered_map<std::string, float> lowerBodyMask = {
     {"mixamorig:LeftToe_End", 1.0f},
 };
 
-EasyAnimator::EasyAnimator(EasyAnimation* animation)
+EasyAnimator::EasyAnimator(const std::vector<EasyAnimation*>& animations)
 {
     m_CurrentTime = 0.0;
-    m_CurrentAnimation = animation;
+    m_CurrentAnimation = nullptr;
 
     m_FinalBoneMatrices.reserve(200);
 
@@ -112,6 +112,18 @@ EasyAnimator::EasyAnimator(EasyAnimation* animation)
 
 void EasyAnimator::PlayAnimation(EasyAnimation* pAnimation)
 {
+    if (m_CurrentAnimation != pAnimation)
+    {
+        m_CurrentAnimation = pAnimation;
+        m_CurrentTime = 0.0;
+    }
+}
+
+void EasyAnimator::PlayAnimation(uint8_t aID)
+{
+    EasyAnimation* pAnimation{};
+    if (aID < animations.size())
+        pAnimation = animations.at(aID);
     if (m_CurrentAnimation != pAnimation)
     {
         m_CurrentAnimation = pAnimation;
@@ -199,9 +211,7 @@ void EasyAnimator::UpdateAnimation(double dt)
     }
 }
 
-void EasyAnimator::CalculateBoneTransform(EasyAnimation* animation, const AssimpNodeData* node,
-    const glm::mat4& parentTransform, std::vector<glm::mat4>& outMatrices,
-    double customTime)
+void EasyAnimator::CalculateBoneTransform(EasyAnimation* animation, const AssimpNodeData* node,const glm::mat4& parentTransform, std::vector<glm::mat4>& outMatrices, double customTime)
 {
     double time = (customTime >= 0.0) ? customTime : m_CurrentTime;
 
