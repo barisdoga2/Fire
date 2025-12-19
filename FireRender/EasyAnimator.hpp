@@ -19,6 +19,8 @@ private:
 
     float upperBodyBlend = 0.0f;
 
+    bool mirror = false;
+
 public:
     EasyAnimation* m_CurrentAnimation = nullptr;
 
@@ -26,6 +28,7 @@ public:
     void PlayAnimation(EasyAnimation* pAnimation);
     void BlendTo(EasyAnimation* next, double duration);
 
+    void SetMirror(bool m) { mirror = m; }
     void UpdateAnimation(double dt);
     void UpdateLayered(EasyAnimation* lower, EasyAnimation* upper, bool aiming, double dt);
 

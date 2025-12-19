@@ -29,10 +29,11 @@ public:
 struct GLFWwindow;
 class MouseData {
 public:
-	GLFWwindow* window;
-	Button button;
-	Position position;
-	Scroll scroll;
+	GLFWwindow* window{};
+	Button button{};
+	Position position{};
+	Scroll scroll{};
+	bool cursorEnabled{true};
 };
 
 class MouseListener {
@@ -56,6 +57,7 @@ public:
 	static void Init();
 	static void DeInit();
 
+	static void EnableCursor(bool enabled);
 	static void AddListener(MouseListener* listener);
 	static bool ListenButton(int button);
 	static bool IsButtonDown(int button);

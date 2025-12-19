@@ -10,10 +10,7 @@
 
 // ###########
 // BASE CAMERA
-EasyCamera::EasyCamera(
-    glm::vec3 position, glm::vec3 rotation,
-    float far, float near, float fov, glm::vec3 worldUp
-) : position(position), rotation(rotation), far(far), near(near), fov(fov), worldUp(worldUp)
+EasyCamera::EasyCamera(glm::vec3 position, glm::vec3 rotation, float far, float near, float fov, glm::vec3 worldUp) : position(position), rotation(rotation), far(far), near(near), fov(fov), worldUp(worldUp)
 {
     UpdateVectors();
     UpdateMatrices(position + front);
@@ -70,14 +67,13 @@ bool TPCamera::button_callback(const MouseData& data)
     if (!enabled)
         return false;
 
-    if (data.button.button == GLFW_MOUSE_BUTTON_2)
+    if (data.button.button == GLFW_MOUSE_BUTTON_2 || data.button.button == GLFW_MOUSE_BUTTON_1)
     {
         rotating = (data.button.action == GLFW_PRESS);
         firstMouse = true;
+        EasyMouse::EnableCursor(!rotating);
         return true;
     }		
-
-
     return false;
 }
 

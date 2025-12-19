@@ -7,7 +7,8 @@
 #include "ClientNetwork.hpp"
 #include "Player.hpp"
 
-
+#define MAIN_CHARACTER "MainCharacter"
+#define FIRE_LIGHTWEIGHT
 
 class EasyModel;
 class EasyShader;
@@ -35,6 +36,7 @@ public:
     HDR* hdr{};
     std::unordered_map<std::string, EasyModel*> models{};
     EasyModel*& Model(std::string name) { return models[name]; };
+    std::unordered_map<std::string, EasyEntity*> entities{};
     std::vector<Chunk*> chunks{};
     MainPlayer* player{};
     std::vector<Player*> players{};
@@ -57,7 +59,8 @@ public:
     void NetworkUpdate(double _dt);
 
     // Render
-    void ImGUI_Render();
+    void ImGUI_Render(double _dt);
+    void RenderScene(double _dt);
     bool Render(double _dt);
     void StartRender(double _dt);
     void EndRender();
@@ -70,6 +73,7 @@ public:
     void ReGenerateMap();
 
     // Network
+    void ProcessReceived(double _dt);
     void OnLogin() override;
     void OnDisconnect() override;
     void ClearPlayers();

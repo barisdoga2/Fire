@@ -3,13 +3,15 @@
 #include <EasyModel.hpp>
 #include <EasyAnimator.hpp>
 #include <EasyAnimation.hpp>
+#include <EasyCamera.hpp>
 #include "ClientNetwork.hpp"
 
 #include <GLFW/glfw3.h>
+#include <glm/gtx/quaternion.hpp>
 
 
 Player::Player(ClientNetwork* network, EasyModel* model, UserID_t uid, bool isMainPlayer, glm::vec3 position) 
-: network(network), uid(uid), isMainPlayer(isMainPlayer), targetPosition(position), EasyEntity(model, position)
+: network(network), uid(uid), isMainPlayer(isMainPlayer), EasyEntity(model, position)
 {
 	
 }
@@ -21,11 +23,8 @@ Player::~Player()
 
 bool Player::Update(double _dt) 
 {
-    if (!animator && model->isRawDataLoadedToGPU && model->animations.size() > 0u)
-        animator = new EasyAnimator(model->animations.at(0U));
-
-	if (animator)
-		animator->UpdateAnimation(_dt);
+	if (!animator && model->isRawDataLoadedToGPU && model->animations.size() > 0u)
+		animator = new EasyAnimator(model->animations.at(0U));
 
     return true;
 }
@@ -60,6 +59,8 @@ bool Player::char_callback(const KeyboardData& data)
 	return false;
 }
 
+
+
 MainPlayer::MainPlayer(ClientNetwork* network, EasyModel* model, UserID_t uid, glm::vec3 position) : Player(network, model, uid, true, position)
 {
 
@@ -70,51 +71,122 @@ MainPlayer::~MainPlayer()
 
 }
 
-bool MainPlayer::Update(double _dt)
+bool useFakeRot{};
+glm::quat fakeRot{ 1,0,0,0 };
+
+glm::mat4x4 MainPlayer::TransformationMatrix() const
 {
-    float dt = (float)_dt;
+	return CreateTransformMatrix(transform.position, useFakeRot ? fakeRot : transform.rotationQuat, transform.scale);
+}
 
-    bool w = keyStates[GLFW_KEY_W];
-    bool s = keyStates[GLFW_KEY_S];
-    bool a = keyStates[GLFW_KEY_A];
-    bool d = keyStates[GLFW_KEY_D];
-    bool rotateOnly = (!w && !s && (a || d));
-    bool moveInput = (w || s || a || d);
+void MainPlayer::UpdateVectors(TPCamera* camera)
+{
+	front = glm::normalize(transform.rotationQuat * glm::vec3(0, 0, 1));
+	right = glm::normalize(glm::cross(front, glm::dvec3(0, 1, 0)));
+	up = glm::normalize(glm::cross(right, front));
+}
 
-    float yawRad = glm::radians(transform.rotation.y);
-    if (rotateOnly)
-    {
-        transform.rotation.y -= (a ? -1.f : 1.f) * 180.f * dt;
-        transform.rotation.y = glm::mod(transform.rotation.y, 360.f);
-        direction = glm::vec3(0.f);
-    }
-    else
-    {
-        if (!moveInput)
-        {
-            direction = glm::mix(direction, glm::vec3(0.f), dt * 10.f);
-        }
-        else
-        {
-            glm::vec3 inputDir((a ? -1.f : 0.f) + (d ? 1.f : 0.f), 0.f, (w ? 1.f : 0.f) + (s ? -1.f : 0.f) );
-            if (glm::length(inputDir) > 0.f)
-                inputDir = glm::normalize(inputDir);
+void MainPlayer::HandleAnimation(TPCamera* camera, double _dt)
+{
+	if (!animator)
+		return;
 
-            glm::vec3 desiredDir(sin(yawRad) * inputDir.z + cos(yawRad) * inputDir.x, 0.f, cos(yawRad) * inputDir.z - sin(yawRad) * inputDir.x);
-            direction = glm::normalize(glm::mix(direction, desiredDir, dt * 8.f));
-        }
+	bool w = keyStates[GLFW_KEY_W];
+	bool s = keyStates[GLFW_KEY_S];
+	bool a = keyStates[GLFW_KEY_A];
+	bool d = keyStates[GLFW_KEY_D];
+	bool side = (a || d);
+	bool move = (w || s);
+	bool input = side || move;
+	bool onlyMove = move && !side;
+	bool onlySide = side && !move;
+	bool movingSide = move && side;
 
-        bool positionLerp = false;
-        targetPosition += direction * speed * dt;
-        transform.position = positionLerp ? ((targetPosition - transform.position) * 0.1f) : targetPosition;
+	EasyAnimation* anim = model->animations[ANIM_IDLE];
+	animator->SetMirror(false);
 
-        if (glm::length(direction) > 0.001f)
-            transform.rotation.y = glm::degrees(std::atan2(direction.x, direction.z));
-    }
+	if (w && !s)
+	{
+		anim = model->animations[ANIM_RUN_FORWARD];
+		animator->SetMirror(false);
+	}
+	else if (s && !w)
+	{
+		anim = model->animations[ANIM_RUN_BACKWARD];
+		animator->SetMirror(false);
+	}
+	else if (d && !a)
+	{
+		anim = model->animations[ANIM_STRAFE_RIGHT];
+		animator->SetMirror(false);
+	}
+	else if (a && !d)
+	{
+		anim = model->animations[ANIM_STRAFE_RIGHT];
+		animator->SetMirror(true);
+	}
 
-    if (animator)
-        animator->PlayAnimation(model->animations.at((w || s) ? 1U : 0U));
+	animator->PlayAnimation(anim);
+	animator->UpdateAnimation(_dt);
+}
 
+void MainPlayer::HandleMovement(TPCamera* camera, double _dt)
+{
+	if (camera->Rotating() && EasyMouse::IsButtonDown(GLFW_MOUSE_BUTTON_2))
+	{
+		if (glm::vec3 camForward = { camera->Front().x, 0.0f, camera->Front().z }; glm::length(camForward) >= 0.0001f)
+		{
+			targetTransform.rotationQuat = glm::rotation(glm::vec3(0, 0, 1), glm::normalize(camForward));
+		}
+	}
+
+	UpdateVectors(camera);
+
+	bool w = keyStates[GLFW_KEY_W];
+	bool s = keyStates[GLFW_KEY_S];
+	bool a = keyStates[GLFW_KEY_A];
+	bool d = keyStates[GLFW_KEY_D];
+	bool side = (a || d);
+	bool move = (w || s);
+	bool input = side || move;
+	bool onlyMove = move && !side;
+	bool onlySide = side && !move;
+	bool movingSide = move && side;
+	if (input)
+	{
+		useFakeRot = movingSide;
+		
+		glm::vec3 moveForward = glm::normalize(glm::vec3((float)front.x, 0.0f, (float)front.z));
+		glm::vec3 moveRight = glm::normalize(glm::cross(moveForward, glm::vec3(0, 1, 0)));
+
+		glm::vec3 dir(0.0f);
+		if (w) dir += moveForward;
+		if (s) dir -= moveForward;
+		if (a) dir -= moveRight;
+		if (d) dir += moveRight;
+
+		if (glm::length(dir) > 0.0001f)
+		{
+			dir = glm::normalize(dir);
+			if (movingSide)
+				fakeRot = glm::angleAxis(std::atan2(dir.x, dir.z) + (s ? glm::pi<float>() : 0.f), glm::vec3(0, 1, 0));
+		}
+
+		double speed = s ? backwardsRunSpeed : runSpeed;
+		targetTransform.position += dir * (float)speed * (float)_dt;
+	}
+	
+	UpdateVectors(camera);
+
+	transform.position += (targetTransform.position - transform.position) * 0.2f;
+	transform.rotationQuat = glm::slerp(transform.rotationQuat, (glm::dot(transform.rotationQuat, targetTransform.rotationQuat) < 0.0f) ? -targetTransform.rotationQuat : targetTransform.rotationQuat,glm::clamp((float)_dt * 25.0f, 0.0f, 1.0f));
+	
+}
+
+bool MainPlayer::Update(TPCamera* camera, double _dt)
+{
+	HandleMovement(camera, _dt);
+	HandleAnimation(camera, _dt);
     return Player::Update(_dt);
 }
 

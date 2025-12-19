@@ -699,38 +699,3 @@ void EasyPlayground::ImGUI_TestRender()
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
-
-void EasyPlayground::ImGUI_Render()
-{
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-
-    ImGUI_DrawConsoleWindow();
-
-    if(network->IsInGame())
-    {
-        ImGUI_DebugWindow();
-        ImGUI_PlayerInfoWindow();
-        ImGUI_BroadcastMessageWindow();
-        ImGUI_DrawChatWindow();
-    }
-    else
-    {
-        if (network->IsChampionSelect())
-        {
-            ImGUI_ChampionSelectWindow();
-        }
-        else if (network->IsLoginFailed() || network->IsLoggingIn())
-        {
-            ImGUI_LoginStatusWindow();
-        }
-        else
-        {
-            ImGUI_LoginWindow();
-        }
-    }
-
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}

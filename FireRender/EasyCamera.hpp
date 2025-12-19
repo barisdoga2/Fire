@@ -10,7 +10,7 @@
 class EasyEntity;
 struct GLFWwindow;
 class EasyCamera : public MouseListener, public KeyboardListener {
-public:
+protected:
 	const glm::vec3 worldUp;
 	const float far, near, fov;
 
@@ -24,15 +24,25 @@ public:
 	glm::mat4 viewMatrix;
 	glm::mat4 projectionMatrix;
 
+public:
 	bool enabled{true};
 
-	EasyCamera(
-		glm::vec3 position = glm::vec3(0, 0, 0), glm::vec3 rotation = glm::vec3(0, 0, 0),
-		float far = 10000.f, float near = 0.01f, float fov = 90.f, glm::vec3 worldUp = glm::vec3(0.f, 1.f, 0.f)
-	);
+	EasyCamera(glm::vec3 position = glm::vec3(0, 0, 0), glm::vec3 rotation = glm::vec3(0, 0, 0), float far = 10000.f, float near = 0.01f, float fov = 90.f, glm::vec3 worldUp = glm::vec3(0.f, 1.f, 0.f));
+
+	float Far() const { return far; };
+	float Near() const { return near; };
+	float Fov() const { return fov; };
+	glm::mat4x4 ViewMatrix() const { return viewMatrix; };
+	glm::mat4x4 ProjectionMatrix() const { return projectionMatrix; };
+	glm::vec3 Position() const { return position; };
+	glm::vec3 Rotation() const { return rotation; };
+	glm::vec3 Front() const { return front; };
+	glm::vec3 Up() const { return up; };
+	glm::vec3 Right() const { return right; };
 
 	virtual void Update(double dt) = 00U;
 
+protected:
 	void UpdateVectors();
 	void UpdateMatrices(glm::vec3 targetPosition);
 
@@ -41,7 +51,6 @@ public:
 // ###################
 // THIRD PERSON CAMERA
 class TPCamera : public EasyCamera {
-public:
 	float distance = 6.0f;
 	float minDist = 0.0f;
 	float maxDist = 15.0f;
@@ -57,7 +66,10 @@ public:
 
 	EasyEntity* target;
 
+public:
 	TPCamera(EasyEntity* target, glm::vec3 eyeOffset = glm::vec3(0,0,0), float far = 10000.f, float near = 0.01f, float fov = 90.f);
+
+	bool Rotating() const { return rotating; };
 
 	void Update(double dt) override;
 
@@ -72,7 +84,6 @@ public:
 
 // FREE ROAM CAMERA
 class FRCamera : public EasyCamera {
-public:
 	bool frRotating = false;
 	bool frFirstMouse = true;
 	glm::dvec2 frLastMouse{};
@@ -82,8 +93,9 @@ public:
 	float frMouseSensitivity = 0.12f;
 	float frScrollSensitivity = 50.0f;
 
-	bool keyState[MAX_KEYS]{}; 
+	bool keyState[MAX_KEYS]{};
 
+public:
 	FRCamera(
 		glm::vec3 position = glm::vec3(0),
 		glm::vec3 rotation = glm::vec3(0),

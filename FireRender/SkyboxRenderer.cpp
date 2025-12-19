@@ -37,7 +37,7 @@ void SkyboxRenderer::DeInit()
 
 void SkyboxRenderer::Render(EasyCamera* camera)
 {
-	const glm::mat4x4 proj = glm::perspective(glm::radians(camera->fov), EasyDisplay::GetAspectRatio(), camera->near, 1250.0f);
+	const glm::mat4x4 proj = glm::perspective(glm::radians(camera->Fov()), EasyDisplay::GetAspectRatio(), camera->Near(), camera->Far());
 
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
@@ -47,7 +47,7 @@ void SkyboxRenderer::Render(EasyCamera* camera)
 	glBindVertexArray(vao);
 	glEnableVertexAttribArray(0);
 
-	glm::mat4x4 view = camera->viewMatrix;
+	glm::mat4x4 view = camera->ViewMatrix();
 	view[3][0] = 0;
 	view[3][1] = 0;
 	view[3][2] = 0;

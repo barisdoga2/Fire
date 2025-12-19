@@ -298,9 +298,9 @@ void ChunkRenderer::Render(EasyCamera* camera, std::vector<Chunk*> chunks, HDR* 
 		glBindVertexArray(chunk->VAO);
 		glEnableVertexAttribArray(0);
 		chunkShader->LoadUniform("uModel", glm::translate(glm::mat4x4(1), glm::vec3(chunk->coord.x * Chunk::CHUNK_SIZE, 0, chunk->coord.y * Chunk::CHUNK_SIZE)));
-		chunkShader->LoadUniform("uView", camera->viewMatrix);
-		chunkShader->LoadUniform("uProj", camera->projectionMatrix);
-		chunkShader->LoadUniform("uCameraPos", camera->position);
+		chunkShader->LoadUniform("uView", camera->ViewMatrix());
+		chunkShader->LoadUniform("uProj", camera->ProjectionMatrix());
+		chunkShader->LoadUniform("uCameraPos", camera->Position());
 		chunkShader->LoadUniform("uIsFog", fog ? 1.0f : 0.0f);
         chunkShader->LoadTexture(0, GL_TEXTURE_2D, "diffuseTexture", chunk->backMaterial->GetTexture(EasyMaterial::ALBEDO));
 

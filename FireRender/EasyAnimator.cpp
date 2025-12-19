@@ -8,6 +8,7 @@
 
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/compatibility.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <assimp/scene.h>
 
 
@@ -213,7 +214,31 @@ void EasyAnimator::CalculateBoneTransform(EasyAnimation* animation, const Assimp
     if (Bone)
     {
         Bone->Update(time);
-        nodeTransform = Bone->GetLocalTransform();
+        glm::vec3 pos;
+        glm::quat rot;
+        glm::vec3 scale;
+        glm::vec3 skew;
+        glm::vec4 perspective;
+
+        glm::decompose(
+            Bone->GetLocalTransform(),
+            scale, rot, pos, skew, perspective
+        );
+
+        if (mirror)
+        {
+            // X ekseninde mirror
+            pos.x = -pos.x;
+
+            // Quaternion mirror (Y-axis reflection)
+            rot.y = -rot.y;
+            rot.z = -rot.z;
+        }
+
+        nodeTransform =
+            glm::translate(glm::mat4(1.0f), pos) *
+            glm::toMat4(rot) *
+            glm::scale(glm::mat4(1.0f), scale);
     }
 
     glm::mat4 globalTransform = parentTransform * nodeTransform;

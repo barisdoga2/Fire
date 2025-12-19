@@ -49,85 +49,94 @@ EasyPlayground::~EasyPlayground()
 	DeInit();
 }
 
+// Render
 bool EasyPlayground::Render(double _dt)
 {
 	camera->Update(_dt);
 
-	for (EasyEntity* e : players)
-		e->Update(_dt);
+	for (Player* e : players)
+		if (e != player)
+			e->Update(_dt);
+		else
+			player->Update((TPCamera*)camera, _dt);
 
 	bool success = true;
 
 	// Render
 	if (isRender || isTestRender)
-	{
-		std::vector<EasyEntity*> entities = {  };
-
-		// Skybox
-		SkyboxRenderer::Render(camera);
-
-		// Normal Lines
-		DebugRenderer::Render(camera, entities, chunks, renderData);
-		
-		if (renderData.imgui_triangles) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-		// Map
-		ChunkRenderer::Render(camera, chunks, hdr, renderData.imgui_isFog);
-
-		// Objects
-		ModelRenderer::Render(camera, entities, renderData);
-
-		// Players
-		std::vector<EasyEntity*> playersAsEntity{};
-		for (Player* p : players)
-			playersAsEntity.push_back(p);
-		ModelRenderer::Render(camera, playersAsEntity, renderData);
-
-		if (renderData.imgui_triangles) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	}
+		RenderScene(_dt);
 
 	// ImGUI
 	if (!isTestRender)
-		EasyPlayground::ImGUI_Render();
+		EasyPlayground::ImGUI_Render(_dt);
 	else
 		EasyPlayground::ImGUI_TestRender();
 
 	return success;
 }
 
-bool EasyPlayground::Update(double _dt)
+void EasyPlayground::RenderScene(double _dt)
 {
-	// UPS Calc
+	std::vector<EasyEntity*> batch{};
+	for (auto& [name, entity] : entities)
+		batch.push_back(entity);
+
+	// Skybox
+	SkyboxRenderer::Render(camera);
+
+	// Normal Lines
+	DebugRenderer::Render(camera, batch, chunks, renderData);
+
+	if (renderData.imgui_triangles) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	// Map
+	ChunkRenderer::Render(camera, chunks, hdr, renderData.imgui_isFog);
+
+	// Objects
+	ModelRenderer::Render(camera, batch, renderData);
+
+	// Players
+	std::vector<EasyEntity*> playersAsEntity{};
+	for (Player* p : players)
+		playersAsEntity.push_back(p);
+	ModelRenderer::Render(camera, playersAsEntity, renderData);
+
+	if (renderData.imgui_triangles) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+void EasyPlayground::ImGUI_Render(double _dt)
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	ImGUI_DrawConsoleWindow();
+
+	if (network->IsInGame())
 	{
-		static double updateTimes[4] = { 0.0 };
-		static int frameCount = 0;
-		static int index = 0;
-
-		// store current frame delta time
-		updateTimes[index] = _dt;
-		index = (index + 1) % 4;
-
-		if (frameCount < 4)
-			++frameCount;
-
-		// calculate average delta over last N frames
-		double avgDt = 0.0;
-		for (int i = 0; i < frameCount; ++i)
-			avgDt += updateTimes[i];
-		avgDt /= frameCount;
-
-		// calculate FPS
-		ups = 1.0 / avgDt;
+		ImGUI_DebugWindow();
+		ImGUI_PlayerInfoWindow();
+		ImGUI_BroadcastMessageWindow();
+		ImGUI_DrawChatWindow();
+	}
+	else
+	{
+		if (network->IsChampionSelect())
+		{
+			ImGUI_ChampionSelectWindow();
+		}
+		else if (network->IsLoginFailed() || network->IsLoggingIn())
+		{
+			ImGUI_LoginStatusWindow();
+		}
+		else
+		{
+			ImGUI_LoginWindow();
+		}
 	}
 
-	// Try load everything until done
-	static bool srcReady{}; if (!srcReady && Model("MainCharacter")->LoadToGPU()) srcReady = true;
-
-	isRender = network->IsInGame();
-
-	NetworkUpdate(_dt);
-
-	return !EasyDisplay::ShouldClose();
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 void EasyPlayground::StartRender(double _dt)
@@ -176,6 +185,67 @@ void EasyPlayground::EndRender()
 	glfwPollEvents();
 }
 
+// Update
+bool EasyPlayground::Update(double _dt)
+{
+	// UPS Calc
+	{
+		static double updateTimes[4] = { 0.0 };
+		static int frameCount = 0;
+		static int index = 0;
+
+		// store current frame delta time
+		updateTimes[index] = _dt;
+		index = (index + 1) % 4;
+
+		if (frameCount < 4)
+			++frameCount;
+
+		// calculate average delta over last N frames
+		double avgDt = 0.0;
+		for (int i = 0; i < frameCount; ++i)
+			avgDt += updateTimes[i];
+		avgDt /= frameCount;
+
+		// calculate FPS
+		ups = 1.0 / avgDt;
+	}
+
+	// Try load everything until done
+	static bool srcReady{}; if (!srcReady && Model(MAIN_CHARACTER)->LoadToGPU()) srcReady = true;
+
+	isRender = network->IsInGame();
+
+	NetworkUpdate(_dt);
+
+	return !EasyDisplay::ShouldClose();
+}
+
+void EasyPlayground::NetworkUpdate(double _dt)
+{
+	network->Update();
+
+	if (!network->IsInGame())
+		return;
+
+	// Heartbeat
+	{
+		static Timestamp_t nextHeartbeat = Clock::now();
+		Millis_t heartbeatPeriod(1000U);
+		if (Clock::now() >= nextHeartbeat)
+		{
+			nextHeartbeat = Clock::now() + heartbeatPeriod;
+
+			std::cout << "[EasyPlayground] NetworkUpdate - Heartbeat sent.\n";
+			network->GetSendCache().push_back(new sHearbeat());
+		}
+	}
+
+	// Process Received
+	ProcessReceived(_dt);
+}
+
+// Input
 bool EasyPlayground::button_callback(const MouseData& data) 
 { 
 	if (!camera->enabled)
@@ -304,6 +374,7 @@ bool EasyPlayground::char_callback(const KeyboardData& data)
 	return false;
 }
 
+// Utility
 void EasyPlayground::ForwardStandartIO()
 {
 	using namespace UIConsole;

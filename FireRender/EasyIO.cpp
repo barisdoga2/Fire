@@ -38,6 +38,12 @@ void EasyMouse::DeInit()
 	}
 }
 
+void EasyMouse::EnableCursor(bool enabled)
+{
+	data.cursorEnabled = enabled;
+	glfwSetInputMode(data.window, GLFW_CURSOR, enabled ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
+}
+
 void EasyMouse::AddListener(MouseListener* listener)
 {
 	listeners.push_back(listener);

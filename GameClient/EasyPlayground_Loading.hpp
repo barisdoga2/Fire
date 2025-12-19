@@ -12,6 +12,11 @@ void EasyPlayground::DeInit()
 	players.clear();
 	player = nullptr;
 
+	// Entities
+	for (auto& [name, entity] : entities)
+		delete entity;
+	entities.clear();
+
 	// HDRs
 	if (hdr)
 		delete hdr;
@@ -66,7 +71,7 @@ void EasyPlayground::ReloadAssets()
 {
 	if (network)
 		delete network;
-	network = new ClientNetwork(bm, this);
+	network = nullptr;
 
 	for (Player* p : players)
 		delete p;
@@ -76,27 +81,42 @@ void EasyPlayground::ReloadAssets()
 	for (auto& [name,model] : models)
 		delete model;
 	models.clear();
+
+	if (camera)
+		delete camera;
+	camera = nullptr;
+
+	if (hdr)
+		delete hdr;
+	hdr = nullptr;
 	
 	Model("MainCharacter") = EasyModel::LoadModel(
 		GetRelPath("res/models/Kachujin G Rosales Skin.fbx"),
 		{
-			GetRelPath("res/models/Standing Idle on Kachujin G Rosales wo Skin.fbx"),
-			GetRelPath("res/models/Running on Kachujin G Rosales wo Skin.fbx"),
-			GetRelPath("res/models/Standing Aim Idle 01 on Kachujin H Rosales wo Skin.fbx")
+			GetRelPath("res/models/Character Idle.fbx"),
+			GetRelPath("res/models/Character Run Backward.fbx"),
+			GetRelPath("res/models/Character Run Forward.fbx"),
+			GetRelPath("res/models/Character Strafe Right.fbx"),
+			GetRelPath("res/models/Character Idle Turn Right.fbx"),
 		}, glm::vec3(0.0082f) // Y = 1.70m
-	);
+		);
 
+
+#ifndef FIRE_LIGHTWEIGHT
 	Model("1x1cube.dae") = EasyModel::LoadModel(GetRelPath("res/models/1x1cube.dae"));
 	Model("items.dae") = EasyModel::LoadModel(GetRelPath("res/models/items.dae"));
 	Model("Buildings.dae") = EasyModel::LoadModel(GetRelPath("res/models/Buildings.dae"));
 	Model("Walls.dae") = EasyModel::LoadModel(GetRelPath("res/models/Walls.dae"));
+#endif
+
+#ifndef FIRE_LIGHTWEIGHT
+	entities.emplace("1x1x1_cube", new EasyEntity(Model("1x1cube.dae"), { {-1,0,0}, {}, {1,1,1} }));
+#endif
 	
-	if (camera)
-		delete camera;
+	network = new ClientNetwork(bm, this);
+
 	camera = new FRCamera();
 
-	if (hdr)
-		delete hdr;
 	hdr = new HDR("defaultLightingHDR");
 
 	ReGenerateMap();

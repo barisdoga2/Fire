@@ -37,14 +37,14 @@ void ModelRenderer::DeInit()
 void ModelRenderer::Render(EasyCamera* camera, const std::vector<EasyEntity*>& entities, const RenderData& rD)
 {
 	modelShader->Start();
-	modelShader->LoadUniform("view", camera->viewMatrix);
-	modelShader->LoadUniform("proj", camera->projectionMatrix);
-	modelShader->LoadUniform("uCameraPos", camera->position);
+	modelShader->LoadUniform("view", camera->ViewMatrix());
+	modelShader->LoadUniform("proj", camera->ProjectionMatrix());
+	modelShader->LoadUniform("uCameraPos", camera->Position());
 	modelShader->LoadUniform("uIsFog", rD.imgui_isFog ? 1.0f : 0.0f);
 
 	for (const EasyEntity* entity : entities)
 	{
-		modelShader->LoadUniform("modelTrans", CreateTransformMatrix(entity->transform.position, entity->transform.rotation, entity->transform.scale));
+		modelShader->LoadUniform("modelTrans", entity->TransformationMatrix());
 		if (entity->animator)
 			modelShader->LoadUniform("boneMatrices", entity->animator->GetFinalBoneMatrices());
 
