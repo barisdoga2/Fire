@@ -99,7 +99,7 @@ static const std::unordered_map<std::string, float> lowerBodyMask = {
     {"mixamorig:LeftToe_End", 1.0f},
 };
 
-EasyAnimator::EasyAnimator(const std::vector<EasyAnimation*>& animations)
+EasyAnimator::EasyAnimator(const std::vector<EasyAnimation*>& animations) : animations(animations)
 {
     m_CurrentTime = 0.0;
     m_CurrentAnimation = nullptr;
@@ -128,6 +128,17 @@ void EasyAnimator::PlayAnimation(uint8_t aID)
     {
         m_CurrentAnimation = pAnimation;
         m_CurrentTime = 0.0;
+    }
+}
+
+void EasyAnimator::BlendTo(uint8_t aID, double duration)
+{
+    EasyAnimation* pAnimation{};
+    if (aID < animations.size())
+        pAnimation = animations.at(aID);
+    if (m_CurrentAnimation != pAnimation)
+    {
+        BlendTo(pAnimation, duration);
     }
 }
 

@@ -105,3 +105,27 @@ public:
 	bool key_callback(const KeyboardData& data) override;
 	bool char_callback(const KeyboardData& data) override;
 };
+
+class RTSCamera : public EasyCamera
+{
+public:
+	RTSCamera(glm::vec3 position = glm::vec3(0), float far = 10000.f, float near = 0.01f, float fov = 90.f);
+
+	void Update(double dt) override;
+
+	bool move_callback(const MouseData& data) override;
+	bool button_callback(const MouseData& data) override;
+
+private:
+	bool dragging = false;
+
+	glm::dvec2 lastMouse{};
+
+	float moveSpeed = 15.0f;
+	float dragSpeed = 0.02f;
+	float edgeSpeed = 20.0f;
+
+	float edgeThreshold = 8.0f; // pixels
+
+	void EdgeScroll(double dt);
+};

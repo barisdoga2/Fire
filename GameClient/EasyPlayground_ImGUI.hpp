@@ -129,6 +129,10 @@ void EasyPlayground::ImGUI_DrawConsoleWindow()
     {
         ImGui::BeginChild("console_scroll", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - 5), false, ImGuiWindowFlags_HorizontalScrollbar);
 
+        int fill = 10 - (int)console.Lines().size();
+        for (int i = fill; i > 0 ; i--)
+            ImGui::TextUnformatted(" ");
+
         for (const auto& line : console.Lines())
             ImGui::TextUnformatted(line.text.c_str());
 
@@ -152,7 +156,7 @@ void EasyPlayground::ImGUI_DrawConsoleWindow()
         ImGui::InputText("##cmd", consoleInputBuff, sizeof(consoleInputBuff));
 
         ImGui::SameLine();
-        if (ImGui::Button("Send", ImVec2(btnW, ImGui::GetFrameHeight())))
+        if (ImGui::Button("Send", ImVec2(btnW, ImGui::GetFrameHeight())) || (ImGui::IsWindowFocused() && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter))))
         {
             console.AddLine(consoleInputBuff);
             consoleInputBuff[0U] = '\0';
@@ -227,11 +231,10 @@ void EasyPlayground::ImGUI_DrawChatWindow()
     if (ImGui::Button("Send", ImVec2(63, inputHeight)))
         send = true;
 
-    if (send)
+    if (send || (ImGui::IsWindowFocused() && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter))))
     {
         std::string text(inputBuf);
-
-        if (!text.empty())
+        if (text.length() > 0U)
         {
             // Send
             network->GetSendCache().push_back(new sChatMessage("", text, 0));
@@ -343,8 +346,7 @@ void EasyPlayground::ImGUI_ChampionSelectWindow()
             bool pressed = ImGui::ImageButton(std::to_string(i).c_str(), icons[i], ImVec2(64.0f, 64.0f));
             if (i == 0)
             {
-                ImGui::FocusItem();
-                if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))
+                if (ImGui::IsWindowFocused() && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter)))
                     pressed = true;
             }
 
@@ -429,10 +431,8 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 	if (!network->IsLoginFailed())
 	{
         bool isButtonClicked = ImGui::Button("Cancel", ImVec2(btnWidth, 28));
-        ImGui::FocusItem();
-        if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))
+        if (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Escape))
             isButtonClicked = true;
-
 		if (isButtonClicked)
 		{
             network->Stop();
@@ -441,10 +441,8 @@ void EasyPlayground::ImGUI_LoginStatusWindow()
 	else
 	{
         bool isButtonClicked = ImGui::Button("OK", ImVec2(btnWidth, 28));
-        ImGui::FocusItem();
-        if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))
+        if (ImGui::IsWindowFocused() && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter)))
             isButtonClicked = true;
-
 		if (isButtonClicked)
 		{
             network->Stop();
@@ -505,8 +503,7 @@ void EasyPlayground::ImGUI_BroadcastMessageWindow()
     CenterItem(btnWidth);
 
     bool isButtonClicked = ImGui::Button("OK", ImVec2(btnWidth, 28));
-    ImGui::FocusItem();
-    if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))
+    if (ImGui::IsWindowFocused() && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter)))
         isButtonClicked = true;
     if (isButtonClicked)
     {
@@ -576,8 +573,7 @@ void EasyPlayground::ImGUI_LoginWindow()
 	CenteredItem(btnWidth);
 
     bool isLoginClicked = ImGui::Button("Login", ImVec2(btnWidth, 32));
-    ImGui::FocusItem();
-    if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))
+    if (ImGui::IsWindowFocused() && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter)))
         isLoginClicked = true;
 	if (isLoginClicked)
 	{

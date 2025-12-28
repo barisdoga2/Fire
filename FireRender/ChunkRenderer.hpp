@@ -23,6 +23,7 @@ public:
         glm::vec3 bitangent = glm::vec3(0);
     };
 
+    uint8_t id = 0U;
     glm::ivec2 coord = { 0,0 };
     std::vector<ChunkVertex> verts;
     std::vector<unsigned int> indices;

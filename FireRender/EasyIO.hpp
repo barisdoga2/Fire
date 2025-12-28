@@ -67,6 +67,8 @@ public:
 
 	static void Update(double _dt);
 
+	static glm::dvec2 GetCursorPosition() { return data.position.now; };
+
 	static void EnableCursor(bool enabled);
 	static void AddListener(MouseListener* listener);
 	static bool ListenButton(int button);

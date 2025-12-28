@@ -33,7 +33,7 @@ int main(void)
         using MainClock = std::chrono::high_resolution_clock;
 
         double fps_timer = 0.0, ups_timer = 0.0;
-        MainClock::time_point lastTime{};
+        MainClock::time_point lastTime = std::chrono::high_resolution_clock::now();
         while (running)
         {
             MainClock::time_point currentTime = std::chrono::high_resolution_clock::now();

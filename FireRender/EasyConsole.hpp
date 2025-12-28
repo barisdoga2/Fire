@@ -16,18 +16,21 @@
 class EasyConsole : public std::streambuf {
 private:
     static inline std::streambuf* oldCoutBuf{};
+    static inline const auto ttl = std::chrono::seconds(3U);
 
+public:
     struct ConsoleLine
     {
         std::string text;
         std::chrono::steady_clock::time_point time;
 
-        ConsoleLine(std::string text) : text(text), time(std::chrono::steady_clock::now())
+        ConsoleLine(std::string text, std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now()) : text(text), time(time)
         {
             text = TimeNow_HHMMSS() + " - " + text;
         }
     };
 
+private:
     std::mutex mtx;
     std::string currentLine;
     std::vector<ConsoleLine> lines;
@@ -52,9 +55,10 @@ public:
             std::cout.rdbuf(oldCoutBuf);
     }
 
-    void AddLine(const std::string& line)
+    void AddLine(const std::string& line, std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now())
     {
-        lines.emplace_back(line);
+        if(line.length() > 0U)
+            lines.emplace_back(line, time);
     }
 
     void AddLines(const std::vector<std::string>& linesIn)
@@ -66,7 +70,6 @@ public:
     void PruneOldLogs()
     {
         const auto now = std::chrono::steady_clock::now();
-        const auto ttl = std::chrono::seconds(30);
         while (!lines.empty())
         {
             if (now - lines.front().time > ttl)

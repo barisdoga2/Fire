@@ -11,7 +11,9 @@ enum AnimID {
 	ANIM_RUN_BACKWARD,
 	ANIM_RUN_FORWARD,
 	ANIM_STRAFE_RIGHT,
+	ANIM_STRAFE_LEFT,
 	ANIM_TURN_RIGHT,
+	ANIM_TURN_LEFT,
 	ANIM_MAX
 };
 
@@ -24,10 +26,15 @@ private:
 	const bool isMainPlayer;
 	const UserID_t uid;
 	ClientNetwork* network;
-	AnimationSM* sm;
 
 protected:
 	EasyTransform targetTransform{};
+	AnimationSM* stateManager{};
+
+	glm::vec2 front{};
+
+	double runSpeed = 5.f;
+	double backwardsRunSpeed = 2.5f;
 
 public:
 	Player(ClientNetwork* network, EasyModel* model, UserID_t uid, bool isMainPlayer, glm::vec3 position);
@@ -51,22 +58,16 @@ private:
 	bool keyStates[MAX_KEYS] = { false };
 	bool buttonStates[MAX_BUTTONS] = { false };
 
-	glm::dvec3 front{};
-	glm::dvec3 up{};
-	glm::dvec3 right{};
-
-	double runSpeed = 5.f;
-	double backwardsRunSpeed = 2.5f;
-
 public:
 	MainPlayer(ClientNetwork* network, EasyModel* model, UserID_t uid, glm::vec3 position);
 	~MainPlayer();
 	
+	void Move(TPCamera* camera, double _dt);
 	bool Update(TPCamera* camera, double _dt);
-	void AssetReadyCallback() override;
 
+	void AssetReadyCallback() override;
 	glm::mat4x4 TransformationMatrix() const override;
-	void UpdateVectors(TPCamera* camera);
+	void SetupAnimationSM();
 
 	bool button_callback(const MouseData& data) override;
 	bool key_callback(const KeyboardData& data) override;

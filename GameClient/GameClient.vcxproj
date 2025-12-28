@@ -161,13 +161,17 @@
   <ItemGroup>
     <ClCompile Include="..\3rd_party\imgui_impl_glfw.cpp" />
     <ClCompile Include="..\3rd_party\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\FireRender\MousePicker.cpp" />
+    <ClCompile Include="AnimationSM_unity.cpp" />
     <ClCompile Include="ClientNetwork.cpp" />
     <ClCompile Include="EasyPlayground.cpp" />
     <ClCompile Include="Client.cpp" />
+    <ClCompile Include="MainPlayer.cpp" />
     <ClCompile Include="Player.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AnimationSM.hpp" />
+    <ClInclude Include="..\FireRender\MousePicker.hpp" />
+    <ClInclude Include="AnimationSM_unity.hpp" />
     <ClInclude Include="EasyPlayground_Loading.hpp" />
     <ClInclude Include="ClientNetwork.hpp" />
     <ClInclude Include="Config.hpp" />

@@ -30,6 +30,7 @@ public:
 
     void PlayAnimation(EasyAnimation* pAnimation);
     void PlayAnimation(uint8_t aID);
+    void BlendTo(uint8_t aID, double duration);
     void BlendTo(EasyAnimation* next, double duration);
 
     void SetMirror(bool m) { mirror = m; }

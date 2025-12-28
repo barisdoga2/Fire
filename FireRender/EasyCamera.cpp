@@ -69,12 +69,15 @@ bool TPCamera::button_callback(const MouseData& data)
 
     bool captured = false;
 
-    if (data.button.button == GLFW_MOUSE_BUTTON_2 || data.button.button == GLFW_MOUSE_BUTTON_1)
+    if (EasyMouse::IsButtonDown(GLFW_MOUSE_BUTTON_1) || EasyMouse::IsButtonDown(GLFW_MOUSE_BUTTON_2))
     {
-        captured = true;
-
-        rotating = (data.button.action == GLFW_PRESS);
+        rotating = true;
         firstMouse = true;
+        EasyMouse::EnableCursor(!rotating);
+    }
+    else
+    {
+        rotating = false;
         EasyMouse::EnableCursor(!rotating);
     }
 
@@ -263,4 +266,79 @@ bool FRCamera::char_callback(const KeyboardData& data)
     bool captured = false;
 
     return captured;
+}
+
+RTSCamera::RTSCamera(glm::vec3 position, float far, float near, float fov)
+    : EasyCamera(
+        position,
+        /* rotation */{ -90.f, 0.f, 0.f },   // look straight down
+        far,
+        near,
+        fov)
+{
+}
+
+void RTSCamera::Update(double dt)
+{
+    if (!enabled)
+        return;
+
+    // lock rotation forever
+    rotation.x = -90.0f; // pitch
+    rotation.y = 0.0f;   // yaw
+    rotation.z = 0.0f;
+
+    UpdateVectors();
+
+    EdgeScroll(dt);
+
+    UpdateMatrices(position + front);
+}
+
+bool RTSCamera::button_callback(const MouseData& data)
+{
+    if (!enabled)
+        return false;
+
+    if (data.button.button == GLFW_MOUSE_BUTTON_2)
+    {
+        dragging = (data.button.action == GLFW_PRESS);
+        lastMouse = data.position.now;
+        return true;
+    }
+
+    return false;
+}
+
+bool RTSCamera::move_callback(const MouseData& data)
+{
+    if (!enabled || !dragging)
+        return false;
+
+    glm::vec2 delta = data.position.now - lastMouse;
+    lastMouse = data.position.now;
+
+    // move on world X/Z only
+    position.x -= delta.x * dragSpeed;
+    position.z += delta.y * dragSpeed;
+
+    return true;
+}
+
+void RTSCamera::EdgeScroll(double dt)
+{
+    glm::vec2 mouse = EasyMouse::GetCursorPosition();
+    glm::vec2 size = EasyDisplay::GetWindowSize();
+
+    float speed = edgeSpeed * static_cast<float>(dt);
+
+    if (mouse.x <= edgeThreshold)
+        position.x -= speed;
+    else if (mouse.x >= size.x - edgeThreshold)
+        position.x += speed;
+
+    if (mouse.y <= edgeThreshold)
+        position.z -= speed;
+    else if (mouse.y >= size.y - edgeThreshold)
+        position.z += speed;
 }

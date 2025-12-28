@@ -34,6 +34,15 @@
       <Filter>Client\Net</Filter>
     </ClCompile>
     <ClCompile Include="Client.cpp" />
+    <ClCompile Include="MainPlayer.cpp">
+      <Filter>Client\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationSM_unity.cpp">
+      <Filter>Client\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FireRender\MousePicker.cpp">
+      <Filter>Client</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -60,8 +69,11 @@
     <ClInclude Include="Config.hpp">
       <Filter>Etc</Filter>
     </ClInclude>
-    <ClInclude Include="AnimationSM.hpp">
+    <ClInclude Include="AnimationSM_unity.hpp">
       <Filter>Client\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\FireRender\MousePicker.hpp">
+      <Filter>Client</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -8,6 +8,9 @@
 
 Chunk::Chunk()
 {
+    static uint8_t id_ctr = 0U;
+    this->id = id_ctr++;
+
     backMaterial = new EasyMaterial("terrainGrass");
 }
 
