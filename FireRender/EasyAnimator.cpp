@@ -35,7 +35,6 @@ static inline float ClampDeg(float v, float minD, float maxD)
     return std::max(minD, std::min(maxD, v));
 }
 
-
 static const std::unordered_map<std::string, float> upperBodyMask = {
 {"mixamorig:Hips", 0.0f},
 {"mixamorig:Spine", 0.3f},
@@ -181,81 +180,78 @@ void EasyAnimator::LookAt(const std::string& boneName, const glm::vec3& cameraFr
     lookAt.pitchLimits = pitchLimits;
 }
 
-void EasyAnimator::UpdateLayered(EasyAnimation* lowerAnim, EasyAnimation* upperAnim, bool aiming, double dt)
+void EasyAnimator::UpdateLayered(double dt)
 {
-    if (!lowerAnim || !upperAnim) return;
 
-	// Smoothly change blend factor
-	float target = aiming ? 1.0f : 0.0f;
-	upperBodyBlend = glm::mix(upperBodyBlend, target, (float)(dt * 8.0)); // smooth
-
-	// Update both animations
-	double runTime = fmod(m_CurrentTime * lowerAnim->m_TicksPerSecond, lowerAnim->m_Duration);
-	double aimTime = fmod(m_CurrentTime * upperAnim->m_TicksPerSecond, upperAnim->m_Duration);
-	m_CurrentTime += dt;
-
-	std::vector<glm::mat4> runBones(200, glm::mat4(1.0f));
-	std::vector<glm::mat4> aimBones(200, glm::mat4(1.0f));
-
-	CalculateBoneTransform(lowerAnim, &lowerAnim->m_RootNode, glm::mat4(1.0f), runBones, runTime);
-	CalculateBoneTransform(upperAnim, &upperAnim->m_RootNode, glm::mat4(1.0f), aimBones, aimTime);
-
-	// Mix upper/lower bones
-	for (auto& [boneName, info] : lowerAnim->m_BoneInfoMap)
-	{
-		int id = info.id;
-		float mask = 0.0f;
-		if (auto it = upperBodyMask.find(boneName); it != upperBodyMask.end())
-			mask = it->second * upperBodyBlend;
-
-		float lowerW = 1.0f - mask;
-		float upperW = mask;
-
-		m_FinalBoneMatrices[id] = runBones[id] * lowerW + aimBones[id] * upperW;
-	}
 }
 
 void EasyAnimator::UpdateAnimation(double dt)
 {
-    if (!m_CurrentAnimation) return;
+    if (!m_CurrentAnimation)
+        return;
 
     m_CurrentTime += m_CurrentAnimation->m_TicksPerSecond * dt * m_PlaybackSpeed;
     m_CurrentTime = fmod(m_CurrentTime, m_CurrentAnimation->m_Duration);
 
-    // Base animation
     std::vector<glm::mat4> baseBones(200, glm::mat4(1.0f));
-    CalculateBoneTransform(m_CurrentAnimation, &m_CurrentAnimation->m_RootNode, glm::mat4(1.0f), baseBones);
+    CalculateBoneTransform(m_CurrentAnimation, &m_CurrentAnimation->m_RootNode, glm::mat4(1.0f), baseBones, m_CurrentTime, mirror);
 
+    static double m_UpperCurrentTime = 0.0;
+    if (m_UpperAnimation)
+    {
+        m_UpperCurrentTime += m_UpperAnimation->m_TicksPerSecond * dt * m_PlaybackSpeed;
+        m_UpperCurrentTime = fmod(m_UpperCurrentTime, m_UpperAnimation->m_Duration);
+
+        std::vector<glm::mat4> aimBones(200, glm::mat4(1.0f));
+        CalculateBoneTransform(m_UpperAnimation, &m_UpperAnimation->m_RootNode, glm::mat4(1.0f), aimBones, m_UpperCurrentTime, mirror);
+
+        std::vector<glm::mat4> blendBones(200, glm::mat4(1.0f));
+        for (auto& [boneName, info] : m_CurrentAnimation->m_BoneInfoMap)
+        {
+            int id = info.id;
+            float mask = 0.0f;
+            if (auto it = upperBodyMask.find(boneName); it != upperBodyMask.end())
+                mask = it->second;
+
+            float lowerW = 1.0f - mask;
+            float upperW = mask;
+
+            blendBones[id] = baseBones[id] * lowerW + aimBones[id] * upperW;
+        }
+        baseBones = blendBones;
+    }
+    else
+    {
+        m_UpperCurrentTime = 0.0;
+    }
+
+    
     if (m_IsBlending && m_NextAnimation)
     {
         m_BlendTime += dt;
+
         double alpha = std::min(m_BlendTime / m_BlendDuration, 1.0);
         double nextTime = fmod(m_CurrentTime, m_NextAnimation->m_Duration);
 
-        std::vector<glm::mat4> nextBones(200, glm::mat4(1.0f));
-        CalculateBoneTransform(m_NextAnimation, &m_NextAnimation->m_RootNode, glm::mat4(1.0f), nextBones, nextTime);
+        std::vector<glm::mat4> nextAnimationBones(200, glm::mat4(1.0f));
+        CalculateBoneTransform(m_NextAnimation, &m_NextAnimation->m_RootNode, glm::mat4(1.0f), nextAnimationBones, nextTime, mirror);
 
         for (size_t i = 0; i < m_FinalBoneMatrices.size(); ++i)
-            m_FinalBoneMatrices[i] = baseBones[i] * (1.0f - (float)alpha) + nextBones[i] * (float)alpha;
+            baseBones[i] = baseBones[i] * (1.0f - (float)alpha) + nextAnimationBones[i] * (float)alpha;
 
         if (alpha >= 1.0)
         {
             m_CurrentAnimation = m_NextAnimation;
             m_NextAnimation = nullptr;
             m_IsBlending = false;
-            m_CurrentTime = 0.0;
         }
     }
-    else
-    {
-        m_FinalBoneMatrices = baseBones;
-    }
+
+    m_FinalBoneMatrices = baseBones;
 }
 
-void EasyAnimator::CalculateBoneTransform(EasyAnimation* animation, const AssimpNodeData* node,const glm::mat4& parentTransform, std::vector<glm::mat4>& outMatrices, double customTime)
+void EasyAnimator::CalculateBoneTransform(EasyAnimation* animation, const AssimpNodeData* node,const glm::mat4& parentTransform, std::vector<glm::mat4>& outMatrices, double dt, bool mirror)
 {
-    double time = (customTime >= 0.0) ? customTime : m_CurrentTime;
-
     EasyBone* Bone = nullptr;
     if (auto it = animation->boneLookup.find(node->name); it != animation->boneLookup.end())
         Bone = it->second;
@@ -263,7 +259,7 @@ void EasyAnimator::CalculateBoneTransform(EasyAnimation* animation, const Assimp
     glm::mat4 nodeTransform = node->transformation;
     if (Bone)
     {
-        Bone->Update(time);
+        Bone->Update(dt);
         EasyTransformExt transform(Bone->GetLocalTransform());
 
         if (lookAt.boneName == node->name)
@@ -305,7 +301,7 @@ void EasyAnimator::CalculateBoneTransform(EasyAnimation* animation, const Assimp
         outMatrices[it->second.id] = globalTransform * it->second.offset;
 
     for (int i = 0; i < node->childrenCount; ++i)
-        CalculateBoneTransform(animation, &node->children[i], globalTransform, outMatrices, time);
+        CalculateBoneTransform(animation, &node->children[i], globalTransform, outMatrices, dt, mirror);
 }
 
 float EasyAnimator::GetNormalizedTime() const

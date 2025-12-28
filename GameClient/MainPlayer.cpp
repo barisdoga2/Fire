@@ -60,10 +60,10 @@ MainPlayer::~MainPlayer()
     
 }
 
-
-
 void MainPlayer::Move(TPCamera* camera, double _dt)
 {
+    if(animator)
+    animator->m_UpperAnimation = EasyKeyboard::IsKeyDown(GLFW_KEY_L) ? animator->animations[ANIM_AIM] : 0;
     float mouseRotate = 0.f;
 
     const bool mb1 = EasyMouse::IsButtonDown(GLFW_MOUSE_BUTTON_1);
@@ -166,6 +166,8 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
     if (animator && stateManager)
     {
         animator->LookAt("mixamorig:Head", camera->Front(), glm::normalize(glm::vec3(camera->Front().x, 0.f, camera->Front().z)), this->transform.rotationQuat, 0.6f, { -80.f, 50.f }, { -10.f, 10.f });
+        if(0 && EasyKeyboard::IsKeyDown(GLFW_KEY_L))
+            animator->LookAt("mixamorig:Spine", camera->Front(), glm::normalize(glm::vec3(camera->Front().x, 0.f, camera->Front().z)), this->transform.rotationQuat, 0.6f, { -30.f, 30.f }, { 0.f, 0.f });
 
         stateManager->SetFloat("KeyDirX", (float)moveDir.x);
         stateManager->SetFloat("KeyDirY", (float)moveDir.y);
@@ -176,6 +178,7 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
             std::cout << "mr: " << mouseRotate << "\n";
         }
         stateManager->SetFloat("MouseRotate", (float)mouseRotate);
+        //stateManager->SetBool("IsAiming", isAiming);
 
         stateManager->Update(_dt);
         animator->UpdateAnimation(_dt);
@@ -197,6 +200,7 @@ void MainPlayer::SetupAnimationSM()
     stateManager->AddFloat("KeyDirX", 0.f);
     stateManager->AddFloat("KeyDirY", 0.f);
     stateManager->AddFloat("MouseRotate", 0.f);
+    stateManager->AddBool("IsAiming", false);
 
     // --- STATES ---
     stateManager->AddState("Idle", model->animations[ANIM_IDLE], true);
@@ -206,11 +210,12 @@ void MainPlayer::SetupAnimationSM()
     stateManager->AddState("StrafeLeft", model->animations[ANIM_STRAFE_LEFT], true);
     stateManager->AddState("TurnRight", model->animations[ANIM_TURN_RIGHT], false);
     stateManager->AddState("TurnLeft", model->animations[ANIM_TURN_LEFT], false);
+    stateManager->AddState("Aim", model->animations[ANIM_AIM], true);
 
     stateManager->SetDefaultState("Idle");
 
     // --- TRANSITIONS ---
-    float blends[] = { 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
+    float blends[] = { 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
     int slot = 0;
 
     // Any -> Idle
@@ -218,6 +223,10 @@ void MainPlayer::SetupAnimationSM()
     stateManager->AddCondition_Float(aToIdle, "KeyDirY", AnimationSM::CompareOp::Equal, 0.f);
     stateManager->AddCondition_Float(aToIdle, "KeyDirX", AnimationSM::CompareOp::Equal, 0.f);
     stateManager->AddCondition_Float(aToIdle, "MouseRotate", AnimationSM::CompareOp::Equal, 0.f);
+
+    // Any -> Aim
+    //auto aToAim = stateManager->AddAnyTransition("Aim", blends[slot++]);
+    //stateManager->AddCondition_Bool(aToAim, "IsAiming");
 
     // Any -> TurnLeft|TurnRight
     auto aToTurnR = stateManager->AddAnyTransition("TurnRight", blends[slot++]);

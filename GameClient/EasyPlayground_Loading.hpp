@@ -105,6 +105,7 @@ void EasyPlayground::ReloadAssets()
 			GetRelPath("res/models/C_StrafeLeft_v2.fbx"),
 			GetRelPath("res/models/C_TurnRight_v2.fbx"),
 			GetRelPath("res/models/C_TurnLeft_v2.fbx"),
+			GetRelPath("res/models/C_Aim_v2.fbx"),
 #else
 		GetRelPath("res/models/Kachujin G Rosales Skin.fbx"),
 		{
