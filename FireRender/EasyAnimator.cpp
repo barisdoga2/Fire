@@ -197,13 +197,20 @@ void EasyAnimator::UpdateAnimation(double dt)
     CalculateBoneTransform(m_CurrentAnimation, &m_CurrentAnimation->m_RootNode, glm::mat4(1.0f), baseBones, m_CurrentTime, mirror);
 
     static double m_UpperCurrentTime = 0.0;
+    if (m_UpperAnimation || (m_IsBlending && m_NextAnimation))
+        m_BlendTime += dt;
+
     if (m_UpperAnimation)
     {
+        double alpha = std::min(m_BlendTime / m_BlendDuration, 1.0);
         m_UpperCurrentTime += m_UpperAnimation->m_TicksPerSecond * dt * m_PlaybackSpeed;
         m_UpperCurrentTime = fmod(m_UpperCurrentTime, m_UpperAnimation->m_Duration);
 
         std::vector<glm::mat4> aimBones(200, glm::mat4(1.0f));
         CalculateBoneTransform(m_UpperAnimation, &m_UpperAnimation->m_RootNode, glm::mat4(1.0f), aimBones, m_UpperCurrentTime, mirror);
+
+        for (size_t i = 0; i < m_FinalBoneMatrices.size(); ++i)
+            aimBones[i] = baseBones[i] * (1.0f - (float)alpha) + aimBones[i] * (float)alpha;
 
         std::vector<glm::mat4> blendBones(200, glm::mat4(1.0f));
         for (auto& [boneName, info] : m_CurrentAnimation->m_BoneInfoMap)
@@ -222,14 +229,13 @@ void EasyAnimator::UpdateAnimation(double dt)
     }
     else
     {
+        if (!m_IsBlending)
+            m_BlendTime = 0.0;
         m_UpperCurrentTime = 0.0;
     }
 
-    
     if (m_IsBlending && m_NextAnimation)
     {
-        m_BlendTime += dt;
-
         double alpha = std::min(m_BlendTime / m_BlendDuration, 1.0);
         double nextTime = fmod(m_CurrentTime, m_NextAnimation->m_Duration);
 
