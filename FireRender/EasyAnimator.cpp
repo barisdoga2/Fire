@@ -112,20 +112,16 @@ EasyAnimator::EasyAnimator(const std::vector<EasyAnimation*>& animations) : anim
 
 void EasyAnimator::PlayAnimation(EasyAnimation* pAnimation)
 {
-    if (m_CurrentAnimation != pAnimation)
-    {
-        m_CurrentAnimation = pAnimation;
-        m_CurrentTime = 0.0;
-    }
+    m_CurrentAnimation = pAnimation;
+    m_CurrentTime = 0.0;
 }
 
 void EasyAnimator::PlayAnimation(uint8_t aID)
 {
     EasyAnimation* pAnimation{};
     if (aID < animations.size())
-        pAnimation = animations.at(aID);
-    if (m_CurrentAnimation != pAnimation)
     {
+        pAnimation = animations.at(aID);
         m_CurrentAnimation = pAnimation;
         m_CurrentTime = 0.0;
     }
@@ -135,17 +131,14 @@ void EasyAnimator::BlendTo(uint8_t aID, double duration)
 {
     EasyAnimation* pAnimation{};
     if (aID < animations.size())
-        pAnimation = animations.at(aID);
-    if (m_CurrentAnimation != pAnimation)
     {
+        pAnimation = animations.at(aID);
         BlendTo(pAnimation, duration);
     }
 }
 
 void EasyAnimator::BlendTo(EasyAnimation* next, double duration)
 {
-    if (!next || next == m_CurrentAnimation || m_IsBlending)
-        return;
     m_NextAnimation = next;
     m_BlendTime = 0.0;
     m_BlendDuration = duration;
@@ -190,7 +183,7 @@ void EasyAnimator::UpdateAnimation(double dt)
 {
     if (!m_CurrentAnimation) return;
 
-    m_CurrentTime += m_CurrentAnimation->m_TicksPerSecond * dt;
+    m_CurrentTime += m_CurrentAnimation->m_TicksPerSecond * dt * m_PlaybackSpeed;
     m_CurrentTime = fmod(m_CurrentTime, m_CurrentAnimation->m_Duration);
 
     // Base animation
@@ -269,4 +262,18 @@ void EasyAnimator::CalculateBoneTransform(EasyAnimation* animation, const Assimp
 
     for (int i = 0; i < node->childrenCount; ++i)
         CalculateBoneTransform(animation, &node->children[i], globalTransform, outMatrices, time);
+}
+
+float EasyAnimator::GetNormalizedTime() const
+{
+    if (!m_CurrentAnimation || m_CurrentAnimation->m_Duration <= 0.0f)
+        return 0.0f;
+
+    float nt = m_CurrentTime / m_CurrentAnimation->m_Duration;
+    if (nt < 0.0f)
+        nt = 0.0f;
+    else if (nt > 1.0f)
+        nt = 1.0f;
+
+    return nt;
 }

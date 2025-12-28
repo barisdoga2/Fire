@@ -69,6 +69,8 @@ namespace glm {
 
 void MainPlayer::Move(TPCamera* camera, double _dt)
 {
+    float mouseRotate = 0.f;
+
     const bool mb1 = EasyMouse::IsButtonDown(GLFW_MOUSE_BUTTON_1);
     const bool mb2 = EasyMouse::IsButtonDown(GLFW_MOUSE_BUTTON_2);
 
@@ -83,17 +85,57 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
     const bool sideMove = moveDir.x != 0;
     const bool diagonalMove = straigthMove && sideMove;
     const bool move = sideMove || straigthMove;
+    const bool alignOnly = mb2 && !move;
     const bool onlySideMove = sideMove && !straigthMove;
     const bool onlyStraighthMove = !sideMove && straigthMove;
     const bool backwardsMove = moveDir.y == -1;
     const double speed = backwardsMove ? -backwardsRunSpeed : runSpeed;
 
-    if (align)
-        front = glm::normalize(glm::vec2(camera->Front().x, camera->Front().z));;
-
-    float targetYaw = glm::degrees(std::atan2(front.x, front.y));
-    if (move)
+    static bool wasAlignOnly = false;
+    if (alignOnly || wasAlignOnly)
     {
+        static float targetYaw = 0.f;
+        
+        wasAlignOnly = alignOnly;
+
+        const glm::vec2 camFront = glm::normalize(glm::vec2(camera->Front().x, camera->Front().z));
+        const float camYaw = glm::degrees(std::atan2(camFront.x, camFront.y));
+        
+        if (!alignOnly)
+        {
+            front = camFront;
+            targetYaw = camYaw;
+            mouseRotate = 0.f;
+        }
+        else
+        {
+            const float renderYaw = std::remainder(glm::degrees(std::atan2((transform.rotationQuat * glm::vec3(0, 0, 1)).x, (transform.rotationQuat * glm::vec3(0, 0, 1)).z)), 360.0f);
+            if (abs(camYaw - targetYaw) > 30.f)
+            {
+                front = camFront;
+                targetYaw = camYaw;
+                mouseRotate = targetYaw > renderYaw ? 1.f : -1.f;
+            }
+            else if (abs(renderYaw - targetYaw) < 5.f)
+            {
+                mouseRotate = 0.f;
+            }
+            else
+            {
+                mouseRotate = targetYaw > renderYaw ? 1.f : -1.f;
+            }
+            std::cout << ", mouse rot:" << mouseRotate << ", diff: " << abs(0 - targetYaw) << "\n";
+        }
+        targetTransform.rotationQuat = glm::angleAxis(glm::radians(targetYaw), glm::vec3(0, 1, 0));
+
+    }
+    else if (move)
+    {
+        float targetYaw = glm::degrees(std::atan2(front.x, front.y));
+
+        if (align)
+            front = glm::normalize(glm::vec2(camera->Front().x, camera->Front().z));
+
         glm::vec2 combinedMoveDir{};
         if (onlyStraighthMove)
         {
@@ -116,11 +158,12 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
         }
         glm::vec2 moveDelta = (float)(speed * _dt) * combinedMoveDir;
         targetTransform.position += glm::vec3(moveDelta.x, 0.f, moveDelta.y);
+
+        targetTransform.rotationQuat = glm::angleAxis(glm::radians(targetYaw), glm::vec3(0, 1, 0));
     }
-    targetTransform.rotationQuat = glm::angleAxis(glm::radians(targetYaw), glm::vec3(0, 1, 0));
 
     const float pos_lerp_amt = glm::clamp((float)_dt * 12.0f, 0.0f, 1.0f);
-    const float rot_lerp_amt = glm::clamp((float)_dt * 8.0f, 0.0f, 1.0f);
+    const float rot_lerp_amt = glm::clamp((float)_dt * 8.0f, 0.0f, 1.0f) * (mouseRotate ? 0.25f : 1.f);
     transform.position = lerp(transform.position, targetTransform.position, pos_lerp_amt);
     transform.rotationQuat = glm::slerp(transform.rotationQuat, targetTransform.rotationQuat, rot_lerp_amt);
 
@@ -128,8 +171,7 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
     {
         stateManager->SetFloat("KeyDirX", (float)moveDir.x);
         stateManager->SetFloat("KeyDirY", (float)moveDir.y);
-
-        //animator->SetMirror(moveDir.x > 0);
+        stateManager->SetFloat("MouseRotate", (float)mouseRotate);
 
         stateManager->Update(_dt);
         animator->UpdateAnimation(_dt);
@@ -146,8 +188,9 @@ bool MainPlayer::Update(TPCamera* camera, double _dt)
 void MainPlayer::SetupAnimationSM()
 {
     // --- PARAMETERS ---
-    stateManager->AddFloat("KeyDirX", 0.0f);   // -1 left, +1 right
-    stateManager->AddFloat("KeyDirY", 0.0f);   // -1 back, +1 forward
+    stateManager->AddFloat("KeyDirX", 0.f);
+    stateManager->AddFloat("KeyDirY", 0.f);
+    stateManager->AddFloat("MouseRotate", 0.f);
 
     // --- STATES ---
     stateManager->AddState("Idle", model->animations[ANIM_IDLE], true);
@@ -155,30 +198,40 @@ void MainPlayer::SetupAnimationSM()
     stateManager->AddState("Forward", model->animations[ANIM_RUN_FORWARD], true);
     stateManager->AddState("StrafeRight", model->animations[ANIM_STRAFE_RIGHT], true);
     stateManager->AddState("StrafeLeft", model->animations[ANIM_STRAFE_LEFT], true);
+    stateManager->AddState("TurnRight", model->animations[ANIM_TURN_RIGHT], false, 1.25f);
+    stateManager->AddState("TurnLeft", model->animations[ANIM_TURN_LEFT], false, 1.25f);
 
     stateManager->SetDefaultState("Idle");
 
     // --- TRANSITIONS ---
+    float blends[] = { 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
+    int slot = 0;
+
+    // Any -> TurnLeft|TurnRight
+    auto aToTurnR = stateManager->AddAnyTransition("TurnRight", blends[slot++]);
+    stateManager->AddCondition_Float(aToTurnR, "MouseRotate", AnimationSM::CompareOp::Less, 0.f);
+    auto aToTurnL = stateManager->AddAnyTransition("TurnLeft", blends[slot++]);
+    stateManager->AddCondition_Float(aToTurnL, "MouseRotate", AnimationSM::CompareOp::Greater, 0.f);
+
     // Any -> Idle
-    float blends[] = { 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
-    auto aToIdle = stateManager->AddAnyTransition("Idle", blends[0u]);
+    auto aToIdle = stateManager->AddAnyTransition("Idle", blends[slot++]);
     stateManager->AddCondition_Float(aToIdle, "KeyDirY", AnimationSM::CompareOp::Equal, 0.f);
     stateManager->AddCondition_Float(aToIdle, "KeyDirX", AnimationSM::CompareOp::Equal, 0.f);
 
     // Any -> StrafeRight|StrafeLeft
-    auto aToStrafeR = stateManager->AddAnyTransition("StrafeRight", blends[1u]);
+    auto aToStrafeR = stateManager->AddAnyTransition("StrafeRight", blends[slot++]);
     stateManager->AddCondition_Float(aToStrafeR, "KeyDirY", AnimationSM::CompareOp::Equal, 0.f);
     stateManager->AddCondition_Float(aToStrafeR, "KeyDirX", AnimationSM::CompareOp::Less, 0.f);
-    auto aToStrafeL = stateManager->AddAnyTransition("StrafeLeft", blends[2u]);
+    auto aToStrafeL = stateManager->AddAnyTransition("StrafeLeft", blends[slot++]);
     stateManager->AddCondition_Float(aToStrafeL, "KeyDirY", AnimationSM::CompareOp::Equal, 0.f);
     stateManager->AddCondition_Float(aToStrafeL, "KeyDirX", AnimationSM::CompareOp::Greater, 0.f);
 
     // Any -> Forward
-    auto aToForward = stateManager->AddAnyTransition("Forward", blends[3u]);
+    auto aToForward = stateManager->AddAnyTransition("Forward", blends[slot++]);
     stateManager->AddCondition_Float(aToForward, "KeyDirY", AnimationSM::CompareOp::Greater, 0.f);
 
     // Any -> Back
-    auto aToBack = stateManager->AddAnyTransition("Back", blends[4u]);
+    auto aToBack = stateManager->AddAnyTransition("Back", blends[slot++]);
     stateManager->AddCondition_Float(aToBack, "KeyDirY", AnimationSM::CompareOp::Less, 0.f);
 }
 

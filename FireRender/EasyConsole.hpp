@@ -24,9 +24,9 @@ public:
         std::string text;
         std::chrono::steady_clock::time_point time;
 
-        ConsoleLine(std::string text, std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now()) : text(text), time(time)
+        ConsoleLine(std::string text, std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now()) : text(TimeNow_HHMMSS() + " - " + text), time(time)
         {
-            text = TimeNow_HHMMSS() + " - " + text;
+            
         }
     };
 

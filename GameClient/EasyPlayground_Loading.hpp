@@ -102,8 +102,18 @@ void EasyPlayground::ReloadAssets()
 			GetRelPath("res/models/Character Run Forward.fbx"),
 			GetRelPath("res/models/Character Strafe Right.fbx"),
 			GetRelPath("res/models/Character Strafe Left.fbx"),
+#if 1
+			#if 1
+			GetRelPath("res/models/Character Idle Turn Right Sans.fbx"),
+			GetRelPath("res/models/Character Idle Turn Left Sans.fbx"),
+			#else
 			GetRelPath("res/models/Character Idle Turn Right.fbx"),
 			GetRelPath("res/models/Character Idle Turn Left.fbx"),
+			#endif
+#else
+			GetRelPath("res/models/Character Idle.fbx"),
+			GetRelPath("res/models/Character Idle.fbx"),
+#endif
 		}, glm::vec3(0.0082f) // Y = 1.70m
 		);
 

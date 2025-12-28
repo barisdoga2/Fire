@@ -17,6 +17,7 @@ private:
     EasyAnimation* m_NextAnimation = nullptr;
     double m_BlendTime = 0.0;
     double m_BlendDuration = 0.0;
+    double m_PlaybackSpeed = 1.0;
     bool m_IsBlending = false;
 
     float upperBodyBlend = 0.0f;
@@ -32,8 +33,11 @@ public:
     void PlayAnimation(uint8_t aID);
     void BlendTo(uint8_t aID, double duration);
     void BlendTo(EasyAnimation* next, double duration);
+    EasyAnimation* GetCurrentAnination() const { return m_CurrentAnimation; };
 
+    float GetNormalizedTime() const;
     void SetMirror(bool m) { mirror = m; }
+    void SetPlaybackSpeed(double playbackSpeed) { m_PlaybackSpeed = playbackSpeed; }
     void UpdateAnimation(double dt);
     void UpdateLayered(EasyAnimation* lower, EasyAnimation* upper, bool aiming, double dt);
 

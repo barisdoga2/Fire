@@ -7,6 +7,10 @@
 AnimationSM::AnimationSM(EasyAnimator* animator)
     : m_Animator(animator)
 {
+    m_NormalizedTimeProvider = [this]()
+        {
+            return m_Animator ? m_Animator->GetNormalizedTime() : 0.0f;
+        };
 }
 
 void AnimationSM::SetAnimator(EasyAnimator* animator)
@@ -250,6 +254,34 @@ void AnimationSM::Update(double /*dt*/)
     if (m_CurrentState < 0)
         return;
 
+    // 0) Auto-finish non-loop states
+    {
+        const State& s = m_States[m_CurrentState];
+        if (!s.loop && m_NormalizedTimeProvider)
+        {
+            float nt = m_NormalizedTimeProvider();
+            if (nt >= 1.0f)
+            {
+                // Prefer explicit exit-time transitions
+                for (const Transition& t : m_Transitions)
+                {
+                    if (t.fromState == m_CurrentState && t.hasExitTime)
+                    {
+                        EnterState(t.toState, true, t.blendDuration);
+                        return;
+                    }
+                }
+
+                // Fallback: go to default state
+                if (m_DefaultState >= 0 && m_DefaultState != m_CurrentState)
+                {
+                    EnterState(m_DefaultState, true, 0.1f);
+                    return;
+                }
+            }
+        }
+    }
+
     // 1) Check Any State transitions first (Unity-like)
     for (int32_t i = 0; i < (int32_t)m_Transitions.size(); ++i)
     {
@@ -259,7 +291,7 @@ void AnimationSM::Update(double /*dt*/)
         std::vector<std::string> triggersUsed;
         if (TransitionPasses(t, &triggersUsed))
         {
-            EnterState(t.toState, /*allowBlend*/true, t.blendDuration);
+            EnterState(t.toState, true, t.blendDuration);
             if (t.consumeTriggers) ConsumeTriggers(triggersUsed);
             return;
         }
@@ -274,7 +306,7 @@ void AnimationSM::Update(double /*dt*/)
         std::vector<std::string> triggersUsed;
         if (TransitionPasses(t, &triggersUsed))
         {
-            EnterState(t.toState, /*allowBlend*/true, t.blendDuration);
+            EnterState(t.toState, true, t.blendDuration);
             if (t.consumeTriggers) ConsumeTriggers(triggersUsed);
             return;
         }
@@ -380,6 +412,8 @@ void AnimationSM::EnterState(int32_t id, bool allowBlend, float blendDuration)
         ExitState(m_CurrentState);
 
     m_CurrentState = id;
+
+    m_Animator->SetPlaybackSpeed(m_States[id].speed);
 
     if (blendDuration > 0.0f && allowBlend)
         m_Animator->BlendTo(m_CurrentState, blendDuration);
