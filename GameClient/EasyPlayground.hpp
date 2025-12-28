@@ -9,7 +9,7 @@
 #include "Player.hpp"
 
 #define MAIN_CHARACTER "MainCharacter"
-#define FIRE_LIGHTWEIGHT
+//#define FIRE_LIGHTWEIGHT
 
 class EasyModel;
 class EasyShader;

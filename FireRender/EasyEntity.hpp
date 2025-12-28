@@ -20,5 +20,5 @@ public:
 
     virtual glm::mat4x4 TransformationMatrix() const;
 
-    virtual void AssetReadyCallback() = 0U;
+    virtual void AssetReadyCallback();
 };

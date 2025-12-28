@@ -139,7 +139,10 @@ void EasyPlayground::ReloadAssets()
 #endif
 
 #ifndef FIRE_LIGHTWEIGHT
-	entities.emplace("1x1x1_cube", new EasyEntity(Model("1x1cube.dae"), { {-1,0,0}, {}, {1,1,1} }));
+	entities.emplace("1x1x1_cube", new EasyEntity(Model("1x1cube.dae"), glm::vec3(0, 0, 0)));
+	entities.emplace("items", new EasyEntity(Model("items.dae"), glm::vec3(0, 0, 0)));
+	entities.emplace("Buildings", new EasyEntity(Model("Buildings.dae"), glm::vec3(0, 0, 0)));
+	entities.emplace("Walls", new EasyEntity(Model("Walls.dae"), glm::vec3(0, 0, 0)));
 #endif
 	
 	network = new ClientNetwork(bm, this);
