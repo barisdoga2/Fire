@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <iostream>
 #include <chrono>
 
 #include <assimp/scene.h>
@@ -30,6 +31,7 @@ struct EasyVertex {
 
 struct EasyBoneInfo {
     int id = -1;
+    int parent = -1;
     glm::mat4 offset = glm::mat4(1.0f);
 };
 
@@ -82,3 +84,17 @@ void ToggleConsole();
 void ShowConsole(bool show = true);
 
 std::string GetRelPath(std::string append);
+
+namespace glm {
+    static inline glm::vec3 lerp(glm::vec3 v1, glm::vec3 v2, float amount)
+    {
+        return v1 * (1.f - amount) + v2 * amount;
+    }
+}
+
+template<typename... Args>
+static inline void PRN(Args&&... args)
+{
+    ((std::cout << std::forward<Args>(args) << ' '), ...);
+    std::cout << '\n';
+}

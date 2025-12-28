@@ -49,8 +49,8 @@ public:
 private:
     EasyModel();
 
-    static EasyMesh* ProcessMesh(EasyModel* model, aiMesh* aiMesh, const aiScene* scene);
-    static void ProcessNode(EasyModel* model, const aiNode* node, const aiScene* scene);
+    static void ProcessMeshes(EasyModel* model, const aiNode* node, const aiScene* scene);
+    static void ProcessNodes(EasyModel* model, const aiNode* node, const aiScene* scene);
     static void ExtractBoneWeightForVertices(EasyModel* model, aiMesh* aiMesh, EasyMesh* mesh, const aiScene* scene);
 };
 

@@ -75,7 +75,7 @@ void MousePicker::Pick(EasyCamera* camera, const std::vector<Chunk*>& chunks)
 			pickShader->LoadUniform("transformationMatrix", glm::translate(glm::mat4x4(1), glm::vec3(chunk->coord.x * Chunk::CHUNK_SIZE, 0, chunk->coord.y * Chunk::CHUNK_SIZE)));
 
 			// Render Chunk
-			glDrawElements(GL_TRIANGLES, chunk->verts.size(), GL_UNSIGNED_INT, 0);
+			glDrawElements(GL_TRIANGLES, (GLuint)chunk->verts.size(), GL_UNSIGNED_INT, 0u);
 		}
 		// Unbind Static Chunk
 		glDisableVertexAttribArray(0);

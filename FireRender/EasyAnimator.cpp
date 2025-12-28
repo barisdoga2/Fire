@@ -1,8 +1,10 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "EasyAnimator.hpp"
 #include "EasyAnimation.hpp"
 #include "EasyUtils.hpp"
+#include "EasyRender.hpp"
 
+#include <iostream>
 #include <algorithm>
 #include <cmath>
 
@@ -11,6 +13,27 @@
 #include <glm/gtx/quaternion.hpp>
 #include <assimp/scene.h>
 
+
+struct LookAtCmd
+{
+    std::string boneName;
+    glm::vec3 cameraFrontBase;
+    glm::vec3 cameraFront;
+    glm::quat characterRot;
+    float weight;
+    std::pair<float, float> yawLimits;
+    std::pair<float, float> pitchLimits;
+
+
+    float yaw{}, pitch{};
+    float targetYaw{}, targetPitch{};
+};
+LookAtCmd lookAt;
+
+static inline float ClampDeg(float v, float minD, float maxD)
+{
+    return std::max(minD, std::min(maxD, v));
+}
 
 
 static const std::unordered_map<std::string, float> upperBodyMask = {
@@ -112,19 +135,16 @@ EasyAnimator::EasyAnimator(const std::vector<EasyAnimation*>& animations) : anim
 
 void EasyAnimator::PlayAnimation(EasyAnimation* pAnimation)
 {
+    std::cout << "PlayAnimation " << pAnimation->m_Name << "\n";
+
     m_CurrentAnimation = pAnimation;
     m_CurrentTime = 0.0;
 }
 
 void EasyAnimator::PlayAnimation(uint8_t aID)
 {
-    EasyAnimation* pAnimation{};
     if (aID < animations.size())
-    {
-        pAnimation = animations.at(aID);
-        m_CurrentAnimation = pAnimation;
-        m_CurrentTime = 0.0;
-    }
+        PlayAnimation(animations.at(aID));
 }
 
 void EasyAnimator::BlendTo(uint8_t aID, double duration)
@@ -139,10 +159,26 @@ void EasyAnimator::BlendTo(uint8_t aID, double duration)
 
 void EasyAnimator::BlendTo(EasyAnimation* next, double duration)
 {
+    std::cout << "BlendTo " << next->m_Name << "\n";
+
     m_NextAnimation = next;
     m_BlendTime = 0.0;
     m_BlendDuration = duration;
     m_IsBlending = true;
+}
+
+void EasyAnimator::LookAt(const std::string& boneName, const glm::vec3& cameraFrontBase, const glm::vec3& cameraFront, glm::quat characterRot, float weight, std::pair<float, float> yawLimits, std::pair<float, float> pitchLimits)
+{
+    if (!m_CurrentAnimation || weight <= 0.0001f)
+        return;
+
+    lookAt.boneName = boneName;
+    lookAt.cameraFrontBase = cameraFrontBase;
+    lookAt.characterRot = characterRot;
+    lookAt.cameraFront = cameraFront;
+    lookAt.weight = weight;
+    lookAt.yawLimits = yawLimits;
+    lookAt.pitchLimits = pitchLimits;
 }
 
 void EasyAnimator::UpdateLayered(EasyAnimation* lowerAnim, EasyAnimation* upperAnim, bool aiming, double dt)
@@ -207,6 +243,7 @@ void EasyAnimator::UpdateAnimation(double dt)
             m_CurrentAnimation = m_NextAnimation;
             m_NextAnimation = nullptr;
             m_IsBlending = false;
+            m_CurrentTime = 0.0;
         }
     }
     else
@@ -220,39 +257,46 @@ void EasyAnimator::CalculateBoneTransform(EasyAnimation* animation, const Assimp
     double time = (customTime >= 0.0) ? customTime : m_CurrentTime;
 
     EasyBone* Bone = nullptr;
-    if (auto it = animation->boneLookup.find(node->name);
-        it != animation->boneLookup.end())
+    if (auto it = animation->boneLookup.find(node->name); it != animation->boneLookup.end())
         Bone = it->second;
 
     glm::mat4 nodeTransform = node->transformation;
     if (Bone)
     {
         Bone->Update(time);
-        glm::vec3 pos;
-        glm::quat rot;
-        glm::vec3 scale;
-        glm::vec3 skew;
-        glm::vec4 perspective;
+        EasyTransformExt transform(Bone->GetLocalTransform());
 
-        glm::decompose(
-            Bone->GetLocalTransform(),
-            scale, rot, pos, skew, perspective
-        );
+        if (lookAt.boneName == node->name)
+        {
+            const glm::quat characterWorldRot = lookAt.characterRot;
+            const glm::vec3 charSpaceDir = glm::inverse(characterWorldRot) * glm::normalize(lookAt.cameraFront);
+            const glm::quat parentWorldRot = glm::quat_cast(parentTransform);
+            const glm::vec3 localDir = glm::inverse(parentWorldRot) * charSpaceDir;
+
+            float yAmt = glm::degrees(std::atan2(localDir.x, localDir.z));
+            float xAmt = glm::degrees(std::atan2(localDir.y, glm::length(glm::vec2(localDir.x, localDir.z))));
+            xAmt = glm::clamp(xAmt, lookAt.pitchLimits.first, lookAt.pitchLimits.second);
+            yAmt = glm::clamp(yAmt, lookAt.yawLimits.first, lookAt.yawLimits.second);
+
+            lookAt.targetPitch = xAmt;
+            lookAt.targetYaw = yAmt;
+
+            lookAt.yaw = glm::lerp(lookAt.yaw, lookAt.targetYaw, 0.025f);
+            lookAt.pitch = glm::lerp(lookAt.pitch, lookAt.targetPitch, 0.025f);
+
+            const glm::quat rot = glm::angleAxis(glm::radians(lookAt.pitch), glm::vec3(1, 0, 0)) * glm::angleAxis(glm::radians(lookAt.yaw), glm::vec3(0, 1, 0));
+            transform.rotationQuat = glm::normalize(transform.rotationQuat * rot);
+        }
+
 
         if (mirror)
         {
-            // X ekseninde mirror
-            pos.x = -pos.x;
-
-            // Quaternion mirror (Y-axis reflection)
-            rot.y = -rot.y;
-            rot.z = -rot.z;
+            transform.position.x = -transform.position.x;
+            transform.rotationQuat.y = -transform.rotationQuat.y;
+            transform.rotationQuat.z = -transform.rotationQuat.z;
         }
 
-        nodeTransform =
-            glm::translate(glm::mat4(1.0f), pos) *
-            glm::toMat4(rot) *
-            glm::scale(glm::mat4(1.0f), scale);
+        nodeTransform = transform.TransformationMatrix();
     }
 
     glm::mat4 globalTransform = parentTransform * nodeTransform;
@@ -269,11 +313,11 @@ float EasyAnimator::GetNormalizedTime() const
     if (!m_CurrentAnimation || m_CurrentAnimation->m_Duration <= 0.0f)
         return 0.0f;
 
-    float nt = m_CurrentTime / m_CurrentAnimation->m_Duration;
-    if (nt < 0.0f)
-        nt = 0.0f;
-    else if (nt > 1.0f)
-        nt = 1.0f;
+    double nt = m_CurrentTime / m_CurrentAnimation->m_Duration;
+    if (nt < 0.0)
+        nt = 0.0;
+    else if (nt > 1.0)
+        nt = 1.0;
 
-    return nt;
+    return (float)nt;
 }

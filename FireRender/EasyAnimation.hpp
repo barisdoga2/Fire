@@ -18,6 +18,7 @@ struct aiAnimation;
 class EasyBone;
 class EasyAnimation {
 public:
+    std::string m_Name;
     double m_Duration;
     double m_TicksPerSecond;
     std::vector<EasyBone*> m_Bones;
@@ -25,12 +26,10 @@ public:
     std::map<std::string, EasyBoneInfo> m_BoneInfoMap;
     std::unordered_map<std::string, EasyBone*> boneLookup;
 
-    EasyAnimation(const aiScene* scene, const aiAnimation* animation,
-        std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount);
+    EasyAnimation(const std::string& name, const aiScene* scene, const aiAnimation* animation, std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount);
 
 private:
-    void ReadMissingBones(const aiAnimation* animation,
-        std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount);
+    void ReadMissingBones(const aiAnimation* animation, std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount);
     void ReadHeirarchyData(AssimpNodeData& dest, const aiNode* src);
 };
 
@@ -46,15 +45,16 @@ private:
     glm::mat4 m_LocalTransform;
     std::string m_Name;
     int m_ID;
-
+    int m_ParentID;
 
 public:
-    EasyBone(const std::string& name, int ID, const aiNodeAnim* channel);
+    EasyBone(const std::string& name, int ID, int parentID, const aiNodeAnim* channel);
     void Update(double animationTime);
 
     glm::mat4 GetLocalTransform() const { return m_LocalTransform; }
     std::string GetBoneName() const { return m_Name; }
     int GetBoneID() const { return m_ID; }
+    int GetParentBoneID() const { return m_ParentID; }
 
 private:
     int GetPositionIndex(double animationTime) const;

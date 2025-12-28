@@ -60,12 +60,7 @@ MainPlayer::~MainPlayer()
     
 }
 
-namespace glm {
-    static inline glm::vec3 lerp(glm::vec3 v1, glm::vec3 v2, float amount)
-    {
-        return v1 * (1.f - amount) + v2 * amount;
-    }
-}
+
 
 void MainPlayer::Move(TPCamera* camera, double _dt)
 {
@@ -90,6 +85,8 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
     const bool onlyStraighthMove = !sideMove && straigthMove;
     const bool backwardsMove = moveDir.y == -1;
     const double speed = backwardsMove ? -backwardsRunSpeed : runSpeed;
+
+    
 
     static bool wasAlignOnly = false;
     if (alignOnly || wasAlignOnly)
@@ -116,7 +113,7 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
                 targetYaw = camYaw;
                 mouseRotate = targetYaw > renderYaw ? 1.f : -1.f;
             }
-            else if (abs(renderYaw - targetYaw) < 5.f)
+            else if (abs(renderYaw - targetYaw) < 1.f)
             {
                 mouseRotate = 0.f;
             }
@@ -124,7 +121,6 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
             {
                 mouseRotate = targetYaw > renderYaw ? 1.f : -1.f;
             }
-            std::cout << ", mouse rot:" << mouseRotate << ", diff: " << abs(0 - targetYaw) << "\n";
         }
         targetTransform.rotationQuat = glm::angleAxis(glm::radians(targetYaw), glm::vec3(0, 1, 0));
 
@@ -169,12 +165,22 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
 
     if (animator && stateManager)
     {
+        animator->LookAt("mixamorig:Head", camera->Front(), glm::normalize(glm::vec3(camera->Front().x, 0.f, camera->Front().z)), this->transform.rotationQuat, 0.6f, { -80.f, 50.f }, { -10.f, 10.f });
+
         stateManager->SetFloat("KeyDirX", (float)moveDir.x);
         stateManager->SetFloat("KeyDirY", (float)moveDir.y);
+        static float lmouseRotate = mouseRotate;
+        if (lmouseRotate != mouseRotate)
+        {
+            lmouseRotate = mouseRotate;
+            std::cout << "mr: " << mouseRotate << "\n";
+        }
         stateManager->SetFloat("MouseRotate", (float)mouseRotate);
 
         stateManager->Update(_dt);
         animator->UpdateAnimation(_dt);
+
+        PRN("percent ", animator->GetNormalizedTime(), ", anim ", animator->GetCurrentAnination()->m_Name, ", mRot ", mouseRotate);
     }
 }
 
@@ -198,8 +204,8 @@ void MainPlayer::SetupAnimationSM()
     stateManager->AddState("Forward", model->animations[ANIM_RUN_FORWARD], true);
     stateManager->AddState("StrafeRight", model->animations[ANIM_STRAFE_RIGHT], true);
     stateManager->AddState("StrafeLeft", model->animations[ANIM_STRAFE_LEFT], true);
-    stateManager->AddState("TurnRight", model->animations[ANIM_TURN_RIGHT], false, 1.25f);
-    stateManager->AddState("TurnLeft", model->animations[ANIM_TURN_LEFT], false, 1.25f);
+    stateManager->AddState("TurnRight", model->animations[ANIM_TURN_RIGHT], false);
+    stateManager->AddState("TurnLeft", model->animations[ANIM_TURN_LEFT], false);
 
     stateManager->SetDefaultState("Idle");
 
@@ -207,16 +213,17 @@ void MainPlayer::SetupAnimationSM()
     float blends[] = { 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
     int slot = 0;
 
+    // Any -> Idle
+    auto aToIdle = stateManager->AddAnyTransition("Idle", blends[slot++]);
+    stateManager->AddCondition_Float(aToIdle, "KeyDirY", AnimationSM::CompareOp::Equal, 0.f);
+    stateManager->AddCondition_Float(aToIdle, "KeyDirX", AnimationSM::CompareOp::Equal, 0.f);
+    stateManager->AddCondition_Float(aToIdle, "MouseRotate", AnimationSM::CompareOp::Equal, 0.f);
+
     // Any -> TurnLeft|TurnRight
     auto aToTurnR = stateManager->AddAnyTransition("TurnRight", blends[slot++]);
     stateManager->AddCondition_Float(aToTurnR, "MouseRotate", AnimationSM::CompareOp::Less, 0.f);
     auto aToTurnL = stateManager->AddAnyTransition("TurnLeft", blends[slot++]);
     stateManager->AddCondition_Float(aToTurnL, "MouseRotate", AnimationSM::CompareOp::Greater, 0.f);
-
-    // Any -> Idle
-    auto aToIdle = stateManager->AddAnyTransition("Idle", blends[slot++]);
-    stateManager->AddCondition_Float(aToIdle, "KeyDirY", AnimationSM::CompareOp::Equal, 0.f);
-    stateManager->AddCondition_Float(aToIdle, "KeyDirX", AnimationSM::CompareOp::Equal, 0.f);
 
     // Any -> StrafeRight|StrafeLeft
     auto aToStrafeR = stateManager->AddAnyTransition("StrafeRight", blends[slot++]);

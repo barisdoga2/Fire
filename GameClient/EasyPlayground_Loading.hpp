@@ -95,6 +95,17 @@ void EasyPlayground::ReloadAssets()
 	hdr = nullptr;
 	
 	Model("MainCharacter") = EasyModel::LoadModel(
+#if 1
+		GetRelPath("res/models/Kachujin G Rosales Skin.fbx"),
+		{
+			GetRelPath("res/models/C_Idle_v2.fbx"),
+			GetRelPath("res/models/C_Back_v2.fbx"),
+			GetRelPath("res/models/C_Run_v2.fbx"),
+			GetRelPath("res/models/C_StrafeRight_v2.fbx"),
+			GetRelPath("res/models/C_StrafeLeft_v2.fbx"),
+			GetRelPath("res/models/C_TurnRight_v2.fbx"),
+			GetRelPath("res/models/C_TurnLeft_v2.fbx"),
+#else
 		GetRelPath("res/models/Kachujin G Rosales Skin.fbx"),
 		{
 			GetRelPath("res/models/Character Idle.fbx"),
@@ -102,7 +113,7 @@ void EasyPlayground::ReloadAssets()
 			GetRelPath("res/models/Character Run Forward.fbx"),
 			GetRelPath("res/models/Character Strafe Right.fbx"),
 			GetRelPath("res/models/Character Strafe Left.fbx"),
-#if 1
+		#if 1
 			#if 1
 			GetRelPath("res/models/Character Idle Turn Right Sans.fbx"),
 			GetRelPath("res/models/Character Idle Turn Left Sans.fbx"),
@@ -110,9 +121,10 @@ void EasyPlayground::ReloadAssets()
 			GetRelPath("res/models/Character Idle Turn Right.fbx"),
 			GetRelPath("res/models/Character Idle Turn Left.fbx"),
 			#endif
-#else
+		#else
 			GetRelPath("res/models/Character Idle.fbx"),
 			GetRelPath("res/models/Character Idle.fbx"),
+		#endif
 #endif
 		}, glm::vec3(0.0082f) // Y = 1.70m
 		);

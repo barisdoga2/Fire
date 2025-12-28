@@ -28,6 +28,11 @@ public:
         {
             
         }
+        
+        static std::string GetAsConsoleLog(std::string log)
+        {
+            return TimeNow_HHMMSS() + " - " + log;
+        }
     };
 
 private:
@@ -57,8 +62,12 @@ public:
 
     void AddLine(const std::string& line, std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now())
     {
-        if(line.length() > 0U)
-            lines.emplace_back(line, time);
+        if (line.length() > 0U)
+        {
+            auto& ref = lines.emplace_back(line, time);
+            oldCoutBuf->sputn(ref.text.data(), ref.text.length());
+            oldCoutBuf->sputc('\n');
+        }
     }
 
     void AddLines(const std::vector<std::string>& linesIn)

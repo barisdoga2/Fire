@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 #include <glm/glm.hpp>
 
 
@@ -33,18 +34,17 @@ public:
     void PlayAnimation(uint8_t aID);
     void BlendTo(uint8_t aID, double duration);
     void BlendTo(EasyAnimation* next, double duration);
-    EasyAnimation* GetCurrentAnination() const { return m_CurrentAnimation; };
-
-    float GetNormalizedTime() const;
-    void SetMirror(bool m) { mirror = m; }
-    void SetPlaybackSpeed(double playbackSpeed) { m_PlaybackSpeed = playbackSpeed; }
+    void LookAt(const std::string& boneName, const glm::vec3& cameraFrontBase, const glm::vec3& cameraFront, glm::quat characterRot, float weight, std::pair<float, float> yawLimits, std::pair<float, float> pitchLimits);
     void UpdateAnimation(double dt);
     void UpdateLayered(EasyAnimation* lower, EasyAnimation* upper, bool aiming, double dt);
 
+    EasyAnimation* GetCurrentAnination() const { return m_CurrentAnimation; };
+    float GetNormalizedTime() const;
+    void SetMirror(bool m) { mirror = m; }
+    void SetPlaybackSpeed(double playbackSpeed) { m_PlaybackSpeed = playbackSpeed; }
     const std::vector<glm::mat4>& GetFinalBoneMatrices() const { return m_FinalBoneMatrices; }
 
 private:
-    void CalculateBoneTransform(EasyAnimation* anim, const AssimpNodeData* node,
-        const glm::mat4& parentTransform, std::vector<glm::mat4>& out,
-        double customTime = -1.0);
+    void CalculateBoneTransform(EasyAnimation* anim, const AssimpNodeData* node, const glm::mat4& parentTransform, std::vector<glm::mat4>& out, double customTime = -1.0);
+
 };

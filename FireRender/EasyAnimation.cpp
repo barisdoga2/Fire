@@ -9,8 +9,7 @@
 
 
 
-EasyBone::EasyBone(const std::string& name, int ID, const aiNodeAnim* channel)
-    : m_Name(name), m_ID(ID), m_LocalTransform(1.0f)
+EasyBone::EasyBone(const std::string& name, int ID, int parentID, const aiNodeAnim* channel) : m_Name(name), m_ID(ID), m_ParentID(parentID), m_LocalTransform(1.0f)
 {
     m_NumPositions = channel->mNumPositionKeys;
 
@@ -139,18 +138,17 @@ glm::mat4 EasyBone::InterpolateScaling(double animationTime) const
     return glm::scale(glm::mat4(1.0f), finalScale);
 }
 
-EasyAnimation::EasyAnimation(const aiScene* scene, const aiAnimation* animation,
-    std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount)
+EasyAnimation::EasyAnimation(const std::string& name, const aiScene* scene, const aiAnimation* animation, std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount)
 {
     assert(scene && scene->mRootNode);
+    m_Name = name;
     m_Duration = animation->mDuration;
     m_TicksPerSecond = animation->mTicksPerSecond;
     ReadHeirarchyData(m_RootNode, scene->mRootNode);
     ReadMissingBones(animation, boneInfoMap, boneCount);
 }
 
-void EasyAnimation::ReadMissingBones(const aiAnimation* animation,
-    std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount)
+void EasyAnimation::ReadMissingBones(const aiAnimation* animation, std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount)
 {
     int size = animation->mNumChannels;
 
@@ -159,17 +157,22 @@ void EasyAnimation::ReadMissingBones(const aiAnimation* animation,
         auto channel = animation->mChannels[i];
         std::string boneName = channel->mNodeName.data;
 
-        if (boneInfoMap.find(boneName) == boneInfoMap.end())
+        auto it = boneInfoMap.find(boneName);
+        if (it == boneInfoMap.end())
         {
-            boneInfoMap[boneName].id = boneCount; // adds to base model bones 
-            boneCount++;
+            EasyBoneInfo info{};
+            info.id = boneCount++;
+            info.parent = -1;
+            boneInfoMap.emplace(boneName, info);
+            it = boneInfoMap.find(boneName);
         }
-        EasyBone* bone = new EasyBone(channel->mNodeName.data, boneInfoMap[channel->mNodeName.data].id, channel);
+
+        EasyBone* bone = new EasyBone(boneName, it->second.id, it->second.parent, channel);
         m_Bones.push_back(bone);
         boneLookup[boneName] = bone;
     }
 
-    m_BoneInfoMap = boneInfoMap; // syncs from base model bones 
+    m_BoneInfoMap = boneInfoMap;
 }
 
 void EasyAnimation::ReadHeirarchyData(AssimpNodeData& dest, const aiNode* src)
