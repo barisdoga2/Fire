@@ -44,6 +44,8 @@ public:
     std::unordered_map<EasyMesh*, std::vector<EasyTransform*>> instances;
     bool LoadToGPU();
 
+    int GetBoneID(const std::string& name) const;
+
     static EasyModel* LoadModel(const std::string& file, const std::vector<std::string> animFiles = {}, glm::vec3 scale = glm::vec3(1,1,1));
 
 private:

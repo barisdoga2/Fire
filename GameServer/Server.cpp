@@ -22,16 +22,25 @@
 #include <conio.h>
 #include <chrono>
 #include <EasyDisplay.hpp>
+#include <EasyUtils.hpp>
 
 #include "ServerNet.hpp"
 #include "GameServer.hpp"
 #include "ServerUI.hpp"
+
+#include <httplib.h>
+#include <openssl/sha.h>
+#include <random>
+#include <sstream>
+#include <iomanip>
+
 
 EasyBufferManager* bm = new EasyBufferManager(50U, 1472U);
 GameServer* server = new GameServer();
 
 bool running{};
 bool stop{};
+
 
 #include <windows.h>
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)

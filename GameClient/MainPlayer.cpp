@@ -10,8 +10,8 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
 
-#include "ClientNetwork.hpp"
 #include "AnimationSM_unity.hpp"
+#include "ClientNetwork.hpp"
 
 class KeyDirection {
     static inline glm::ivec2 keyDir{};
@@ -62,8 +62,8 @@ MainPlayer::~MainPlayer()
 
 void MainPlayer::Move(TPCamera* camera, double _dt)
 {
-    if(animator)
-    animator->m_UpperAnimation = EasyKeyboard::IsKeyDown(GLFW_KEY_L) ? animator->animations[ANIM_AIM] : 0;
+    //if(animator)
+    //    animator->m_UpperAnimation = EasyKeyboard::IsKeyDown(GLFW_KEY_L) ? animator->animations[ANIM_AIM] : 0;
     float mouseRotate = 0.f;
 
     const bool mb1 = EasyMouse::IsButtonDown(GLFW_MOUSE_BUTTON_1);
@@ -158,6 +158,18 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
         targetTransform.rotationQuat = glm::angleAxis(glm::radians(targetYaw), glm::vec3(0, 1, 0));
     }
 
+    // After calculating targetTransform, send input to server
+    glm::vec3 moveDirection = targetTransform.position - transform.position;
+    if (glm::length(moveDirection) > 0.001f)
+    {
+        sPlayerInput* input = new sPlayerInput(
+            network->session.uid,
+            transform.position,
+            glm::normalize(moveDirection)
+        );
+        network->GetSendCache().push_back(input);
+    }
+
     const float pos_lerp_amt = glm::clamp((float)_dt * 12.0f, 0.0f, 1.0f);
     const float rot_lerp_amt = glm::clamp((float)_dt * 8.0f, 0.0f, 1.0f) * (mouseRotate ? 0.25f : 1.f);
     transform.position = lerp(transform.position, targetTransform.position, pos_lerp_amt);
@@ -165,9 +177,9 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
 
     if (animator && stateManager)
     {
-        animator->LookAt("mixamorig:Head", camera->Front(), glm::normalize(glm::vec3(camera->Front().x, 0.f, camera->Front().z)), this->transform.rotationQuat, 0.6f, { -80.f, 50.f }, { -10.f, 10.f });
-        if(0 && EasyKeyboard::IsKeyDown(GLFW_KEY_L))
-            animator->LookAt("mixamorig:Spine", camera->Front(), glm::normalize(glm::vec3(camera->Front().x, 0.f, camera->Front().z)), this->transform.rotationQuat, 0.6f, { -30.f, 30.f }, { 0.f, 0.f });
+        //animator->LookAt("mixamorig:Head", camera->Front(), glm::normalize(glm::vec3(camera->Front().x, 0.f, camera->Front().z)), this->transform.rotationQuat, 0.6f, { -80.f, 50.f }, { -10.f, 10.f });
+        //if(0 && EasyKeyboard::IsKeyDown(GLFW_KEY_L))
+        //    animator->LookAt("mixamorig:Spine", camera->Front(), glm::normalize(glm::vec3(camera->Front().x, 0.f, camera->Front().z)), this->transform.rotationQuat, 0.6f, { -30.f, 30.f }, { 0.f, 0.f });
 
         stateManager->SetFloat("KeyDirX", (float)moveDir.x);
         stateManager->SetFloat("KeyDirY", (float)moveDir.y);
@@ -177,13 +189,39 @@ void MainPlayer::Move(TPCamera* camera, double _dt)
             lmouseRotate = mouseRotate;
             std::cout << "mr: " << mouseRotate << "\n";
         }
+        stateManager->SetFloat("IsStrafing", onlySideMove ? (float)moveDir.x : 0.f);
         stateManager->SetFloat("MouseRotate", (float)mouseRotate);
-        //stateManager->SetBool("IsAiming", isAiming);
+        stateManager->SetFloat("MoveAmount", mouseRotate != 0.f ? 1.f : std::abs((float)moveDir.x) + std::abs((float)moveDir.y));
+        stateManager->SetBool("IsAiming", EasyKeyboard::IsKeyDown(GLFW_KEY_L));
 
-        stateManager->Update(_dt);
-        animator->UpdateAnimation(_dt);
+        stateManager->Update((float)_dt);
+        if (stateManager->GetBool("IsAiming"))
+        {
+            if (!animator->HasOverlay())
+            {
+                EasyAnimator::AnimationLayer layer;
+                layer.clip = model->animations[ANIM_AIM];
+                layer.mask = EasyAnimator::upperBodyMask(model);
+                layer.weight = 0.01f;
+                layer.targetWeight = 1.0f;
+                layer.mirrorWeight = 0.0f;
+                layer.mirrorTarget = onlySideMove && !leftMove ? -1.0f : onlySideMove && leftMove ? 1.f : 1.f;
+                layer.blendSpeed = 10.0f;
+                layer.mirrorBlendSpeed = 10.0f;
+                animator->SetOverlayLayer(layer);
+            }
+            else
+            {
+                animator->SetOverlayTargetWeight(1.0f);
+                animator->SetOverlayTargetMirror(onlySideMove && !leftMove ? -1.0f : onlySideMove && leftMove ? 1.f : 1.f);
+            }
+        }
+        else
+        {
+            animator->SetOverlayTargetWeight(0.0f);
+        }
 
-        PRN("percent ", animator->GetNormalizedTime(), ", anim ", animator->GetCurrentAnination()->m_Name, ", mRot ", mouseRotate);
+        animator->Update((float)_dt);
     }
 }
 
@@ -197,10 +235,12 @@ bool MainPlayer::Update(TPCamera* camera, double _dt)
 void MainPlayer::SetupAnimationSM()
 {
     // --- PARAMETERS ---
+    stateManager->AddFloat("MoveAmount", 0.f);
     stateManager->AddFloat("KeyDirX", 0.f);
     stateManager->AddFloat("KeyDirY", 0.f);
     stateManager->AddFloat("MouseRotate", 0.f);
     stateManager->AddBool("IsAiming", false);
+    stateManager->AddFloat("IsStrafing", 0.f);
 
     // --- STATES ---
     stateManager->AddState("Idle", model->animations[ANIM_IDLE], true);
@@ -208,21 +248,18 @@ void MainPlayer::SetupAnimationSM()
     stateManager->AddState("Forward", model->animations[ANIM_RUN_FORWARD], true);
     stateManager->AddState("StrafeRight", model->animations[ANIM_STRAFE_RIGHT], true);
     stateManager->AddState("StrafeLeft", model->animations[ANIM_STRAFE_LEFT], true);
-    stateManager->AddState("TurnRight", model->animations[ANIM_TURN_RIGHT], false);
-    stateManager->AddState("TurnLeft", model->animations[ANIM_TURN_LEFT], false);
-    stateManager->AddState("Aim", model->animations[ANIM_AIM], true);
+    stateManager->AddState("TurnRight", model->animations[ANIM_TURN_RIGHT], true);
+    stateManager->AddState("TurnLeft", model->animations[ANIM_TURN_LEFT], true);
 
     stateManager->SetDefaultState("Idle");
 
     // --- TRANSITIONS ---
-    float blends[] = { 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
+    float blends[] = { 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f };
     int slot = 0;
 
-    // Any -> Idle
+    // Any -> Idle  (KeyDirY == 0)
     auto aToIdle = stateManager->AddAnyTransition("Idle", blends[slot++]);
-    stateManager->AddCondition_Float(aToIdle, "KeyDirY", AnimationSM::CompareOp::Equal, 0.f);
-    stateManager->AddCondition_Float(aToIdle, "KeyDirX", AnimationSM::CompareOp::Equal, 0.f);
-    stateManager->AddCondition_Float(aToIdle, "MouseRotate", AnimationSM::CompareOp::Equal, 0.f);
+    stateManager->SetCondition(aToIdle, { "MoveAmount", AnimationSM::CompareOp::Equal , 0.f });
 
     // Any -> Aim
     //auto aToAim = stateManager->AddAnyTransition("Aim", blends[slot++]);
@@ -230,25 +267,25 @@ void MainPlayer::SetupAnimationSM()
 
     // Any -> TurnLeft|TurnRight
     auto aToTurnR = stateManager->AddAnyTransition("TurnRight", blends[slot++]);
-    stateManager->AddCondition_Float(aToTurnR, "MouseRotate", AnimationSM::CompareOp::Less, 0.f);
+    stateManager->SetCondition(aToTurnR, { "MouseRotate", AnimationSM::CompareOp::Less, 0.f });
     auto aToTurnL = stateManager->AddAnyTransition("TurnLeft", blends[slot++]);
-    stateManager->AddCondition_Float(aToTurnL, "MouseRotate", AnimationSM::CompareOp::Greater, 0.f);
+    stateManager->SetCondition(aToTurnL, { "MouseRotate", AnimationSM::CompareOp::Greater, 0.f });
 
     // Any -> StrafeRight|StrafeLeft
     auto aToStrafeR = stateManager->AddAnyTransition("StrafeRight", blends[slot++]);
-    stateManager->AddCondition_Float(aToStrafeR, "KeyDirY", AnimationSM::CompareOp::Equal, 0.f);
-    stateManager->AddCondition_Float(aToStrafeR, "KeyDirX", AnimationSM::CompareOp::Less, 0.f);
+    stateManager->SetCondition(aToStrafeR, { "IsStrafing", AnimationSM::CompareOp::Less, 0.f });
     auto aToStrafeL = stateManager->AddAnyTransition("StrafeLeft", blends[slot++]);
-    stateManager->AddCondition_Float(aToStrafeL, "KeyDirY", AnimationSM::CompareOp::Equal, 0.f);
-    stateManager->AddCondition_Float(aToStrafeL, "KeyDirX", AnimationSM::CompareOp::Greater, 0.f);
+    stateManager->SetCondition(aToStrafeL, { "IsStrafing", AnimationSM::CompareOp::Greater, 0.f });
 
     // Any -> Forward
     auto aToForward = stateManager->AddAnyTransition("Forward", blends[slot++]);
-    stateManager->AddCondition_Float(aToForward, "KeyDirY", AnimationSM::CompareOp::Greater, 0.f);
+    stateManager->SetCondition(aToForward, { "KeyDirY", AnimationSM::CompareOp::Greater, 0.f });
 
     // Any -> Back
     auto aToBack = stateManager->AddAnyTransition("Back", blends[slot++]);
-    stateManager->AddCondition_Float(aToBack, "KeyDirY", AnimationSM::CompareOp::Less, 0.f);
+    stateManager->SetCondition(aToBack, { "KeyDirY", AnimationSM::CompareOp::Less, 0.f });
+
+    stateManager->Start();
 }
 
 glm::mat4x4 MainPlayer::TransformationMatrix() const

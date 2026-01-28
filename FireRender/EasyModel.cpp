@@ -302,3 +302,9 @@ void EasyModel::ExtractBoneWeightForVertices(EasyModel* model, aiMesh* aiMesh, E
         assert(idx < mesh->vertices.size());
 }
 
+int EasyModel::GetBoneID(const std::string& name) const
+{
+    const auto& map = animations[0]->BoneInfoMap();
+    auto it = map.find(name);
+    return it == map.end() ? -1 : it->second.id;
+}

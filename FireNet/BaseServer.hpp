@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EasyNet.hpp"
+#include "../GameServer/SqLite3.hpp"
 
 class EasySerializeable;
 class EasyBuffer;
@@ -49,7 +50,7 @@ public:
 
     void DestroySession(SessionID_t sid, std::string disconnectMessage = "");
 
-    bool Start(EasyBufferManager* bm, const unsigned short port, ServerCallback* cbk, bool encryption = true, bool compression = true);
+    bool Start(std::string apiPath, std::string apiDomain, std::string apiCrt, std::string apiKey, std::string apiIP, uint16_t apiPort, SqLite3& db, EasyBufferManager* bm, const unsigned short port, ServerCallback* cbk, bool encryption = true, bool compression = true);
 
     void Stop(std::string shutdownMessage = "");
 

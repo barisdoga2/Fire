@@ -9,60 +9,74 @@
 
 #include "EasyUtils.hpp"
 
-
-
 struct aiNode;
 struct aiNodeAnim;
 struct aiScene;
 struct aiAnimation;
-class EasyBone;
-class EasyAnimation {
-public:
-    std::string m_Name;
-    double m_Duration;
-    double m_TicksPerSecond;
-    std::vector<EasyBone*> m_Bones;
-    AssimpNodeData m_RootNode;
-    std::map<std::string, EasyBoneInfo> m_BoneInfoMap;
-    std::unordered_map<std::string, EasyBone*> boneLookup;
-
-    EasyAnimation(const std::string& name, const aiScene* scene, const aiAnimation* animation, std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount);
-
-private:
-    void ReadMissingBones(const aiAnimation* animation, std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount);
-    void ReadHeirarchyData(AssimpNodeData& dest, const aiNode* src);
-};
 
 class EasyBone {
 private:
-    std::vector<KeyPosition> m_Positions;
-    std::vector<KeyRotation> m_Rotations;
-    std::vector<KeyScale> m_Scales;
-    int m_NumPositions;
-    int m_NumRotations;
-    int m_NumScalings;
+    const std::string m_Name;
+    const int m_ID = -1;
+    const int m_ParentID = -1;
 
-    glm::mat4 m_LocalTransform;
-    std::string m_Name;
-    int m_ID;
-    int m_ParentID;
+    const std::vector<KeyPosition> m_Positions;
+    const std::vector<KeyRotation> m_Rotations;
+    const std::vector<KeyScale> m_Scales;
 
 public:
     EasyBone(const std::string& name, int ID, int parentID, const aiNodeAnim* channel);
-    void Update(double animationTime);
 
-    glm::mat4 GetLocalTransform() const { return m_LocalTransform; }
-    std::string GetBoneName() const { return m_Name; }
-    int GetBoneID() const { return m_ID; }
-    int GetParentBoneID() const { return m_ParentID; }
+    glm::mat4 Evaluate(float animationTimeTicks) const;
+
+    const std::string& Name() const { return m_Name; }
+    int ID() const { return m_ID;}
+    int ParentID() const{return m_ParentID;}
 
 private:
-    int GetPositionIndex(double animationTime) const;
-    int GetRotationIndex(double animationTime) const;
-    int GetScaleIndex(double animationTime) const;
-    double GetScaleFactor(double lastTime, double nextTime, double currentTime) const;
+    int GetPositionIndex(float animationTimeTicks) const;
+    int GetRotationIndex(float animationTimeTicks) const;
+    int GetScaleIndex(float animationTimeTicks) const;
 
-    glm::mat4 InterpolatePosition(double time) const;
-    glm::mat4 InterpolateRotation(double time) const;
-    glm::mat4 InterpolateScaling(double time) const;
+    static float GetScaleFactor(float lastTime, float nextTime, float currentTime);
+
+    glm::mat4 InterpolatePosition(float timeTicks) const;
+    glm::mat4 InterpolateRotation(float timeTicks) const;
+    glm::mat4 InterpolateScaling(float timeTicks) const;
+};
+
+
+class EasyAnimation {
+private:
+    struct EasyBoneData {
+        std::map<std::string, EasyBone> m_Bones;
+        std::map<std::string, EasyBoneInfo> m_BoneInfoMap;
+        AssimpNodeData m_RootNode;
+    };
+
+    const std::string m_Name;
+    const float m_Duration;
+    const float m_TicksPerSecond;
+    const bool m_DefaultLoop;
+
+    const EasyBoneData m_BoneData;
+
+public:
+    EasyAnimation(const std::string& name, const aiScene* scene, const aiAnimation* animation, std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount, bool loop = true);
+    ~EasyAnimation();
+
+    const EasyBone* FindBone(const std::string& name) const;
+
+    const std::string& Name() const { return m_Name; }
+    const float Duration() const { return m_Duration; }
+    const float TicksPerSecond() const { return m_TicksPerSecond; }
+    const bool DefaultLoop() const { return m_DefaultLoop; }
+    const AssimpNodeData& RootNode() const { return m_BoneData.m_RootNode; }
+    const std::map<std::string, EasyBoneInfo>& BoneInfoMap() const { return m_BoneData.m_BoneInfoMap; }
+
+private:
+    static void ReadMissingBones(const aiAnimation* animation, std::map<std::string, EasyBoneInfo>& boneInfoMap, std::map<std::string, EasyBone>& bones, int& boneCount);
+    static void ReadHeirarchyData(AssimpNodeData& dest, const aiNode* src);
+
+    static EasyBoneData CreateData(const aiAnimation* animation, std::map<std::string, EasyBoneInfo>& boneInfoMap, int& boneCount, const aiScene* scene);
 };

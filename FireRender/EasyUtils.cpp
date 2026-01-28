@@ -331,6 +331,27 @@ void EasyUtils_Init()
     SetUnhandledExceptionFilter(ExceptionHandler);
 }
 
+std::string GetEXEPath()
+{
+    static std::string root;
+    static bool i = true;
+    if (i)
+    {
+        i = false;
+        char buffer[128];
+        GetModuleFileNameA(NULL, buffer, 128);
+        std::string fullPath(buffer);
+        for (auto& c : fullPath)
+            if (c == '\\')
+                c = '/';
+        size_t pos = fullPath.find_last_of("\\/");
+        root = fullPath.substr(0, pos) + '/';
+    }
+
+    return root;
+}
+
+
 std::string GetRelPath(std::string append)
 {
     static std::string root;

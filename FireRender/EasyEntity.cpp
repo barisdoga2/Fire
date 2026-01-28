@@ -33,7 +33,7 @@ bool EasyEntity::Update(double _dt)
 void EasyEntity::AssetReadyCallback()
 {
     if (!animator && model->animations.size() > 0u)
-        animator = new EasyAnimator(model->animations);
+        animator = new EasyAnimator();
 }
 
 glm::mat4x4 EasyEntity::TransformationMatrix() const

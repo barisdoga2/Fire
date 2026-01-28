@@ -1,5 +1,4 @@
-﻿
-void EasyPlayground::ClearPlayers()
+﻿void EasyPlayground::ClearPlayers()
 {
 	for (auto& p : players)
 		delete p;
@@ -59,23 +58,21 @@ void EasyPlayground::ProcesPlayer(const std::vector<sPlayerInfo>& infos, const s
 		}
 	}
 
+	// Apply states with interpolation
 	for (const sPlayerState& state : states)
 	{
-		auto it = players.begin();
-		while (it != players.end())
-			if ((*it)->UserID() == state.uid)
-				break;
-			else
-				it++;
-		if (it != players.end())
+		Player* p = GetPlayerByUID(state.uid);
+		if (p)
 		{
 			if (network->session.uid == state.uid)
 			{
-				// Self data
+				// Optional: Reconcile local prediction with server state
+				// For now, trust client prediction for main player
 			}
 			else
 			{
-				(*it)->transform.position = state.position;
+				// Remote player: apply interpolated state
+				p->ApplyServerState(state);
 			}
 		}
 	}

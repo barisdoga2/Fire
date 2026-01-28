@@ -30,13 +30,32 @@ void Player::AssetReadyCallback()
 		stateManager = new AnimationSM(animator);
 }
 
+void Player::ApplyServerState(const sPlayerState& state)
+{
+    prevPosition = transform.position;
+    prevRotation = transform.rotationQuat;
+    serverPosition = state.position;
+    serverRotation = state.rotation;
+    interpTimer = 0.0f;
+}
+
 bool Player::Update(double _dt) 
 {
-	if (stateManager)
-		stateManager->Update(_dt);
+    // Interpolate for remote players (not main player)
+    if (!isMainPlayer)
+    {
+        interpTimer += (float)_dt;
+        float alpha = glm::clamp(interpTimer / INTERP_DURATION, 0.0f, 1.0f);
+        
+        transform.position = glm::mix(prevPosition, serverPosition, alpha);
+        transform.rotationQuat = glm::slerp(prevRotation, serverRotation, alpha);
+    }
+
+    if (stateManager)
+        stateManager->Update((float)_dt);
 	
-	if(animator)
-		animator->UpdateAnimation(_dt);
+    if(animator)
+        animator->Update((float)_dt);
 
     return EasyEntity::Update(_dt);
 }

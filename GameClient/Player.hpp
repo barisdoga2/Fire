@@ -26,7 +26,6 @@ class Player : public EasyEntity, MouseListener, KeyboardListener {
 private:
 	const bool isMainPlayer;
 	const UserID_t uid;
-	ClientNetwork* network;
 
 protected:
 	EasyTransform targetTransform{};
@@ -37,7 +36,17 @@ protected:
 	double runSpeed = 5.f;
 	double backwardsRunSpeed = 2.5f;
 
+	// Interpolation for remote players
+	glm::vec3 serverPosition{};
+	glm::vec3 prevPosition{};
+	glm::quat serverRotation{ 1,0,0,0 };
+	glm::quat prevRotation{ 1,0,0,0 };
+	float interpTimer = 0.0f;
+	static constexpr float INTERP_DURATION = 0.1f; // Match server tick rate
+
 public:
+	ClientNetwork* network;
+
 	Player(ClientNetwork* network, EasyModel* model, UserID_t uid, bool isMainPlayer, glm::vec3 position);
 	~Player();
 
@@ -51,6 +60,8 @@ public:
 	bool move_callback(const MouseData& data) override;
 	bool key_callback(const KeyboardData& data) override;
 	bool char_callback(const KeyboardData& data) override;
+
+	void ApplyServerState(const sPlayerState& state);
 };
 
 

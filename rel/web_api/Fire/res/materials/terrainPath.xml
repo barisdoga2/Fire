@@ -1,0 +1,14 @@
+<pbr>
+    <aoFloating>1</aoFloating>
+    <metallicFloating>1</metallicFloating>
+    <roughnessFloating>1</roughnessFloating>
+	
+    <albedoTexture>terrain/path/path_Albedo.jpg</albedoTexture>
+    <aoTexture>terrain/path/path_AO.jpg</aoTexture>
+    <metallicTexture>None</metallicTexture>
+    <roughnessTexture>terrain/path/path_Roughness.jpg</roughnessTexture>
+	
+    <normalTexture>terrain/path/path_Normal.jpg</normalTexture>
+	<emissiveTexture>None</emissiveTexture>
+	<opacityTexture>None</opacityTexture>
+</pbr>

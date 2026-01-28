@@ -16,14 +16,11 @@
     <Filter Include="Util">
       <UniqueIdentifier>{e748ee8b-b66e-47a6-a32b-08808517d03b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Render\Model\Animation">
+      <UniqueIdentifier>{db8effc3-302f-45c0-b8af-0670b6aff332}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EasyAnimation.hpp">
-      <Filter>Render\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="EasyAnimator.hpp">
-      <Filter>Render\Model</Filter>
-    </ClInclude>
     <ClInclude Include="EasyMaterial.hpp">
       <Filter>Render\Model</Filter>
     </ClInclude>
@@ -79,14 +76,14 @@
     <ClInclude Include="EasyConsole.hpp">
       <Filter>Util</Filter>
     </ClInclude>
+    <ClInclude Include="EasyAnimation.hpp">
+      <Filter>Render\Model\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyAnimator.hpp">
+      <Filter>Render\Model\Animation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="EasyAnimation.cpp">
-      <Filter>Render\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="EasyAnimator.cpp">
-      <Filter>Render\Model</Filter>
-    </ClCompile>
     <ClCompile Include="EasyMaterial.cpp">
       <Filter>Render\Model</Filter>
     </ClCompile>
@@ -131,6 +128,12 @@
     </ClCompile>
     <ClCompile Include="EasyEntity.cpp">
       <Filter>Render\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyAnimation.cpp">
+      <Filter>Render\Model\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyAnimator.cpp">
+      <Filter>Render\Model\Animation</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

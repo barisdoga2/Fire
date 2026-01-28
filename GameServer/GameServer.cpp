@@ -14,9 +14,19 @@ static uint64_t GetServerTimeMs()
     return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - start).count();
 }
 
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+#include <algorithm>
+#include <cctype>
+#include <stdexcept>
+#include <iostream>
+
+
 GameServer::GameServer() : BaseServer()
 {
-
+    
 }
 
 GameServer::~GameServer()
@@ -26,7 +36,8 @@ GameServer::~GameServer()
 
 bool GameServer::Start(EasyBufferManager* bm)
 {
-    return BaseServer::Start(bm, SERVER_PORT, this, FIRE_ENCRYPTION, FIRE_COMPRESSION);
+    std::string exePath = GetEXEPath();
+    return BaseServer::Start(exePath + cfg.api, cfg.api_domain, exePath + cfg.crt, exePath + cfg.key, cfg.api_ip, cfg.api_port, db, bm, SERVER_PORT, this, FIRE_ENCRYPTION, FIRE_COMPRESSION);
 }
 
 void GameServer::Stop(std::string shutdownMessage)
@@ -38,6 +49,7 @@ void GameServer::ProcessReceived(double dt)
 {
     ServerCache_t& send = GetSendCache();
     ServerCache_t& recv = GetReceiveCache();
+    
     for (auto recvIt = recv.begin(); recvIt != recv.end(); )
     {
         FireSession* fSession = sessions[recvIt->first];
@@ -75,9 +87,18 @@ void GameServer::ProcessReceived(double dt)
             }
             else if (sPlayerInput* playerInput = dynamic_cast<sPlayerInput*>(*objIt); playerInput)
             {
-                std::cout << "[GameServer] Update - sPlayerInput received.\n";
-
-                // ...
+                // Validate and apply input (server-authoritative)
+                fSession->inputDirection = playerInput->direction;
+                
+                // Simple server-side movement validation
+                glm::vec3 moveDir = glm::normalize(playerInput->direction + glm::vec3(0.0001f));
+                float speed = 5.0f; // Server-defined speed
+                fSession->velocity = moveDir * speed * glm::length(playerInput->direction);
+                
+                // Update position (server tick)
+                fSession->position += fSession->velocity * (float)dt;
+                
+                // Optional: Clamp or validate position bounds here
 
                 fSession->recv = Clock::now();
                 delete* objIt;
@@ -132,8 +153,18 @@ void GameServer::Update(double dt)
         return;
 
     BaseServer::Update(dt);
-
     ProcessReceived(dt);
+
+    // Broadcast world state periodically
+    static double worldStateBroadcastTimer = 0.0;
+    const double WORLD_STATE_RATE = 0.1; // 10 Hz (100ms)
+    
+    worldStateBroadcastTimer += dt;
+    if (worldStateBroadcastTimer >= WORLD_STATE_RATE)
+    {
+        worldStateBroadcastTimer = 0.0;
+        BroadcastWorldState();
+    }
 
     // Destroy Sessions. Timeout and Logout
     {
@@ -157,6 +188,40 @@ void GameServer::Update(double dt)
     }
 }
 
+void GameServer::BroadcastWorldState()
+{
+    ServerCache_t& send = GetSendCache();
+    
+    // Build world state with all player positions
+    sWorldState* worldState = new sWorldState();
+    for (auto& [sid, fs] : sessions)
+    {
+        if (fs)
+        {
+            worldState->playerState.emplace_back(
+                fs->uid, 
+                fs->position, 
+                fs->rotation, 
+                fs->velocity
+            );
+        }
+    }
+    
+    // Send to all clients
+    for (auto& [sid, fs] : sessions)
+    {
+        if (fs)
+        {
+            // Clone for each client (or use shared_ptr)
+            sWorldState* copy = new sWorldState();
+            copy->playerState = worldState->playerState;
+            send[sid].push_back(copy);
+        }
+    }
+    
+    delete worldState;
+}
+
 void GameServer::BroadcastMessage(std::string broadcastMessage)
 {
     ServerCache_t& send = GetSendCache();
@@ -166,9 +231,13 @@ void GameServer::BroadcastMessage(std::string broadcastMessage)
 
 bool GameServer::OnServerStart()
 {
+    std::string path = GetRelPath();
+#ifdef REMOTE
+    path = GetEXEPath();
+#endif
     std::cout << "[GameServer] OnServerStart - Starting...\n";
 
-    if (!sqlite.Init(GetRelPath("res/db/fire.db")))
+    if (!db.Init(path + "rel/web_api/Fire/res/db/fire.db"))
     {
         std::cout << "[GameServer] OnServerStart - Failed to start. Failed to open database!\n";
         return false;
@@ -194,7 +263,7 @@ void GameServer::OnServerStop(std::string shutdownMessage)
         delete fs;
     sessions.clear();
 
-    sqlite.Close();
+    db.Close();
     std::cout << "[GameServer] OnServerStart - Stopped.\n";
 }
 
@@ -209,7 +278,7 @@ bool GameServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
     bool status = true;
     if (status)
     {
-        if (auto db_sessions = sqlite.Query("SELECT id, user_id, session_key, valid_until FROM sessions WHERE id='" + std::to_string(*base.sid) + "' LIMIT 1;"); !db_sessions.empty())
+        if (auto db_sessions = db.Query("SELECT id, user_id, session_key, valid_until FROM sessions WHERE id='" + std::to_string(*base.sid) + "' LIMIT 1;"); !db_sessions.empty())
         {
             const auto& db_session = db_sessions[0];
             stats.uid = std::stoi(db_session[1]);
@@ -250,7 +319,7 @@ bool GameServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
 
     if (status)
     {
-        if (auto db_users = sqlite.Query("SELECT id, username FROM users WHERE id='" + std::to_string(stats.uid) + "' LIMIT 1;"); !db_users.empty())
+        if (auto db_users = db.Query("SELECT id, username FROM users WHERE id='" + std::to_string(stats.uid) + "' LIMIT 1;"); !db_users.empty())
         {
             const auto& db_user = db_users[0];
             username = db_user[1];
@@ -264,7 +333,7 @@ bool GameServer::OnSessionCreate(const SessionBase& base, EasyBuffer* buffer)
 
     if (status)
     {
-        if (auto db_stats = sqlite.Query("SELECT id, user_id, gametime, golds, diamonds, tutorial_done, champions_owned FROM user_stats WHERE user_id='" + std::to_string(stats.uid) + "' LIMIT 1;"); !db_stats.empty())
+        if (auto db_stats = db.Query("SELECT id, user_id, gametime, golds, diamonds, tutorial_done, champions_owned FROM user_stats WHERE user_id='" + std::to_string(stats.uid) + "' LIMIT 1;"); !db_stats.empty())
         {
             const auto& db_stat = db_stats[0];
 

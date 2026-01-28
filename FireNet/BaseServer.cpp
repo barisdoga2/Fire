@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 
 #include "BaseServer.hpp"
 
@@ -13,6 +13,10 @@
 #include <optional>
 #include <filesystem>
 #include <ctime>
+#define CROW_ENABLE_SSL
+#include <crow.h>
+#include <filesystem>
+#include <fstream>
 
 #include "EasyIpAddress.hpp"
 #include "EasySocket.hpp"
@@ -20,6 +24,120 @@
 #include "EasySerializer.hpp"
 #include "EasyPacket.hpp"
 #include "EasyNet.hpp"
+#include "../FireRender/EasyUtils.hpp"
+
+#include <filesystem>
+#include <fstream>
+#include <unordered_map>
+
+
+#include <openssl/sha.h>
+#include <random>
+#include <sstream>
+#include <iomanip>
+
+namespace fs = std::filesystem;
+
+
+static inline std::string Sha256(const std::string& input) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256((const unsigned char*)input.c_str(), input.size(), hash);
+
+    std::ostringstream ss;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+    }
+    return ss.str();
+}
+
+static inline std::string RandomString(size_t len) {
+    static const char chars[] =
+        "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    thread_local std::mt19937 rng{ std::random_device{}() };
+    std::uniform_int_distribution<> dist(0, sizeof(chars) - 2);
+
+    std::string s;
+    for (size_t i = 0; i < len; i++) {
+        s += chars[dist(rng)];
+    }
+    return s;
+}
+
+static inline std::string RenderPage(const std::string& message, const std::string& jwt) {
+    std::ostringstream html;
+    html <<
+        R"(<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>FireWeb Login / Register</title>
+<style>
+body { font-family: Arial; text-align: center; margin-top: 60px; }
+input { padding: 8px; margin: 5px; width: 200px; }
+button { padding: 8px 15px; margin: 5px; }
+.msg { margin-top: 20px; font-weight: bold; }
+textarea { width: 80%; height: 100px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1><a href="Fire.7z">Download Client</a></h1>
+
+<h2>FireWeb Login / Register</h2>
+<form method="POST" action="/FireFS/index.php">
+<input type="text" name="username" placeholder="Username" required><br>
+<input type="password" name="password" placeholder="Password" required><br>
+<button type="submit" name="login">Login</button>
+<button type="submit" name="register">Register</button>
+</form>
+
+<div class="msg">)" << message << R"(</div>)";
+
+    if (!jwt.empty()) {
+        html << R"(
+<h3>JWT Token</h3>
+<textarea readonly>)" << jwt << R"(</textarea>)";
+    }
+
+    html << R"(</body></html>)";
+    return html.str();
+}
+
+namespace fs = std::filesystem;
+
+static inline const fs::path ROOT = fs::absolute("release_api");
+
+static inline std::string mime_type(const fs::path& p) {
+    static std::unordered_map<std::string, std::string> map = {
+        {".html","text/html"},
+        {".js","application/javascript"},
+        {".css","text/css"},
+        {".json","application/json"},
+        {".png","image/png"},
+        {".jpg","image/jpeg"},
+        {".jpeg","image/jpeg"},
+        {".ico","image/x-icon"},
+        {".txt","text/plain"},
+        {".dll","application/octet-stream"},
+        {".exe","application/octet-stream"},
+        {".glsl","text/plain"}
+    };
+
+    auto ext = p.extension().string();
+    for (auto& c : ext) c = char(tolower(c));
+
+    auto it = map.find(ext);
+    if (it != map.end()) { return it->second; }
+    return "application/octet-stream";
+}
+
+static inline  bool safe_path(const fs::path& base, const fs::path& target) {
+    auto canonBase = fs::weakly_canonical(base);
+    auto canonTarget = fs::weakly_canonical(target);
+    return true;// std::mismatch(canonBase.begin(), canonBase.end(), canonTarget.begin()).first == canonBase.end();
+}
+
+
 
 class Session {
 public:
@@ -402,7 +520,79 @@ void BaseServer::DestroySession(SessionID_t sid, std::string disconnectMessage)
     cntx->sessionMan->DestroySession(sid, disconnectMessage);
 }
 
-bool BaseServer::Start(EasyBufferManager* bm, const unsigned short port, ServerCallback* cbk, bool encryption, bool compression)
+struct AuthResult
+{
+    std::string message;
+    std::string jwt;
+};
+
+AuthResult HandleAuth(const crow::request& req, SqLite3& db)
+{
+    crow::query_string params(("?" + req.body).c_str());
+
+    auto get = [&](const char* key) -> std::string {
+        if (auto v = params.get(key))
+            return v;
+        return {};
+        };
+
+    auto has = [&](const char* key) -> bool {
+        return req.body.find(key) != std::string::npos;
+        };
+
+    std::string user = get("username");
+    std::string pass = get("password");
+
+    AuthResult res;
+
+    // ------------------------
+    // Login
+    // ------------------------
+    if (has("login"))
+    {
+        auto rows = db.Query("SELECT id, password FROM users WHERE username='" + user + "';"
+        );
+
+        if (rows.empty() || rows[0][1] != Sha256(pass))
+        {
+            res.message = "Wrong username or password!";
+        }
+        else
+        {
+            int uid = std::stoi(rows[0][0]);
+            std::string key = RandomString(16);
+            int validUntil = (int)time(nullptr) + 3600;
+
+            db.Execute("DELETE FROM sessions WHERE user_id=" + std::to_string(uid) + ";");
+            db.Execute("INSERT INTO sessions (user_id, session_key, valid_until) VALUES (" +std::to_string(uid) + ",'" + key + "'," + std::to_string(validUntil) + ");");
+
+            res.jwt = std::to_string(uid) + ":" + key;
+            res.message = "Login successful!";
+        }
+    }
+
+    if (has("register"))
+    {
+        std::string hash = Sha256(pass);
+        bool ok = db.Execute("INSERT INTO users (username,password) VALUES ('" +user + "','" + hash + "');");
+
+        if (!ok)
+        {
+            res.message = "Username already exists!";
+        }
+        else
+        {
+            auto id = db.QueryInt("SELECT last_insert_rowid();");
+            db.Execute("INSERT INTO user_stats (user_id) VALUES (" +std::to_string(*id) + ");");
+            res.message = "Register successful!";
+        }
+    }
+
+    return res;
+}
+
+
+bool BaseServer::Start(std::string apiPath, std::string apiDomain, std::string apiCrt, std::string apiKey, std::string apiIP, uint16_t apiPort, SqLite3& db, EasyBufferManager* bm, const unsigned short port, ServerCallback* cbk, bool encryption, bool compression)
 {
     if (IsRunning())
         return false;
@@ -428,6 +618,70 @@ bool BaseServer::Start(EasyBufferManager* bm, const unsigned short port, ServerC
         Stop();
     else
         std::cout << "[BaseServer] Start - Started.\n";
+
+    // Web API
+    {
+        crow::App<> app;
+        
+        std::string domain = "/" + apiDomain + "/";
+
+        CROW_ROUTE(app, "/<string>/<string>").methods(crow::HTTPMethod::POST)(
+            [&](const crow::request& req, std::string path, std::string page) {
+                if (path.starts_with("/" + apiDomain + "/.index.php")) {
+                    auto result = HandleAuth(req, db);
+                    return crow::response(200, RenderPage(result.message, result.jwt));
+                }
+                return crow::response(404);
+            }
+            );
+
+        CROW_ROUTE(app, "/<string>/<string>").methods(crow::HTTPMethod::GET)(
+            [&](const crow::request& req, std::string path, std::string page) {
+                if (path.starts_with("/" + apiDomain + "/.index.php")) {
+                    auto result = HandleAuth(req, db);
+                    return crow::response(200, RenderPage(result.message, result.jwt));
+                }
+                else if (path.starts_with("/" + apiDomain + "/")) {
+                    fs::path filePath = apiPath + path;
+
+                    if (!safe_path(ROOT, filePath) ||
+                        !fs::exists(filePath) ||
+                        fs::is_directory(filePath))
+                    {
+                        return crow::response(404, "404 Not Found");
+                    }
+
+                    std::ifstream in(filePath, std::ios::binary);
+                    if (!in) {
+                        return crow::response(500, "Read error");
+                    }
+
+                    std::string body(
+                        (std::istreambuf_iterator<char>(in)),
+                        std::istreambuf_iterator<char>()
+                    );
+
+                    crow::response res;
+                    res.code = 200;
+                    res.body = std::move(body);
+                    res.set_header("Content-Type", mime_type(filePath));
+                    res.set_header("Cache-Control", "no-cache, no-store, must-revalidate");
+                    res.set_header("Pragma", "no-cache");
+                    res.set_header("Expires", "0");
+
+                    return res;
+                }
+                return crow::response(404);
+            }
+            );
+
+        app
+            .ssl_file(apiCrt, apiKey)
+            .bindaddr(apiIP)
+            .port(apiPort)
+            .multithreaded()
+            .run();
+    }
 
     return IsRunning();
 }

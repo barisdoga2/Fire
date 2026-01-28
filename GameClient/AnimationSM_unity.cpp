@@ -8,9 +8,13 @@ AnimationSM::AnimationSM(EasyAnimator* animator)
     : m_Animator(animator)
 {
     m_NormalizedTimeProvider = [this]()
+    {
+        if (m_Animator)
         {
-            return m_Animator ? m_Animator->GetNormalizedTime() : 0.0f;
-        };
+            return m_Animator->GetNormalizedTime();
+        }
+        return 0.0f;
+    };
 }
 
 void AnimationSM::SetAnimator(EasyAnimator* animator)
@@ -29,18 +33,21 @@ void AnimationSM::AddBool(const std::string& name, bool initial)
     p.type = ParamType::Bool;
     p.b = initial;
 }
+
 void AnimationSM::AddInt(const std::string& name, int initial)
 {
     Param& p = m_Params[name];
     p.type = ParamType::Int;
     p.i = initial;
 }
+
 void AnimationSM::AddFloat(const std::string& name, float initial)
 {
     Param& p = m_Params[name];
     p.type = ParamType::Float;
     p.f = initial;
 }
+
 void AnimationSM::AddTrigger(const std::string& name)
 {
     Param& p = m_Params[name];
@@ -48,67 +55,72 @@ void AnimationSM::AddTrigger(const std::string& name)
     p.triggerLatched = false;
 }
 
-bool AnimationSM::HasParam(const std::string& name) const
-{
-    return m_Params.find(name) != m_Params.end();
-}
-
 void AnimationSM::SetBool(const std::string& name, bool v)
 {
-    Param& p = m_Params[name];
-    p.type = ParamType::Bool;
-    p.b = v;
+    m_Params[name].b = v;
 }
+
 void AnimationSM::SetInt(const std::string& name, int v)
 {
-    Param& p = m_Params[name];
-    p.type = ParamType::Int;
-    p.i = v;
+    m_Params[name].i = v;
 }
+
 void AnimationSM::SetFloat(const std::string& name, float v)
 {
-    Param& p = m_Params[name];
-    p.type = ParamType::Float;
-    p.f = v;
+    m_Params[name].f = v;
 }
+
 void AnimationSM::SetTrigger(const std::string& name)
 {
-    Param& p = m_Params[name];
-    p.type = ParamType::Trigger;
-    p.triggerLatched = true;
+    m_Params[name].triggerLatched = true;
 }
+
 void AnimationSM::ResetTrigger(const std::string& name)
 {
     auto it = m_Params.find(name);
-    if (it == m_Params.end()) return;
-    if (it->second.type == ParamType::Trigger)
+    if (it != m_Params.end())
+    {
         it->second.triggerLatched = false;
+    }
 }
 
 bool AnimationSM::GetBool(const std::string& name) const
 {
     auto it = m_Params.find(name);
-    if (it == m_Params.end()) return false;
+    if (it == m_Params.end())
+    {
+        return false;
+    }
     return it->second.b;
 }
+
 int AnimationSM::GetInt(const std::string& name) const
 {
     auto it = m_Params.find(name);
-    if (it == m_Params.end()) return 0;
+    if (it == m_Params.end())
+    {
+        return 0;
+    }
     return it->second.i;
 }
+
 float AnimationSM::GetFloat(const std::string& name) const
 {
     auto it = m_Params.find(name);
-    if (it == m_Params.end()) return 0.0f;
+    if (it == m_Params.end())
+    {
+        return 0.0f;
+    }
     return it->second.f;
 }
 
 int32_t AnimationSM::AddState(const std::string& name, EasyAnimation* clip, bool loop, float speed)
 {
-    if (name.empty()) return -1;
-    if (m_StateNameToId.find(name) != m_StateNameToId.end())
-        return m_StateNameToId[name];
+    auto it = m_StateNameToId.find(name);
+    if (it != m_StateNameToId.end())
+    {
+        return it->second;
+    }
 
     State s;
     s.name = name;
@@ -117,113 +129,75 @@ int32_t AnimationSM::AddState(const std::string& name, EasyAnimation* clip, bool
     s.speed = speed;
 
     int32_t id = (int32_t)m_States.size();
-    m_States.push_back(std::move(s));
+    m_States.push_back(s);
     m_StateNameToId[name] = id;
 
     if (m_DefaultState < 0)
+    {
         m_DefaultState = id;
+    }
 
     return id;
-}
-
-bool AnimationSM::HasState(const std::string& name) const
-{
-    return m_StateNameToId.find(name) != m_StateNameToId.end();
 }
 
 int32_t AnimationSM::FindState(const std::string& name) const
 {
     auto it = m_StateNameToId.find(name);
-    return (it == m_StateNameToId.end()) ? -1 : it->second;
+    if (it == m_StateNameToId.end())
+    {
+        return -1;
+    }
+    return it->second;
 }
 
 void AnimationSM::SetDefaultState(const std::string& name)
 {
-    SetDefaultState(FindState(name));
-}
-
-void AnimationSM::SetDefaultState(int32_t stateId)
-{
-    if (stateId < 0 || stateId >= (int32_t)m_States.size()) return;
-    m_DefaultState = stateId;
+    m_DefaultState = FindState(name);
 }
 
 int32_t AnimationSM::AddTransition(const std::string& from, const std::string& to, float blendDuration)
 {
-    int32_t fromId = FindState(from);
-    int32_t toId = FindState(to);
-    if (fromId < 0 || toId < 0) return -1;
-
     Transition t;
-    t.fromState = fromId;
-    t.toState = toId;
+    t.fromState = FindState(from);
+    t.toState = FindState(to);
     t.blendDuration = blendDuration;
 
     int32_t id = (int32_t)m_Transitions.size();
-    m_Transitions.push_back(std::move(t));
+    m_Transitions.push_back(t);
     return id;
 }
 
 int32_t AnimationSM::AddAnyTransition(const std::string& to, float blendDuration)
 {
-    int32_t toId = FindState(to);
-    if (toId < 0) return -1;
-
     Transition t;
     t.fromState = -1;
-    t.toState = toId;
+    t.toState = FindState(to);
     t.blendDuration = blendDuration;
 
     int32_t id = (int32_t)m_Transitions.size();
-    m_Transitions.push_back(std::move(t));
+    m_Transitions.push_back(t);
     return id;
 }
 
-void AnimationSM::AddCondition(int32_t transitionId, const Condition& c)
+void AnimationSM::SetCondition(int32_t transitionId, const Condition& c)
 {
-    if (transitionId < 0 || transitionId >= (int32_t)m_Transitions.size()) return;
-    m_Transitions[transitionId].conditions.push_back(c);
-}
+    if (transitionId < 0 || transitionId >= (int32_t)m_Transitions.size())
+    {
+        return;
+    }
 
-void AnimationSM::AddCondition_Float(int32_t transitionId, const std::string& param, CompareOp op, float v)
-{
-    Condition c;
-    c.paramName = param;
-    c.op = op;
-    c.compareValue = v;
-    AddCondition(transitionId, c);
-}
-
-void AnimationSM::AddCondition_Int(int32_t transitionId, const std::string& param, CompareOp op, int v)
-{
-    Condition c;
-    c.paramName = param;
-    c.op = op;
-    c.compareValue = (float)v;
-    AddCondition(transitionId, c);
-}
-
-void AnimationSM::AddCondition_Bool(int32_t transitionId, const std::string& param, bool requiredValue)
-{
-    Condition c;
-    c.paramName = param;
-    c.op = requiredValue ? CompareOp::IsTrue : CompareOp::IsFalse;
-    c.compareValue = requiredValue ? 1.0f : 0.0f;
-    AddCondition(transitionId, c);
-}
-
-void AnimationSM::AddCondition_Trigger(int32_t transitionId, const std::string& triggerName)
-{
-    Condition c;
-    c.paramName = triggerName;
-    c.op = CompareOp::IsTrue;
-    c.compareValue = 1.0f;
-    AddCondition(transitionId, c);
+    Transition& t = m_Transitions[transitionId];
+    t.condition = c;
+    t.hasCondition = true;
 }
 
 void AnimationSM::SetExitTime(int32_t transitionId, float normalizedExitTime)
 {
-    if (transitionId < 0 || transitionId >= (int32_t)m_Transitions.size()) return;
+    if (transitionId < 0 || transitionId >= (int32_t)m_Transitions.size())
+    {
+        return;
+    }
+
     Transition& t = m_Transitions[transitionId];
     t.hasExitTime = true;
     t.exitTime = std::clamp(normalizedExitTime, 0.0f, 1.0f);
@@ -231,211 +205,119 @@ void AnimationSM::SetExitTime(int32_t transitionId, float normalizedExitTime)
 
 void AnimationSM::Start()
 {
-    if (m_Started) return;
+    if (m_Started)
+    {
+        return;
+    }
+
     m_Started = true;
 
-    if (m_DefaultState < 0 && !m_States.empty())
-        m_DefaultState = 0;
-
     if (m_DefaultState >= 0)
-        EnterState(m_DefaultState, /*allowBlend*/false, 0.0f);
-}
-
-void AnimationSM::Stop()
-{
-    // intentionally minimal for now
-}
-
-void AnimationSM::Update(double /*dt*/)
-{
-    if (!m_Started)
-        Start();
-
-    if (m_CurrentState < 0)
-        return;
-
-    // 0) Auto-finish non-loop states
     {
-        const State& s = m_States[m_CurrentState];
-        if (!s.loop && m_NormalizedTimeProvider)
-        {
-            float nt = m_NormalizedTimeProvider();
-            if (nt >= 1.0f)
-            {
-                // Prefer explicit exit-time transitions
-                for (const Transition& t : m_Transitions)
-                {
-                    if (t.fromState == m_CurrentState && t.hasExitTime)
-                    {
-                        EnterState(t.toState, true, t.blendDuration);
-                        return;
-                    }
-                }
+        EnterState(m_DefaultState, false, 0.0f);
+    }
+}
 
-                // Fallback: go to default state
-                if (m_DefaultState >= 0 && m_DefaultState != m_CurrentState)
-                {
-                    EnterState(m_DefaultState, true, 0.1f);
-                    return;
-                }
+void AnimationSM::Update(float dt)
+{
+    if (!m_Started || m_CurrentState < 0)
+    {
+        return;
+    }
+
+    const float normTime = m_NormalizedTimeProvider ? m_NormalizedTimeProvider() : 0.0f;
+
+    for (Transition& t : m_Transitions)
+    {
+        if (t.fromState != -1 && t.fromState != m_CurrentState)
+        {
+            continue;
+        }
+
+        if (t.hasExitTime && normTime < t.exitTime)
+        {
+            continue;
+        }
+
+        if (t.toState == m_CurrentState)
+        {
+            continue;
+        }
+
+        if (t.hasCondition && !EvaluateCondition(t.condition))
+        {
+            continue;
+        }
+
+        ExitState(m_CurrentState);
+        EnterState(t.toState, true, t.blendDuration);
+
+        if (t.consumeTrigger)
+        {
+            auto it = m_Params.find(t.condition.paramName);
+            if (it != m_Params.end() && it->second.type == ParamType::Trigger)
+            {
+                it->second.triggerLatched = false;
             }
         }
-    }
-
-    // 1) Check Any State transitions first (Unity-like)
-    for (int32_t i = 0; i < (int32_t)m_Transitions.size(); ++i)
-    {
-        const Transition& t = m_Transitions[i];
-        if (t.fromState != -1) continue;
-
-        std::vector<std::string> triggersUsed;
-        if (TransitionPasses(t, &triggersUsed))
-        {
-            EnterState(t.toState, true, t.blendDuration);
-            if (t.consumeTriggers) ConsumeTriggers(triggersUsed);
-            return;
-        }
-    }
-
-    // 2) Check transitions from current state
-    for (int32_t i = 0; i < (int32_t)m_Transitions.size(); ++i)
-    {
-        const Transition& t = m_Transitions[i];
-        if (t.fromState != m_CurrentState) continue;
-
-        std::vector<std::string> triggersUsed;
-        if (TransitionPasses(t, &triggersUsed))
-        {
-            EnterState(t.toState, true, t.blendDuration);
-            if (t.consumeTriggers) ConsumeTriggers(triggersUsed);
-            return;
-        }
+        break;
     }
 }
 
-const AnimationSM::State* AnimationSM::GetCurrentState() const
-{
-    if (m_CurrentState < 0 || m_CurrentState >= (int32_t)m_States.size()) return nullptr;
-    return &m_States[m_CurrentState];
-}
-
-bool AnimationSM::EvaluateCondition(const Condition& c, std::vector<std::string>* triggersUsed) const
+bool AnimationSM::EvaluateCondition(const Condition& c) const
 {
     auto it = m_Params.find(c.paramName);
     if (it == m_Params.end())
+    {
         return false;
+    }
 
     const Param& p = it->second;
 
-    auto cmpFloat = [&](float lhs) -> bool
+    switch (c.op)
     {
-        switch (c.op)
-        {
-        case CompareOp::Greater:       return lhs >  c.compareValue;
-        case CompareOp::GreaterEqual:  return lhs >= c.compareValue;
-        case CompareOp::Less:          return lhs <  c.compareValue;
-        case CompareOp::LessEqual:     return lhs <= c.compareValue;
-        case CompareOp::Equal:         return lhs == c.compareValue;
-        case CompareOp::NotEqual:      return lhs != c.compareValue;
-        default:                       return false;
-        }
-    };
-
-    switch (p.type)
-    {
-    case ParamType::Float:
-        return cmpFloat(p.f);
-
-    case ParamType::Int:
-        return cmpFloat((float)p.i);
-
-    case ParamType::Bool:
-        if (c.op == CompareOp::IsTrue)  return p.b == true;
-        if (c.op == CompareOp::IsFalse) return p.b == false;
-        // allow == / != with compareValue 0/1
-        if (c.op == CompareOp::Equal)   return (p.b ? 1.0f : 0.0f) == c.compareValue;
-        if (c.op == CompareOp::NotEqual)return (p.b ? 1.0f : 0.0f) != c.compareValue;
-        return false;
-
-    case ParamType::Trigger:
-        if (triggersUsed)
-            triggersUsed->push_back(c.paramName);
-        if (c.op == CompareOp::IsTrue)  return p.triggerLatched == true;
-        if (c.op == CompareOp::IsFalse) return p.triggerLatched == false;
-        if (c.op == CompareOp::Equal)   return (p.triggerLatched ? 1.0f : 0.0f) == c.compareValue;
-        if (c.op == CompareOp::NotEqual)return (p.triggerLatched ? 1.0f : 0.0f) != c.compareValue;
-        return false;
-
-    default:
-        return false;
+        case CompareOp::IsTrue: return p.type == ParamType::Trigger ? p.triggerLatched : p.b;
+        case CompareOp::IsFalse: return !p.b;
+        case CompareOp::Greater: return p.f > c.compareValue;
+        case CompareOp::GreaterEqual: return p.f >= c.compareValue;
+        case CompareOp::Less: return p.f < c.compareValue;
+        case CompareOp::LessEqual: return p.f <= c.compareValue;
+        case CompareOp::Equal: return p.f == c.compareValue;
+        case CompareOp::NotEqual: return p.f != c.compareValue;
+        default: return false;
     }
-}
-
-bool AnimationSM::TransitionPasses(const Transition& t, std::vector<std::string>* triggersUsed) const
-{
-    // Exit time gate
-    if (t.hasExitTime)
-    {
-        if (!m_NormalizedTimeProvider)
-            return false;
-
-        float nt = m_NormalizedTimeProvider();
-        if (nt < t.exitTime)
-            return false;
-    }
-
-    // Conditions (AND)
-    for (const Condition& c : t.conditions)
-    {
-        if (!EvaluateCondition(c, triggersUsed))
-            return false;
-    }
-
-    return true;
-}
-
-void AnimationSM::ConsumeTriggers(const std::vector<std::string>& triggersUsed)
-{
-    for (const std::string& n : triggersUsed)
-        ResetTrigger(n);
 }
 
 void AnimationSM::EnterState(int32_t id, bool allowBlend, float blendDuration)
 {
-    if (id < 0 || id >= (int32_t)m_States.size())
-        return;
+    State& s = m_States[id];
 
-    if (id == m_CurrentState)
-        return;
+    if (m_Animator)
+    {
+        if (allowBlend)
+        {
+            m_Animator->BlendTo(s.clip, blendDuration, s.loop);
+        }
+        else
+        {
+            m_Animator->PlayAnimation(s.clip, s.loop);
+        }
+        m_Animator->SetPlaybackSpeed(s.speed);
+    }
 
-    if (m_CurrentState >= 0)
-        ExitState(m_CurrentState);
+    if (s.onEnter)
+    {
+        s.onEnter();
+    }
 
     m_CurrentState = id;
-
-    m_Animator->SetPlaybackSpeed(m_States[id].speed);
-
-    if (blendDuration > 0.0f && allowBlend)
-        m_Animator->BlendTo(m_CurrentState, blendDuration);
-    else
-        m_Animator->PlayAnimation(m_CurrentState);
-
-    if (m_States[id].onEnter)
-        m_States[id].onEnter();
 }
 
 void AnimationSM::ExitState(int32_t id)
 {
-    if (id < 0 || id >= (int32_t)m_States.size())
-        return;
-
-    if (m_States[id].onExit)
-        m_States[id].onExit();
-}
-
-EasyAnimation* AnimationSM::GetStateClip(int32_t id) const
-{
-    if (id < 0 || id >= (int32_t)m_States.size())
-        return nullptr;
-    return m_States[id].clip;
+    State& s = m_States[id];
+    if (s.onExit)
+    {
+        s.onExit();
+    }
 }

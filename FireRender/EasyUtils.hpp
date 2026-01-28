@@ -37,17 +37,17 @@ struct EasyBoneInfo {
 
 struct KeyPosition {
     glm::vec3 position;
-    double timeStamp = 0.0;
+    float timeStamp = 0.f;
 };
 
 struct KeyRotation {
     glm::quat orientation;
-    double timeStamp = 0.0;
+    float timeStamp = 0.f;
 };
 
 struct KeyScale {
     glm::vec3 scale;
-    double timeStamp = 0.0;
+    float timeStamp = 0.f;
 };
 
 
@@ -83,7 +83,9 @@ void ToggleConsole();
 
 void ShowConsole(bool show = true);
 
-std::string GetRelPath(std::string append);
+std::string GetRelPath(std::string append = "");
+
+std::string GetEXEPath();
 
 namespace glm {
     static inline glm::vec3 lerp(glm::vec3 v1, glm::vec3 v2, float amount)

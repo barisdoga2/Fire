@@ -1,0 +1,14 @@
+<pbr>
+    <aoFloating>1</aoFloating>
+    <metallicFloating>1</metallicFloating>
+    <roughnessFloating>1</roughnessFloating>
+	
+    <albedoTexture>terrain/grass/grass_Albedo.jpg</albedoTexture>
+    <aoTexture>terrain/grass/grass_AO.jpg</aoTexture>
+    <metallicTexture>None</metallicTexture>
+    <roughnessTexture>terrain/grass/grass_Roughness.jpg</roughnessTexture>
+	
+    <normalTexture>terrain/grass/grass_Normal.jpg</normalTexture>
+	<emissiveTexture>None</emissiveTexture>
+	<opacityTexture>None</opacityTexture>
+</pbr>

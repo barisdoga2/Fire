@@ -3,7 +3,8 @@
 #include <unordered_set>
 #include <vector>
 #include <deque>
-#include <EasyNet.hpp>
+#include <deque>
+#include <glm/gtc/quaternion.hpp>
 #include <EasySerializer.hpp>
 
 #ifndef _DEBUG
@@ -89,16 +90,19 @@ public:
     UserStats stats;
     Timestamp_t recv;
 
+    // Movement state
     glm::vec3 position{};
-    glm::vec3 direction{};
+    glm::quat rotation{ 1,0,0,0 };
+    glm::vec3 velocity{};
+    glm::vec3 inputDirection{};
 
     bool logoutRequested{};
 
-    FireSession(std::string username, SessionID_t sid, UserID_t uid, Addr_t addr, UserStats stats, Timestamp_t recv) : username(username), sid(sid), uid(uid), addr(addr), stats(stats), recv(recv), logoutRequested(false)
+    FireSession(std::string username, SessionID_t sid, UserID_t uid, Addr_t addr, UserStats stats, Timestamp_t recv) 
+        : username(username), sid(sid), uid(uid), addr(addr), stats(stats), recv(recv), logoutRequested(false)
     {
 
     }
-
 };
 
 class sLogoutRequest : public EasySerializeable {
@@ -415,13 +419,16 @@ class sPlayerState : public EasySerializeable {
 public:
     UserID_t uid;
     glm::vec3 position;
+    glm::quat rotation;       // Add rotation
+    glm::vec3 velocity;       // Add velocity for prediction
 
-    sPlayerState() : uid(), position(), EasySerializeable(static_cast<PacketID_t>(PLAYER_STATE))
+    sPlayerState() : uid(), position(), rotation(1,0,0,0), velocity(), EasySerializeable(static_cast<PacketID_t>(PLAYER_STATE))
     {
 
     }
 
-    sPlayerState(UserID_t uid, glm::vec3 position) : uid(uid), position(position), EasySerializeable(static_cast<PacketID_t>(PLAYER_STATE))
+    sPlayerState(UserID_t uid, glm::vec3 position, glm::quat rotation = glm::quat(1,0,0,0), glm::vec3 velocity = glm::vec3(0)) 
+        : uid(uid), position(position), rotation(rotation), velocity(velocity), EasySerializeable(static_cast<PacketID_t>(PLAYER_STATE))
     {
 
     }
@@ -435,6 +442,8 @@ public:
     {
         ser->Put(uid);
         ser->Put(position);
+        ser->Put(rotation);
+        ser->Put(velocity);
     }
 };
 REGISTER_PACKET(sPlayerState, PLAYER_STATE);
